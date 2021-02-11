@@ -21,6 +21,7 @@ struct Token{
 };
 
 Token *token;
+char *user_input;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -30,6 +31,19 @@ void error(char *fmt, ...) {
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
   exit(1);
+}
+
+void error_at(char *loc,char *fmt, ...){
+    va_list ap;
+    va_start(ap,fmt);
+
+    int pos=loc-user_input;
+    fprintf(stderr,"%s\n",user_input);
+    fprintf(stderr,"%*s",pos," ");
+    fprintf(stderr,"^ ");
+    fprintf(stderr,fmt,ap);
+    fprintf(stderr,"\n");
+    exit(1);
 }
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
@@ -44,7 +58,7 @@ bool consume(char op) {
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op){
     if (token->kind != TK_RESERVED || token->str[0] != op){
-        error("\"%c\"ではありません",op);
+        error_at(token->str,"\"%c\"ではありません",op);
     }
     token=token->next;
 }
@@ -52,7 +66,7 @@ void expect(char op){
 //トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_number(){
     if (token ->kind != TK_NUM){
-        error("数ではありません");
+        error_at(token->str,"数ではありません");
     }
     int val=token->val;
     token = token->next;
@@ -92,7 +106,7 @@ Token *tokenize(char *p){
             continue;
         }
 
-        error("トークナイズできません");
+        error_at(p,"トークナイズできません");
     }
 
     new_Token(TK_EOF,cur,p);
@@ -106,7 +120,8 @@ int main(int argc,char **argv){
         return 1;
     }
 
-    token=tokenize(argv[1]);
+    user_input=argv[1];
+    token=tokenize(user_input);
 
     printf(".Intel_syntax noprefix\n");
     printf(".globl main\n");
