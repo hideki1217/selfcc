@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "selfcc": "c",
+        "stdio.h": "c",
+        "selfcc.h": "c"
+    }
+}
