@@ -30,4 +30,16 @@ assert 47 '5+6*7'
 assert 15 '5*(9-6)'
 assert 4 '(3+5)/2'
 
+assert 2 "-8+10"
+assert 2 "+(-8)-(-10)"
+
+assert 1 "4+1>3"
+assert 1 "4*1>=4"
+assert 0 "4*1<+3"
+assert 1 "4*1 <= -(-4)"
+assert 1 "(4*3)-1==11"
+assert 0 "(4*3)-1==(3+2)*2"
+assert 1 "(4*3)-1!=5*2"
+
+
 echo OK
