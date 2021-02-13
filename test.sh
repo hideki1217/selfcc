@@ -56,7 +56,10 @@ assert 3 "x=9; if(x!=9)return 5;return 3;"
 
 assert 3 "x=9; if(x!=9)return 5;else return 3;return 1;"
 assert 36 "x=9; if(x==5)x=x*3;else x=x*4;return x;"
-assert 5 "x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;"
+assert 6 "x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;"
+
+assert 5 "x=0; while(x<5)x=x+1; return x;"
+assert 8 "x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;"
 
 
 echo OK

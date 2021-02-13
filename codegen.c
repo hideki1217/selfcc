@@ -49,6 +49,16 @@ Node *stmt(){
         node->cond=condition;
         return node;
     }
+    if(consume("while")){
+        expect('(');
+        Node *condition=expr();
+        expect(')');
+        Node *A=stmt();
+
+        Node *node=new_Node(ND_WHILE,A,NULL);
+        node->cond=condition;
+        return node;
+    }
     Node *node=expr();
     expect(';');
     return node;
@@ -174,6 +184,7 @@ void gen_lval(Node *node){
 }
 
 void gen(Node *node){
+    int lcount;
     switch(node->kind){
     case ND_NUM:
         printf("    push %d\n",node->val);
@@ -203,23 +214,36 @@ void gen(Node *node){
         printf("    ret\n");
         return;
     case ND_IF:
+        lcount=Lcount++;
         gen(node->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
-        printf("    je .Lend%d\n",Lcount);
+        printf("    je .Lend%d\n",lcount);
         gen(node->lhs);
-        printf(".Lend%d:\n",Lcount++);
+        printf(".Lend%d:\n",lcount);
         return;
     case ND_IFEL:
+        lcount=Lcount++;
         gen(node->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
-        printf("    je .Lelse%d\n",Lcount);
+        printf("    je .Lelse%d\n",lcount);
         gen(node->lhs);
-        printf("    jmp .Lend%d\n",Lcount);
-        printf(".Lelse%d:\n",Lcount);
+        printf("    jmp .Lend%d\n",lcount);
+        printf(".Lelse%d:\n",lcount);
         gen(node->rhs);
-        printf(".Lend%d:\n",Lcount++);
+        printf(".Lend%d:\n",lcount);
+        return;
+    case ND_WHILE:
+        lcount=Lcount++;
+        printf(".Lbegin%d:\n",lcount);
+        gen(node->cond);
+        printf("    pop rax\n");
+        printf("    cmp rax, 0\n");
+        printf("    je .Lend%d\n",lcount);
+        gen(node->lhs);
+        printf("    jmp .Lbegin%d\n",lcount);
+        printf(".Lend%d:\n",lcount);
         return;
     }
     
