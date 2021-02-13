@@ -18,6 +18,7 @@ Node *new_Node_num(int val){
 
 //文法部
 Node *code[100];
+int Lcount=0;
 
 void program(){
     int i=0;
@@ -27,9 +28,16 @@ void program(){
     code[i]=NULL;
 }
 Node *stmt(){
-    if(consume_return()){
+    if(consume("return")){
         Node *node=new_Node(ND_RETURN,expr(),NULL);
         expect(';');
+        return node;
+    }
+    if(consume("if")){
+        expect('(');
+        Node *condition=expr();
+        expect(')');
+        Node *node=new_Node(ND_IF,condition,stmt());
         return node;
     }
     Node *node=expr();
@@ -184,6 +192,14 @@ void gen(Node *node){
         printf("    mov rsp, rbp\n");
         printf("    pop rbp\n");
         printf("    ret\n");
+        return;
+    case ND_IF:
+        gen(node->lhs);
+        printf("    pop rax\n");
+        printf("    cmp rax, 0\n");
+        printf("    je .Lend%d\n",Lcount);
+        gen(node->rhs);
+        printf(".Lend%d:\n",Lcount++);
         return;
     }
     

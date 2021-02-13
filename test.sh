@@ -51,5 +51,8 @@ assert 1 "abc=5;abcd=abc/5;"
 assert 18 "aho=3; aho_aho=aho*2; return aho_aho*aho;"
 assert 50 "x_1=100;x_2=2;return x_1/x_2; return 0;"
 
+assert 5 "x=9; if(x==9)return 5;return 3;"
+assert 3 "x=9; if(x!=9)return 5;return 3;"
+
 
 echo OK

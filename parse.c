@@ -73,13 +73,6 @@ Token *consume_ident(){
     return ident;
 }
 
-bool consume_return(){
-    if (token->kind != TK_RETURN)
-        return false;
-    token=token->next;
-    return true;
-}
-
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op){
@@ -116,6 +109,7 @@ int is_alp(char c){
          (c == '_');
 }
 
+
 Token *tokenize(char *p){
     Token head;
     head.next=NULL;
@@ -125,13 +119,38 @@ Token *tokenize(char *p){
             p++;
             continue;
         }
-
+        //制御構文
         if( memcmp(p,"return",6)==0 && !is_alnum(p[6])) { 
-            cur=new_Token(TK_RETURN,cur,p,6);
+            cur=new_Token(TK_RESERVED,cur,p,6);
             p+=6;
             continue;
         }
 
+        if( memcmp(p,"while",5)==0 && !is_alnum(p[5])){
+            cur=new_Token(TK_RESERVED,cur,p,5);
+            p+=5;
+            continue;
+        }
+
+        if( memcmp(p,"else",4)==0 && !is_alnum(p[4])){
+            cur=new_Token(TK_RESERVED,cur,p,4);
+            p+=4;
+            continue;
+        }
+
+        if( memcmp(p,"for",3)==0 && !is_alnum(p[3])){
+            cur=new_Token(TK_RESERVED,cur,p,3);
+            p+=3;
+            continue;
+        }
+
+        if( memcmp(p,"if",2)==0 && !is_alnum(p[2])){
+            cur=new_Token(TK_RESERVED,cur,p,2);
+            p+=2;
+            continue;
+        }
+
+        //確実に非変数名なもの
         if( memcmp(p,"!=",2)==0 || memcmp(p,"==",2)==0 
          || memcmp(p,"<=",2)==0 || memcmp(p,">=",2)==0){
             cur=new_Token(TK_RESERVED,cur,p,2);
@@ -148,6 +167,7 @@ Token *tokenize(char *p){
             continue;
         }
 
+        //数字
         if(isdigit(*p)){
             char* q=p;
             cur=new_Token(TK_NUM,cur,p,1);//数字の長さを1で適当に初期化
@@ -156,6 +176,7 @@ Token *tokenize(char *p){
             continue;
         }
 
+        //変数名
         if( is_alp(*p) ){
             char *q=p;
             while(1){

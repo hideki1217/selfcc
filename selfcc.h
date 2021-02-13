@@ -2,7 +2,6 @@
 
 typedef enum{
     TK_RESERVED,
-    TK_RETURN,
     TK_IDENT,
     TK_NUM,
     TK_EOF
@@ -29,7 +28,6 @@ void error_at(char *loc,char *fmt, ...);
 bool consume(char *op);
 
 Token *consume_ident();
-bool consume_return();
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op);
@@ -49,6 +47,7 @@ struct LVar{
     int offset;//RBPからのoffset
 };
 extern LVar *locals;
+extern int Lcount;
 
 LVar *find_lvar(Token *token);
 
@@ -65,6 +64,7 @@ typedef enum{
     ND_ASSIGN,//"="
     ND_LVAR,//変数
     ND_RETURN,
+    ND_IF,
     ND_NUM
 }NodeKind;
 typedef struct Node Node;

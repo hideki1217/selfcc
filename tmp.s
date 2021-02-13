@@ -7,16 +7,7 @@ main:
     mov rax, rbp
     sub rax, 8
     push rax
-    push 100
-    pop rdi
-    pop rax
-    mov [rax], rdi
-    push rdi
-    pop rax
-    mov rax, rbp
-    sub rax, 16
-    push rax
-    push 2
+    push 9
     pop rdi
     pop rax
     mov [rax], rdi
@@ -28,23 +19,24 @@ main:
     pop rax
     mov rax, [rax]
     push rax
-    mov rax, rbp
-    sub rax, 16
-    push rax
-    pop rax
-    mov rax, [rax]
-    push rax
+    push 9
     pop rdi
     pop rax
-    cqo
-    idiv rdi
+    cmp rax, rdi
+    setne al
+    movzb rax, al
     push rax
+    pop rax
+    cmp rax, 0
+    je .Lend0
+    push 5
     pop rax
     mov rsp, rbp
     pop rbp
     ret
+.Lend0:
     pop rax
-    push 0
+    push 3
     pop rax
     mov rsp, rbp
     pop rbp
