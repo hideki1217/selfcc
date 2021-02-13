@@ -61,5 +61,8 @@ assert 6 "x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;"
 assert 5 "x=0; while(x<5)x=x+1; return x;"
 assert 8 "x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;"
 
+assert 10 "i=0;for(x=0;x<5;x=x+1)i=i+x;return i;"
+assert 3 "i=0;for(x=0;x<5;x=x+1)if(x==3)i=i+x;return i;"
+
 
 echo OK

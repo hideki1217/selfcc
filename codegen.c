@@ -19,6 +19,7 @@ Node *new_Node_num(int val){
 //文法部
 Node *code[100];
 int Lcount=0;
+Node *nullNode;
 
 void program(){
     int i=0;
@@ -29,7 +30,7 @@ void program(){
 }
 Node *stmt(){
     if(consume("return")){
-        Node *node=new_Node(ND_RETURN,expr(),NULL);
+        Node *node=new_Node(ND_RETURN,expr(),nullNode);
         expect(';');
         return node;
     }
@@ -44,7 +45,7 @@ Node *stmt(){
             node=new_Node(ND_IFEL,A,stmt());
         }
         else{
-            node=new_Node(ND_IF,A,NULL);
+            node=new_Node(ND_IF,A,nullNode);
         }
         node->cond=condition;
         return node;
@@ -55,8 +56,23 @@ Node *stmt(){
         expect(')');
         Node *A=stmt();
 
-        Node *node=new_Node(ND_WHILE,A,NULL);
+        Node *node=new_Node(ND_WHILE,A,nullNode);
         node->cond=condition;
+        return node;
+    }
+    if(consume("for")){
+        expect('(');
+        Node *init=check(";")?nullNode:expr();
+        expect(';');
+        Node *cond=check(";")?nullNode:expr();
+        expect(';');
+        Node *update=check(")")?nullNode:expr();
+        expect(')');
+
+        Node *node=new_Node(ND_FOR,init,stmt());
+        node->cond=cond;
+        node->update=update;
+
         return node;
     }
     Node *node=expr();
@@ -242,6 +258,19 @@ void gen(Node *node){
         printf("    cmp rax, 0\n");
         printf("    je .Lend%d\n",lcount);
         gen(node->lhs);
+        printf("    jmp .Lbegin%d\n",lcount);
+        printf(".Lend%d:\n",lcount);
+        return;
+    case ND_FOR:
+        lcount=Lcount++;
+        gen(node->lhs);
+        printf(".Lbegin%d:\n",lcount);
+        gen(node->cond);
+        printf("    pop rax\n");
+        printf("    cmp rax, 0\n");
+        printf("    je .Lend%d\n",lcount);
+        gen(node->rhs);
+        gen(node->update);
         printf("    jmp .Lbegin%d\n",lcount);
         printf(".Lend%d:\n",lcount);
         return;

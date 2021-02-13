@@ -12,6 +12,7 @@ int main(int argc,char **argv){
     user_input=argv[1];
     locals=NULL;
     token=tokenize(user_input);
+    nullNode=new_Node_num(1);
     program();
 
     printf(".Intel_syntax noprefix\n");

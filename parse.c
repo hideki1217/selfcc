@@ -64,6 +64,12 @@ bool consume(char *op) {
     return true;
 }
 
+//次の文字がopかどうかを判定、文字は進めない
+bool check(char *op){
+    return strlen(op) == token->len &&
+        memcmp(token->str,op,token->len)==0;
+}
+
 //変数ならばそれを返して一つ進める
 Token *consume_ident(){
     if (token->kind != TK_IDENT)

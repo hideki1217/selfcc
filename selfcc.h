@@ -26,6 +26,7 @@ void error_at(char *loc,char *fmt, ...);
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 bool consume(char *op);
+bool check(char *op);
 
 Token *consume_ident();
 
@@ -67,6 +68,7 @@ typedef enum{
     ND_IF,
     ND_IFEL,
     ND_WHILE,
+    ND_FOR,
     ND_NUM
 }NodeKind;
 typedef struct Node Node;
@@ -75,6 +77,7 @@ struct Node{
     Node *lhs;
     Node *rhs;
     Node *cond;
+    Node *update;
     int val;// for ND_NUM
     int offset;// for ND_LVAR
 };
@@ -82,6 +85,7 @@ Node *new_Node(NodeKind kind,Node *lhs,Node* rhs);
 Node *new_Node_num(int val);
 
 extern Node *code[100];
+extern Node *nullNode;
 
 //文法部
 void program();
