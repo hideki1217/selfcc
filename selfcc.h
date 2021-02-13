@@ -69,6 +69,7 @@ typedef enum{
     ND_IFEL,
     ND_WHILE,
     ND_FOR,
+    ND_BLOCK,//ブロック
     ND_NUM
 }NodeKind;
 typedef struct Node Node;
@@ -78,6 +79,7 @@ struct Node{
     Node *rhs;
     Node *cond;
     Node *update;
+    Node *next_inblock;
     int val;// for ND_NUM
     int offset;// for ND_LVAR
 };

@@ -29,8 +29,19 @@ void program(){
     code[i]=NULL;
 }
 Node *stmt(){
+    if(consume("{")){
+        Node *node=new_Node(ND_BLOCK,NULL,NULL);
+        Node *now=node;
+        while(!consume("}")){
+            Node *next=stmt();
+            now->next_inblock=next;
+            now=next;
+        }
+        now->next_inblock=NULL;
+        return node; 
+    }
     if(consume("return")){
-        Node *node=new_Node(ND_RETURN,expr(),nullNode);
+        Node *node=new_Node(ND_RETURN,expr(),NULL);
         expect(';');
         return node;
     }
@@ -45,7 +56,7 @@ Node *stmt(){
             node=new_Node(ND_IFEL,A,stmt());
         }
         else{
-            node=new_Node(ND_IF,A,nullNode);
+            node=new_Node(ND_IF,A,NULL);
         }
         node->cond=condition;
         return node;
@@ -56,7 +67,7 @@ Node *stmt(){
         expect(')');
         Node *A=stmt();
 
-        Node *node=new_Node(ND_WHILE,A,nullNode);
+        Node *node=new_Node(ND_WHILE,A,NULL);
         node->cond=condition;
         return node;
     }
@@ -273,6 +284,16 @@ void gen(Node *node){
         gen(node->update);
         printf("    jmp .Lbegin%d\n",lcount);
         printf(".Lend%d:\n",lcount);
+        return;
+    case ND_BLOCK:
+        for(Node *elem=node->next_inblock;
+            elem;
+            elem=elem->next_inblock)
+        {
+            gen(elem);
+            printf("    pop rax\n");
+        }
+        printf("    push rax\n");
         return;
     }
     

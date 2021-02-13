@@ -168,7 +168,8 @@ Token *tokenize(char *p){
          || *p == '*' || *p == '/'
          || *p == '(' || *p == ')'
          || *p == '>' || *p == '<'
-         || *p == '=' || *p == ';'){
+         || *p == '=' || *p == ';'
+         || *p == '{' || *p == '}'){
             cur=new_Token(TK_RESERVED,cur,p++,1);
             continue;
         }

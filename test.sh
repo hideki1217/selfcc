@@ -64,5 +64,8 @@ assert 8 "x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;"
 assert 10 "i=0;for(x=0;x<5;x=x+1)i=i+x;return i;"
 assert 3 "i=0;for(x=0;x<5;x=x+1)if(x==3)i=i+x;return i;"
 
+assert 3 "{3;}"
+assert 5 "{x=3;x*4;}return 5;"
+assert 3 "y_1=0;y_2=1;for(x=0;x<3;x=x+1){z=y_1;y_1=y_2;y_2=z+y_2;}return y_2;"
 
 echo OK
