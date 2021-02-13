@@ -54,5 +54,9 @@ assert 50 "x_1=100;x_2=2;return x_1/x_2; return 0;"
 assert 5 "x=9; if(x==9)return 5;return 3;"
 assert 3 "x=9; if(x!=9)return 5;return 3;"
 
+assert 3 "x=9; if(x!=9)return 5;else return 3;return 1;"
+assert 36 "x=9; if(x==5)x=x*3;else x=x*4;return x;"
+assert 5 "x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;"
+
 
 echo OK

@@ -37,7 +37,16 @@ Node *stmt(){
         expect('(');
         Node *condition=expr();
         expect(')');
-        Node *node=new_Node(ND_IF,condition,stmt());
+        Node *A=stmt();
+
+        Node *node;
+        if(consume("else")){
+            node=new_Node(ND_IFEL,A,stmt());
+        }
+        else{
+            node=new_Node(ND_IF,A,NULL);
+        }
+        node->cond=condition;
         return node;
     }
     Node *node=expr();
@@ -194,10 +203,21 @@ void gen(Node *node){
         printf("    ret\n");
         return;
     case ND_IF:
-        gen(node->lhs);
+        gen(node->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
         printf("    je .Lend%d\n",Lcount);
+        gen(node->lhs);
+        printf(".Lend%d:\n",Lcount++);
+        return;
+    case ND_IFEL:
+        gen(node->cond);
+        printf("    pop rax\n");
+        printf("    cmp rax, 0\n");
+        printf("    je .Lelse%d\n",Lcount);
+        gen(node->lhs);
+        printf("    jmp .Lend%d\n",Lcount);
+        printf(".Lelse%d:\n",Lcount);
         gen(node->rhs);
         printf(".Lend%d:\n",Lcount++);
         return;
