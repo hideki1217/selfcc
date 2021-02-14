@@ -1,6 +1,7 @@
 #include "selfcc.h"
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
 Node *new_Node(NodeKind kind,Node *lhs,Node* rhs){
     Node *node=calloc(1,sizeof(Node));
@@ -176,25 +177,35 @@ Node *primary(){
 
     Token *token=consume_ident();
     if (token){
-        Node *node=calloc(1,sizeof(Node));
-        node->kind=ND_LVAR;
-
-        LVar *var=find_lvar(token);
-        if(var){
-            node->offset=var->offset;
+        if(consume("(")){//関数呼び出しの場合
+            Node *node=calloc(1,sizeof(Node));
+            node->kind=ND_FUNCTION;
+            node->funcname=token->str;
+            node->namelen=token->len;
+            expect(')');
             return node;
-        }else{
-            var=calloc(1,sizeof(LVar));
-            var->next=locals;
-            var->name=token->str;
-            var->len=token->len;
-            var->offset=locals? 
-                locals->offset + 8 
-                : 8;
-            node->offset=var->offset;
-            locals=var;
         }
-        return node;
+        else{//変数の場合
+            Node *node=calloc(1,sizeof(Node));
+            node->kind=ND_LVAR;
+
+            LVar *var=find_lvar(token);
+            if(var){
+                node->offset=var->offset;
+                return node;
+            }else{
+                var=calloc(1,sizeof(LVar));
+                var->next=locals;
+                var->name=token->str;
+                var->len=token->len;
+                var->offset=locals? 
+                    locals->offset + 8 
+                    : 8;
+                node->offset=var->offset;
+                locals=var;
+            }
+            return node;
+        }
     }
 
     return new_Node_num(expect_number());
@@ -295,6 +306,13 @@ void gen(Node *node){
         }
         printf("    push rax\n");
         return;
+    case ND_FUNCTION:
+        {
+            char str[node->namelen+1];
+            strncpy(str,node->funcname,node->namelen); 
+            printf("    call %s\n",str);
+            return;
+        }
     }
     
     gen(node->lhs);

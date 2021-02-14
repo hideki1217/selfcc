@@ -70,6 +70,7 @@ typedef enum{
     ND_WHILE,
     ND_FOR,
     ND_BLOCK,//ブロック
+    ND_FUNCTION,
     ND_NUM
 }NodeKind;
 typedef struct Node Node;
@@ -82,6 +83,8 @@ struct Node{
     Node *next_inblock;
     int val;// for ND_NUM
     int offset;// for ND_LVAR
+    char *funcname;//for ND_FUNCTION
+    int namelen;//for ND_FUNCTION
 };
 Node *new_Node(NodeKind kind,Node *lhs,Node* rhs);
 Node *new_Node_num(int val);
