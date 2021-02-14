@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<math.h>
 
 Node *new_Node(NodeKind kind){
     Node *node=calloc(1,sizeof(Node));
@@ -55,6 +56,7 @@ VarNode *new_VarNode(int offset){
 Node *code[100];
 int Lcount=0;
 Node *nullNode;
+char* pointargReg[6];
 
 void program(){
     int i=0;
@@ -69,10 +71,10 @@ Node *stmt(){
         Node *now=node;
         while(!consume("}")){
             Node *next=stmt();
-            now->next_inblock=next;
+            now->next=next;
             now=next;
         }
-        now->next_inblock=NULL;
+        now->next=NULL;
         return node; 
     }
     if(consume("return")){
@@ -209,7 +211,14 @@ Node *primary(){
     if (token){
         if(consume("(")){//関数呼び出しの場合
             FuncNode *node=new_FuncNode(token->str,token->len);
-            expect(')');
+            Node *args=NULL;
+            while(!consume(")")){
+                consume(",");
+                Node *arg=primary();
+                arg->next=args;
+                args=arg;
+            }
+            node->arg=args;
             return (Node*)node;
         }
         else{//変数の場合
@@ -238,6 +247,7 @@ Node *primary(){
 }
 
 // endregion
+int min(int x,int y){return x>y?y:x;}
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR)
         error("代入の左辺値が変数ではありません");
@@ -322,9 +332,9 @@ void gen(Node *node){
         printf(".Lend%d:\n",lcount);
         return;
     case ND_BLOCK:
-        for(Node *elem=node->next_inblock;
+        for(Node *elem=node->next;
             elem;
-            elem=elem->next_inblock)
+            elem=elem->next)
         {
             gen(elem);
             printf("    pop rax\n");
@@ -333,9 +343,24 @@ void gen(Node *node){
         return;
     case ND_FUNCTION:
         {
-            char str[((FuncNode*)node)->namelen+1];
-            strncpy(str,((FuncNode*)node)->funcname,((FuncNode*)node)->namelen); 
+            FuncNode* fnode=((FuncNode*)node);
+            int argcount=0;
+            for(Node *elem=fnode->arg;
+                elem;
+                elem=elem->next,argcount++)
+            {
+                gen(elem);
+            }
+            for(int i=0;i<min(6,argcount);i++){
+                printf("    pop rax\n");
+                printf("    mov %s, rax\n",pointargReg[i]);
+            }
+
+            char str[fnode->namelen+1];
+            strncpy(str,fnode->funcname,fnode->namelen);
+            str[fnode->namelen] ='\0';
             printf("    call %s\n",str);
+            printf("    push rax\n");
             return;
         }
     }

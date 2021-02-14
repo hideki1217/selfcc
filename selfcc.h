@@ -83,7 +83,7 @@ typedef struct VarNode VarNode;
 
 struct Node{
     NodeKind kind;
-    Node *next_inblock;
+    Node *next;
 };
 Node *new_Node(NodeKind kind);
 struct BinaryNode{
@@ -143,3 +143,5 @@ Node *primary();
 
 void gen_lval(Node *node);
 void gen(Node *node);
+
+extern char* pointargReg[6];

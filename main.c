@@ -13,6 +13,12 @@ int main(int argc,char **argv){
     locals=NULL;
     token=tokenize(user_input);
     nullNode=(Node*)new_NumNode(1);
+    pointargReg[0]="rdi";//関数引数の規約
+    pointargReg[1]="rsi";
+    pointargReg[2]="rdx";
+    pointargReg[3]="rcx";
+    pointargReg[4]="r8d";
+    pointargReg[5]="r9d";
     program();
 
     printf(".Intel_syntax noprefix\n");

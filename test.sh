@@ -77,4 +77,16 @@ return y_2;"
 
 assert 3 "for(i=0;i<5;i=i+1)foo(); x=3;"
 
+assert 8 "x=3;y=5;z=hoge(x,y);"
+assert 13 "
+x=1;
+y=1;
+for(i=0;i<5;i=i+1){
+    z=hoge(x,y);
+    x=y;
+    y=z;
+}
+return y;
+"
+
 echo OK
