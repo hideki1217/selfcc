@@ -17,8 +17,8 @@ int main(int argc,char **argv){
     pointargReg[1]="rsi";
     pointargReg[2]="rdx";
     pointargReg[3]="rcx";
-    pointargReg[4]="r8d";
-    pointargReg[5]="r9d";
+    pointargReg[4]="r8";
+    pointargReg[5]="r9";
     program();
 
     printf(".Intel_syntax noprefix\n");

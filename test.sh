@@ -88,5 +88,7 @@ for(i=0;i<5;i=i+1){
 }
 return y;
 "
+assert 6 "hogege(1,1,1,1,1,1);"
+assert 7 "hogehoge(1,1,1,1,1,1,1);"
 
 echo OK
