@@ -74,20 +74,57 @@ typedef enum{
     ND_NUM
 }NodeKind;
 typedef struct Node Node;
+typedef struct BinaryNode BinaryNode;
+typedef struct NumNode NumNode;
+typedef struct CondNode CondNode;
+typedef struct ForNode ForNode;
+typedef struct FuncNode FuncNode;
+typedef struct VarNode VarNode;
+
 struct Node{
     NodeKind kind;
+    Node *next_inblock;
+};
+Node *new_Node(NodeKind kind);
+struct BinaryNode{
+    Node base;
     Node *lhs;
     Node *rhs;
+};
+BinaryNode *new_BinaryNode(NodeKind kind,Node *lhs,Node* rhs);
+struct NumNode{
+    Node base;
+    int val;// for ND_NUM
+};
+NumNode *new_NumNode(int val);
+struct CondNode{
+    Node base;
+    Node *T;
+    Node *F;
+    Node *cond;
+};
+CondNode *new_CondNode(NodeKind kind,Node *cond,Node *T,Node *F);
+struct ForNode{
+    Node base;
+    Node *init;
+    Node *T;
     Node *cond;
     Node *update;
-    Node *next_inblock;
-    int val;// for ND_NUM
-    int offset;// for ND_LVAR
-    char *funcname;//for ND_FUNCTION
-    int namelen;//for ND_FUNCTION
 };
-Node *new_Node(NodeKind kind,Node *lhs,Node* rhs);
-Node *new_Node_num(int val);
+ForNode *new_ForNode(Node *init,Node *cond,Node *update,Node *A); 
+struct FuncNode{
+    Node base;
+    char *funcname;
+    int namelen;
+    Node *arg;
+};
+FuncNode *new_FuncNode(char *funcname,int namelen);
+struct VarNode{
+    Node base;
+    int offset;// for ND_LVAR
+};
+VarNode *new_VarNode(int offset);
+
 
 extern Node *code[100];
 extern Node *nullNode;

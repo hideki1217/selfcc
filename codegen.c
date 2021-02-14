@@ -3,18 +3,52 @@
 #include<stdlib.h>
 #include<string.h>
 
-Node *new_Node(NodeKind kind,Node *lhs,Node* rhs){
+Node *new_Node(NodeKind kind){
     Node *node=calloc(1,sizeof(Node));
     node->kind=kind;
+    return node;
+}
+BinaryNode *new_BinaryNode(NodeKind kind,Node *lhs,Node* rhs){
+    BinaryNode *node=calloc(1,sizeof(BinaryNode));
+    node->base.kind=kind;
     node->lhs=lhs;
     node->rhs=rhs;
     return node;
 }
-Node *new_Node_num(int val){
-    Node *node=calloc(1,sizeof(Node));
-    node->kind=ND_NUM;
+NumNode *new_NumNode(int val){
+    NumNode *node=calloc(1,sizeof(NumNode));
+    node->base.kind=ND_NUM;
     node->val=val;
     return node;
+}
+CondNode *new_CondNode(NodeKind kind,Node *cond,Node *T,Node *F){
+    CondNode *node=calloc(1,sizeof(CondNode));
+    node->base.kind=kind;
+    node->cond=cond;
+    node->T=T;
+    node->F=F;
+    return node;
+}
+ForNode *new_ForNode(Node *init,Node *cond,Node *update,Node *T){
+    ForNode *node=calloc(1,sizeof(ForNode));
+    node->base.kind=ND_FOR;
+    node->init=init;
+    node->cond=cond;
+    node->update=update;
+    node->T=T;
+    return node;
+}
+FuncNode *new_FuncNode(char *funcname,int namelen){
+    FuncNode *node=calloc(1,sizeof(FuncNode));
+    node->base.kind=ND_FUNCTION;
+    node->funcname=funcname;
+    node->namelen=namelen;
+    return node;
+}
+VarNode *new_VarNode(int offset){
+    VarNode *node=calloc(1,sizeof(VarNode));
+    node->base.kind=ND_LVAR;
+    node->offset=offset;
 }
 
 //文法部
@@ -31,7 +65,7 @@ void program(){
 }
 Node *stmt(){
     if(consume("{")){
-        Node *node=new_Node(ND_BLOCK,NULL,NULL);
+        Node *node=new_Node(ND_BLOCK);
         Node *now=node;
         while(!consume("}")){
             Node *next=stmt();
@@ -42,9 +76,9 @@ Node *stmt(){
         return node; 
     }
     if(consume("return")){
-        Node *node=new_Node(ND_RETURN,expr(),NULL);
+        BinaryNode *node=new_BinaryNode(ND_RETURN,expr(),NULL);
         expect(';');
-        return node;
+        return (Node*)node;
     }
     if(consume("if")){
         expect('(');
@@ -52,15 +86,14 @@ Node *stmt(){
         expect(')');
         Node *A=stmt();
 
-        Node *node;
+        CondNode *node;
         if(consume("else")){
-            node=new_Node(ND_IFEL,A,stmt());
+            node=new_CondNode(ND_IFEL,condition,A,stmt());
         }
         else{
-            node=new_Node(ND_IF,A,NULL);
+            node=new_CondNode(ND_IF,condition,A,NULL);
         }
-        node->cond=condition;
-        return node;
+        return (Node*)node;
     }
     if(consume("while")){
         expect('(');
@@ -68,9 +101,8 @@ Node *stmt(){
         expect(')');
         Node *A=stmt();
 
-        Node *node=new_Node(ND_WHILE,A,NULL);
-        node->cond=condition;
-        return node;
+        CondNode *node=new_CondNode(ND_WHILE,condition,A,NULL);
+        return (Node*)node;
     }
     if(consume("for")){
         expect('(');
@@ -81,11 +113,9 @@ Node *stmt(){
         Node *update=check(")")?nullNode:expr();
         expect(')');
 
-        Node *node=new_Node(ND_FOR,init,stmt());
-        node->cond=cond;
-        node->update=update;
-
-        return node;
+        ForNode *node=new_ForNode(init,cond,update,stmt());
+        
+        return (Node*)node;
     }
     Node *node=expr();
     expect(';');
@@ -97,7 +127,7 @@ Node *expr(){
 Node *assign(){
     Node *node=equality();
     if(consume("=")){
-        node=new_Node(ND_ASSIGN,node,assign());
+        node=(Node*)new_BinaryNode(ND_ASSIGN,node,assign());
     }
     return node;
 }
@@ -106,10 +136,10 @@ Node *equality(){
 
     while(1){
         if(consume("==")){
-            node=new_Node(ND_EQU,node,relational());
+            node=(Node*)new_BinaryNode(ND_EQU,node,relational());
         }
         else if(consume("!=")){
-            node=new_Node(ND_NEQ,node,relational());
+            node=(Node*)new_BinaryNode(ND_NEQ,node,relational());
         }
         else
             return node;
@@ -120,16 +150,16 @@ Node *relational(){
 
     while(1){
         if(consume(">=")){
-            node=new_Node(ND_GOE,add(),node);
+            node=(Node*)new_BinaryNode(ND_GOE,add(),node);
         }
         else if(consume("<=")){
-            node=new_Node(ND_GOE,node,add());
+            node=(Node*)new_BinaryNode(ND_GOE,node,add());
         }
         else if(consume(">")){
-            node=new_Node(ND_GRT,add(),node);
+            node=(Node*)new_BinaryNode(ND_GRT,add(),node);
         }
         else if(consume("<")){
-            node=new_Node(ND_GRT,node,add());
+            node=(Node*)new_BinaryNode(ND_GRT,node,add());
         }
         else
             return node;
@@ -140,10 +170,10 @@ Node *add(){
 
     while(1){
         if(consume("+")){
-            node=new_Node(ND_ADD,node,mul());
+            node=(Node*)new_BinaryNode(ND_ADD,node,mul());
         }
         else if(consume("-")){
-            node=new_Node(ND_SUB,node,mul());
+            node=(Node*)new_BinaryNode(ND_SUB,node,mul());
         }
         else
             return node;
@@ -154,9 +184,9 @@ Node *mul(){
 
     while(1){
         if (consume("*"))
-            node=new_Node(ND_MUL,node,unary());
+            node=(Node*)new_BinaryNode(ND_MUL,node,unary());
         else if (consume("/"))
-            node=new_Node(ND_DIV,node,unary());
+            node=(Node*)new_BinaryNode(ND_DIV,node,unary());
         else
             return node;
     }
@@ -165,7 +195,7 @@ Node *unary(){
     if (consume("+"))
         return primary();
     if (consume("-"))
-        return new_Node(ND_SUB,new_Node_num(0),primary());
+        return (Node*)new_BinaryNode(ND_SUB,(Node*)new_NumNode(0),primary());
     return primary();
 }
 Node *primary(){
@@ -178,21 +208,17 @@ Node *primary(){
     Token *token=consume_ident();
     if (token){
         if(consume("(")){//関数呼び出しの場合
-            Node *node=calloc(1,sizeof(Node));
-            node->kind=ND_FUNCTION;
-            node->funcname=token->str;
-            node->namelen=token->len;
+            FuncNode *node=new_FuncNode(token->str,token->len);
             expect(')');
-            return node;
+            return (Node*)node;
         }
         else{//変数の場合
-            Node *node=calloc(1,sizeof(Node));
-            node->kind=ND_LVAR;
+            VarNode *node=new_VarNode(0);
 
             LVar *var=find_lvar(token);
             if(var){
                 node->offset=var->offset;
-                return node;
+                return (Node*)node;
             }else{
                 var=calloc(1,sizeof(LVar));
                 var->next=locals;
@@ -204,20 +230,19 @@ Node *primary(){
                 node->offset=var->offset;
                 locals=var;
             }
-            return node;
+            return (Node*)node;
         }
     }
 
-    return new_Node_num(expect_number());
+    return (Node*)new_NumNode(expect_number());
 }
 
 // endregion
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR)
         error("代入の左辺値が変数ではありません");
-    
     printf("    mov rax, rbp\n");
-    printf("    sub rax, %d\n",node->offset);
+    printf("    sub rax, %d\n",((VarNode *)node)->offset);
     printf("    push rax\n");
 }
 
@@ -225,7 +250,7 @@ void gen(Node *node){
     int lcount;
     switch(node->kind){
     case ND_NUM:
-        printf("    push %d\n",node->val);
+        printf("    push %d\n",((NumNode *)node)->val);
         return;
     case ND_LVAR:
         gen_lval(node);
@@ -234,8 +259,8 @@ void gen(Node *node){
         printf("    push rax\n");
         return;
     case ND_ASSIGN:
-        gen_lval(node->lhs);
-        gen(node->rhs);
+        gen_lval(((BinaryNode*)node)->lhs);
+        gen(((BinaryNode*)node)->rhs);
 
         printf("    pop rdi\n");
         printf("    pop rax\n");
@@ -244,7 +269,7 @@ void gen(Node *node){
 
         return;
     case ND_RETURN:
-        gen(node->lhs);
+        gen(((BinaryNode*)node)->lhs);
         //エピローグ
         printf("    pop rax\n");
         printf("    mov rsp, rbp\n");
@@ -253,46 +278,46 @@ void gen(Node *node){
         return;
     case ND_IF:
         lcount=Lcount++;
-        gen(node->cond);
+        gen(((CondNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
         printf("    je .Lend%d\n",lcount);
-        gen(node->lhs);
+        gen(((CondNode*)node)->T);
         printf(".Lend%d:\n",lcount);
         return;
     case ND_IFEL:
         lcount=Lcount++;
-        gen(node->cond);
+        gen(((CondNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
         printf("    je .Lelse%d\n",lcount);
-        gen(node->lhs);
+        gen(((CondNode*)node)->T);
         printf("    jmp .Lend%d\n",lcount);
         printf(".Lelse%d:\n",lcount);
-        gen(node->rhs);
+        gen(((CondNode*)node)->F);
         printf(".Lend%d:\n",lcount);
         return;
     case ND_WHILE:
         lcount=Lcount++;
         printf(".Lbegin%d:\n",lcount);
-        gen(node->cond);
+        gen(((CondNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
         printf("    je .Lend%d\n",lcount);
-        gen(node->lhs);
+        gen(((CondNode*)node)->T);
         printf("    jmp .Lbegin%d\n",lcount);
         printf(".Lend%d:\n",lcount);
         return;
     case ND_FOR:
         lcount=Lcount++;
-        gen(node->lhs);
+        gen(((ForNode*)node)->init);
         printf(".Lbegin%d:\n",lcount);
-        gen(node->cond);
+        gen(((ForNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
         printf("    je .Lend%d\n",lcount);
-        gen(node->rhs);
-        gen(node->update);
+        gen(((ForNode*)node)->T);
+        gen(((ForNode*)node)->update);
         printf("    jmp .Lbegin%d\n",lcount);
         printf(".Lend%d:\n",lcount);
         return;
@@ -308,15 +333,15 @@ void gen(Node *node){
         return;
     case ND_FUNCTION:
         {
-            char str[node->namelen+1];
-            strncpy(str,node->funcname,node->namelen); 
+            char str[((FuncNode*)node)->namelen+1];
+            strncpy(str,((FuncNode*)node)->funcname,((FuncNode*)node)->namelen); 
             printf("    call %s\n",str);
             return;
         }
     }
     
-    gen(node->lhs);
-    gen(node->rhs);
+    gen(((BinaryNode*)node)->lhs);
+    gen(((BinaryNode*)node)->rhs);
 
     printf("    pop rdi\n");
     printf("    pop rax\n");
