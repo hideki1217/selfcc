@@ -16,3 +16,12 @@ int hogege(int a,int b,int c,int d,int e,int f){
 int hogehoge(int a,int b,int c,int d,int e,int f,int g){
     return a+b+c+d+e+f+g;
 }
+
+int print(int x){
+    printf("%d\n",x);
+}
+
+int fact(int x){
+    if(x==1)return 1;
+    return x*fact(x-1);
+}

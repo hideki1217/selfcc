@@ -8,7 +8,7 @@
 
 
 
-Token *token;
+Token *tkstream;
 char *user_input;
 LVar *locals;
 
@@ -55,51 +55,67 @@ void error_at(char *loc,char *fmt, ...){
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 bool consume(char *op) {
-    if (token->kind != TK_RESERVED ||
-        strlen(op) != token->len ||
-        memcmp(token->str,op,token->len)){
+    if (tkstream->kind != TK_RESERVED ||
+        strlen(op) != tkstream->len ||
+        memcmp(tkstream->str,op,tkstream->len)){
         return false;
     }
-    token=token->next;
+    tkstream=tkstream->next;
     return true;
 }
 
 //次の文字がopかどうかを判定、文字は進めない
 bool check(char *op){
-    return strlen(op) == token->len &&
-        memcmp(token->str,op,token->len)==0;
+    return strlen(op) == tkstream->len &&
+        memcmp(tkstream->str,op,tkstream->len)==0;
 }
 
 //変数ならばそれを返して一つ進める
 Token *consume_ident(){
-    if (token->kind != TK_IDENT)
+    if (tkstream->kind != TK_IDENT)
         return NULL;
-    Token *ident=token;
-    token=token->next;
+    Token *ident=tkstream;
+    tkstream=tkstream->next;
     return ident;
 }
 
+Token *expect_ident(){
+    if (tkstream->kind != TK_IDENT)
+        error_at(tkstream->str,"変数もしくは関数ではありません");
+    Token *ident=tkstream;
+    tkstream=tkstream->next;
+    return ident;
+}
+
+Token *expect_var(){
+    if(tkstream->kind!=TK_IDENT && *(tkstream->next->str)!='('){
+        error_at(tkstream->str,"変数ではありません");
+    }
+    Token *ident=tkstream;
+    tkstream=tkstream->next;
+    return ident;
+}
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op){
-    if (token->kind != TK_RESERVED || token->str[0] != op){
-        error_at(token->str,"\"%c\"ではありません",op);
+    if (tkstream->kind != TK_RESERVED || tkstream->str[0] != op){
+        error_at(tkstream->str,"\"%c\"ではありません",op);
     }
-    token=token->next;
+    tkstream=tkstream->next;
 }
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_number(){
-    if (token ->kind != TK_NUM){
-        error_at(token->str,"数ではありません");
+    if (tkstream ->kind != TK_NUM){
+        error_at(tkstream->str,"数ではありません");
     }
-    int val=token->val;
-    token = token->next;
+    int val=tkstream->val;
+    tkstream= tkstream->next;
     return val;
 }
 
 bool at_eof() {
-  return token->kind == TK_EOF;
+  return tkstream->kind == TK_EOF;
 }
 
 int is_alnum(char c) {

@@ -51,31 +51,93 @@ VarNode *new_VarNode(int offset){
     node->base.kind=ND_LVAR;
     node->offset=offset;
 }
+RootineNode *new_RootineNode(char *name,int len){
+    RootineNode *node=calloc(1,sizeof(RootineNode));
+    node->base.kind=ND_ROOTINE;
+    node->name=name;
+    node->namelen=len;
+    return node;
+}
+BlockNode *new_BlockNode(){
+    BlockNode *node=calloc(1,sizeof(BlockNode));
+    node->base.kind=ND_BLOCK;
+    return node;
+}
+
+LVar *new_LVar(Token* token){
+    LVar *var=calloc(1,sizeof(LVar));
+    var->next=locals;
+    var->name=token->str;
+    var->len=token->len;
+    var->offset=locals? 
+        locals->offset + 8 
+        : 8;
+    return var;
+}
 
 //文法部
-Node *code[100];
+Node *code;
 int Lcount=0;
 Node *nullNode;
 char* pointargReg[6];
 
 void program(){
     int i=0;
+    Node head;
+    head.next=NULL;
+    Node *node=&head;
     while(!at_eof()){
-        code[i++]=stmt();
+        node->next=rootine();
+        node=node->next;
     }
-    code[i]=NULL;
+    node->next=NULL;
+    code=head.next;
+}
+Node *rootine(){
+    locals=NULL;//ローカル変数をrootineごとにリセット
+    Token *token=expect_ident();
+    if(consume("(")){//関数定義
+        RootineNode *node=new_RootineNode(token->str,token->len);
+
+        Node anker;
+        anker.next=NULL;
+        Node *top=&anker;
+        while(!consume(")")){
+            consume(",");
+
+            token=expect_var();
+            LVar *var=new_LVar(token);
+            locals=var;
+
+            Node *arg=(Node*)new_VarNode(var->offset);
+            top->next=arg;
+            top=arg;
+        }
+        node->arg=(VarNode*)(anker.next);
+        node->block=stmt();
+        if(locals)node->total_offset=locals->offset;
+
+        return (Node*)node;
+    }
+    else{//グローバル変数
+    }
 }
 Node *stmt(){
     if(consume("{")){
-        Node *node=new_Node(ND_BLOCK);
-        Node *now=node;
+        BlockNode *node=new_BlockNode();
+
+        Node anker;
+        anker.next=NULL;
+        Node *now=&anker;
         while(!consume("}")){
             Node *next=stmt();
             now->next=next;
             now=next;
         }
         now->next=NULL;
-        return node; 
+        node->block=anker.next;
+
+        return (Node*)node; 
     }
     if(consume("return")){
         BinaryNode *node=new_BinaryNode(ND_RETURN,expr(),NULL);
@@ -214,7 +276,7 @@ Node *primary(){
             Node *args=NULL;
             while(!consume(")")){
                 consume(",");
-                Node *arg=primary();
+                Node *arg=add();
                 arg->next=args;
                 args=arg;
             }
@@ -229,13 +291,7 @@ Node *primary(){
                 node->offset=var->offset;
                 return (Node*)node;
             }else{
-                var=calloc(1,sizeof(LVar));
-                var->next=locals;
-                var->name=token->str;
-                var->len=token->len;
-                var->offset=locals? 
-                    locals->offset + 8 
-                    : 8;
+                var=new_LVar(token);
                 node->offset=var->offset;
                 locals=var;
             }
@@ -248,6 +304,7 @@ Node *primary(){
 
 // endregion
 int min(int x,int y){return x>y?y:x;}
+void *copy(char* s, char* str,int len){strncpy(s,str,len);s[len]='\0';}
 void gen_lval(Node *node){
     if(node->kind != ND_LVAR)
         error("代入の左辺値が変数ではありません");
@@ -259,6 +316,42 @@ void gen_lval(Node *node){
 void gen(Node *node){
     int lcount;
     switch(node->kind){
+    case ND_ROOTINE:
+        {
+            RootineNode *rootine=(RootineNode*)node;
+            char name[rootine->namelen+1];
+            copy(name,rootine->name,rootine->namelen);
+            printf("%s:\n",name);
+            // プロローグ
+            // local変数分の領域を確保　
+            printf("    push rbp\n");
+            printf("    mov rbp, rsp\n");
+            printf("    sub rsp, %d\n",rootine->total_offset);
+
+            //引数の読み込み(ローカル変数として)
+            int count=0;
+            for(VarNode *var=rootine->arg;
+                var;
+                var=(VarNode*)var->base.next,count++)
+            {
+                gen_lval((Node*)var);
+                printf("    pop rax\n");
+                if(count<6)    
+                    printf("    mov [rax], %s\n",pointargReg[count]);
+                else
+                    printf("    mov [rax], [rbp+%d]\n",(count-6)*8+16);
+            }
+
+            gen(rootine->block);
+
+            // エピローグ
+            // 最後の式の結果がRAXに残っているのでそれが返り値になる
+            printf("    mov rsp, rbp\n");
+            printf("    pop rbp\n");
+            printf("    ret\n");
+
+            return;
+        }
     case ND_NUM:
         printf("    push %d\n",((NumNode *)node)->val);
         return;
@@ -291,6 +384,7 @@ void gen(Node *node){
         gen(((CondNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
+        printf("    push rax\n");
         printf("    je .Lend%d\n",lcount);
         gen(((CondNode*)node)->T);
         printf(".Lend%d:\n",lcount);
@@ -300,6 +394,7 @@ void gen(Node *node){
         gen(((CondNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
+        printf("    push rax\n");
         printf("    je .Lelse%d\n",lcount);
         gen(((CondNode*)node)->T);
         printf("    jmp .Lend%d\n",lcount);
@@ -313,6 +408,7 @@ void gen(Node *node){
         gen(((CondNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
+        printf("    push rax\n");
         printf("    je .Lend%d\n",lcount);
         gen(((CondNode*)node)->T);
         printf("    jmp .Lbegin%d\n",lcount);
@@ -325,6 +421,7 @@ void gen(Node *node){
         gen(((ForNode*)node)->cond);
         printf("    pop rax\n");
         printf("    cmp rax, 0\n");
+        printf("    push rax\n");
         printf("    je .Lend%d\n",lcount);
         gen(((ForNode*)node)->T);
         gen(((ForNode*)node)->update);
@@ -332,7 +429,7 @@ void gen(Node *node){
         printf(".Lend%d:\n",lcount);
         return;
     case ND_BLOCK:
-        for(Node *elem=node->next;
+        for(Node *elem=((BlockNode*)node)->block;
             elem;
             elem=elem->next)
         {
@@ -357,8 +454,7 @@ void gen(Node *node){
             }
 
             char str[fnode->namelen+1];
-            strncpy(str,fnode->funcname,fnode->namelen);
-            str[fnode->namelen] ='\0';
+            copy(str,fnode->funcname,fnode->namelen);
             printf("    call %s\n",str);
             printf("    push rax\n");
             return;

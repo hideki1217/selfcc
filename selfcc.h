@@ -16,7 +16,7 @@ struct Token{
 };
 Token *new_Token(TokenKind kind,Token* cur,char *str,int len);
 
-extern Token *token;
+extern Token *tkstream;
 extern char *user_input;
 
 // エラーを報告するための関数
@@ -28,7 +28,10 @@ void error_at(char *loc,char *fmt, ...);
 bool consume(char *op);
 bool check(char *op);
 
+//identを一つ返し一つ進める
 Token *consume_ident();
+Token *expect_ident();
+Token *expect_var();
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op);
@@ -47,6 +50,7 @@ struct LVar{
     int len;   //名前の長さ
     int offset;//RBPからのoffset
 };
+LVar *new_LVar(Token* token);
 extern LVar *locals;
 extern int Lcount;
 
@@ -71,15 +75,18 @@ typedef enum{
     ND_FOR,
     ND_BLOCK,//ブロック
     ND_FUNCTION,
+    ND_ROOTINE,
     ND_NUM
 }NodeKind;
 typedef struct Node Node;
+typedef struct BlockNode BlockNode;
 typedef struct BinaryNode BinaryNode;
 typedef struct NumNode NumNode;
 typedef struct CondNode CondNode;
 typedef struct ForNode ForNode;
 typedef struct FuncNode FuncNode;
 typedef struct VarNode VarNode;
+typedef struct RootineNode RootineNode;
 
 struct Node{
     NodeKind kind;
@@ -124,13 +131,28 @@ struct VarNode{
     int offset;// for ND_LVAR
 };
 VarNode *new_VarNode(int offset);
+struct RootineNode{
+    Node base;
+    Node *block;
+    VarNode *arg;
+    char* name;
+    int namelen;
+    int total_offset;
+};
+RootineNode *new_RootineNode(char *name,int len);
+struct BlockNode{
+    Node base;
+    Node *block;
+};
+BlockNode *new_BlockNode();
 
 
-extern Node *code[100];
+extern Node *code;
 extern Node *nullNode;
 
 //文法部
 void program();
+Node *rootine();
 Node *stmt();
 Node *expr();
 Node *assign();
