@@ -20,15 +20,56 @@ Token *new_Token(TokenKind kind,Token* cur,char *str,int len){
     cur->next =token;
     return token;
 }
-
+//宣言済み変数一覧に存在するか確認
 LVar *find_lvar(Token *token){
     for(LVar *var=locals;var;var=var->next){
-        if(var->len==token->len && memcmp(token->str, var->name,var->len)==0){
+        if(var->len==token->len 
+        && memcmp(token->str, var->name,var->len)==0){
             return var;
         }
     }
     return NULL;
 }
+//なければ作る。あれば二重に定義したことをエラー
+LVar *add_lvar(Token *token,Mold *mold){
+    LVar* res=find_lvar(token);
+    if( res==NULL ){
+        res=new_LVar(token,mold);
+        locals=res;
+        return res;
+    }
+    else
+        error_at(token->str,"同名の変数が既に定義されています");
+}
+//宣言済み変数一覧になければエラー
+LVar *get_lvar(Token *token){
+    LVar* res=find_lvar(token);
+    if( res==NULL )
+        error_at(token->str,"宣言されていない変数です。");
+    else
+        return res;
+}
+
+Mold *new_Mold(char* name,int len,int size){
+    Mold *mold=calloc(1,sizeof(Mold));
+    mold->name=name;
+    mold->len=len;
+    mold->size=size;
+    return mold;
+}
+Mold *find_mold(Token *token){
+    for(Mold *mold=molds;
+        mold;
+        mold=mold->next)
+    {
+        if(mold->len==token->len 
+        && memcmp(mold->name,token->str,mold->len)==0){
+            return mold;
+        }
+    }
+    return NULL;
+}
+Mold *molds;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -57,7 +98,7 @@ void error_at(char *loc,char *fmt, ...){
 bool consume(char *op) {
     if (tkstream->kind != TK_RESERVED ||
         strlen(op) != tkstream->len ||
-        memcmp(tkstream->str,op,tkstream->len)){
+        memcmp(tkstream->str,op,tkstream->len)!=0){
         return false;
     }
     tkstream=tkstream->next;
@@ -102,6 +143,32 @@ void expect(char op){
         error_at(tkstream->str,"\"%c\"ではありません",op);
     }
     tkstream=tkstream->next;
+}
+
+Mold *expect_mold(){
+    if (tkstream->kind != TK_IDENT ){
+        error_at(tkstream->str,"型名ではありません");
+    }
+    Mold *mold=find_mold(tkstream);
+    if(mold ==NULL)
+        error_at(tkstream->str,"宣言されていない型です。");
+    tkstream=tkstream->next;
+    return mold;
+}
+bool *check_mold(){
+    Mold *mold=find_mold(tkstream);
+    if(mold ==NULL)
+        return false;
+    return true;
+}
+// checkした後に実行すべき
+Mold *consume_mold(){
+    if (tkstream->kind != TK_IDENT ){
+        error_at(tkstream->str,"型名ではありません");
+    }
+    Mold *mold=find_mold(tkstream);
+    tkstream=tkstream->next;
+    return mold;
 }
 
 //トークンが数であればそれを出力し、トークンを一つ進める。

@@ -1,12 +1,26 @@
 #include<stdbool.h>
 
+typedef struct Token Token;
+typedef struct Mold Mold;
+typedef struct LVar LVar;
+typedef struct Rootine Rootine;
+typedef struct Node Node;
+typedef struct BlockNode BlockNode;
+typedef struct BinaryNode BinaryNode;
+typedef struct NumNode NumNode;
+typedef struct CondNode CondNode;
+typedef struct ForNode ForNode;
+typedef struct FuncNode FuncNode;
+typedef struct VarNode VarNode;
+typedef struct RootineNode RootineNode;
+
 typedef enum{
     TK_RESERVED,
     TK_IDENT,
     TK_NUM,
     TK_EOF
 }TokenKind;
-typedef struct Token Token;
+
 struct Token{
     TokenKind kind;
     Token *next;
@@ -36,25 +50,15 @@ Token *expect_var();
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op);
 
+//型名がなければエラーを吐く
+Mold* expect_mold();
+
 //トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_number();
 
 bool at_eof();
 
 Token *tokenize(char *p);
-
-typedef struct LVar LVar;
-struct LVar{
-    LVar *next;//次の変数かNULL
-    char *name;//変数名
-    int len;   //名前の長さ
-    int offset;//RBPからのoffset
-};
-LVar *new_LVar(Token* token);
-extern LVar *locals;
-extern int Lcount;
-
-LVar *find_lvar(Token *token);
 
 
 typedef enum{
@@ -80,15 +84,7 @@ typedef enum{
     ND_DEREF,//'*'
     ND_NUM
 }NodeKind;
-typedef struct Node Node;
-typedef struct BlockNode BlockNode;
-typedef struct BinaryNode BinaryNode;
-typedef struct NumNode NumNode;
-typedef struct CondNode CondNode;
-typedef struct ForNode ForNode;
-typedef struct FuncNode FuncNode;
-typedef struct VarNode VarNode;
-typedef struct RootineNode RootineNode;
+
 
 struct Node{
     NodeKind kind;
@@ -140,8 +136,10 @@ struct RootineNode{
     char* name;
     int namelen;
     int total_offset;
+    char* moldname;
+    int moldlen;
 };
-RootineNode *new_RootineNode(char *name,int len);
+RootineNode *new_RootineNode(char *name,int len,char*moldname,int moldlen);
 struct BlockNode{
     Node base;
     Node *block;
@@ -169,3 +167,42 @@ void gen_lval(Node *node);
 void gen(Node *node);
 
 extern char* pointargReg[6];
+
+//型を管理
+struct Mold{
+    Mold *next;
+    char* name;
+    int len;
+    int size;
+};
+Mold *new_Mold(char* name,int len,int size);
+Mold *find_mold(Token *token);
+bool *check_mold();
+Mold *consume_mold();
+extern Mold *molds;
+
+//変数を管理
+struct LVar{
+    LVar *next;//次の変数かNULL
+    char *name;//変数名
+    int len;   //名前の長さ
+    int offset;//RBPからのoffset、による型のサイズ
+    Mold *mold;
+};
+LVar *new_LVar(Token* token,Mold *mold);
+extern LVar *locals;
+extern int Lcount;
+
+LVar *find_lvar(Token *token);
+LVar *add_lvar(Token *token,Mold *mold);
+LVar *get_lvar(Token *token);
+
+
+//関数を管理
+struct Rootine{
+    Rootine *next;
+    RootineNode *node;
+    char * name;
+    int namelen;
+    Mold *mold;  
+};

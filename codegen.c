@@ -51,11 +51,13 @@ VarNode *new_VarNode(int offset){
     node->base.kind=ND_LVAR;
     node->offset=offset;
 }
-RootineNode *new_RootineNode(char *name,int len){
+RootineNode *new_RootineNode(char *name,int len,char* moldname,int moldlen){
     RootineNode *node=calloc(1,sizeof(RootineNode));
     node->base.kind=ND_ROOTINE;
     node->name=name;
     node->namelen=len;
+    node->moldname=moldname;
+    node->moldlen=moldlen;
     return node;
 }
 BlockNode *new_BlockNode(){
@@ -64,13 +66,15 @@ BlockNode *new_BlockNode(){
     return node;
 }
 
-LVar *new_LVar(Token* token){
+
+LVar *new_LVar(Token* token,Mold *mold){
     LVar *var=calloc(1,sizeof(LVar));
     var->next=locals;
     var->name=token->str;
     var->len=token->len;
+    var->mold=mold;
     var->offset=locals? 
-        locals->offset + 8 
+        locals->offset + mold->size 
         : 8;
     return var;
 }
@@ -95,9 +99,10 @@ void program(){
 }
 Node *rootine(){
     locals=NULL;//ローカル変数をrootineごとにリセット
+    Mold *mold=expect_mold();
     Token *token=expect_ident();
     if(consume("(")){//関数定義
-        RootineNode *node=new_RootineNode(token->str,token->len);
+        RootineNode *node=new_RootineNode(token->str,token->len,mold->name,mold->len);
 
         Node anker;
         anker.next=NULL;
@@ -105,13 +110,13 @@ Node *rootine(){
         while(!consume(")")){
             consume(",");
 
+            mold=expect_mold();
             token=expect_var();
-            LVar *var=new_LVar(token);
+            LVar *var=add_lvar(token,mold);
             locals=var;
 
-            Node *arg=(Node*)new_VarNode(var->offset);
-            top->next=arg;
-            top=arg;
+            top->next=(Node*)new_VarNode(var->offset);
+            top=top->next;
         }
         node->arg=(VarNode*)(anker.next);
         node->block=stmt();
@@ -186,6 +191,12 @@ Node *stmt(){
     return node;
 }
 Node *expr(){
+    if (check_mold()){
+        Mold *mold=consume_mold();
+        Token* token=expect_var();
+        LVar *var=add_lvar(token,mold);
+        return (Node*)new_VarNode(var->offset);
+    }
     return assign();
 }
 Node *assign(){
@@ -288,18 +299,8 @@ Node *primary(){
             return (Node*)node;
         }
         else{//変数の場合
-            VarNode *node=new_VarNode(0);
-
-            LVar *var=find_lvar(token);
-            if(var){
-                node->offset=var->offset;
-                return (Node*)node;
-            }else{
-                var=new_LVar(token);
-                node->offset=var->offset;
-                locals=var;
-            }
-            return (Node*)node;
+            LVar *var=get_lvar(token);
+            return (Node*)new_VarNode(var->offset);
         }
     }
 
