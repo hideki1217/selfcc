@@ -10,6 +10,9 @@ $(OBJS): selfcc.h
 test: selfcc
 		./test.sh
 
+testoftest: test.c
+		gcc -o test test.c  -g
+
 clean: 
 		rm -f selfcc *.o *~ tmp*
 

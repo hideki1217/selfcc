@@ -12,16 +12,11 @@ int main(int argc,char **argv){
     locals=NULL;
     tkstream=tokenize(user_input);
     nullNode=(Node*)new_NumNode(1);
-    pointargReg[0]="rdi";//関数引数の規約
-    pointargReg[1]="rsi";
-    pointargReg[2]="rdx";
-    pointargReg[3]="rcx";
-    pointargReg[4]="r8";
-    pointargReg[5]="r9";
+    
     //プリミティブ型
     types=new_Type("int",3,4);
+    types=new_Type("void",4,8);
 
-    types->next=NULL;
     program();
 
     printf(".Intel_syntax noprefix\n");

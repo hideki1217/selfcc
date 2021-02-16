@@ -202,12 +202,10 @@ int main(){
 assert 5 "
 int main(){
     int x;
-    int y;
-    int z;
+    int *y;
     x=5;
-    y=9;
-    z=&y + 8;
-    return *z;
+    y=&x;
+    return *y;
 }
 "
 
@@ -221,11 +219,23 @@ int main(){
 }
 "
 
+assert 5 "
+int main(){
+    int x;
+    int y;
+    int *z;
+    x=5;
+    y=9;
+    z=&y + 1;
+    return *z;
+}
+"
+
 assert 3 "
 int main(){
     int x;
     int y;
-    *(&y+8)=3;
+    *(&y+1)=3;
     return x;
 }
 "
@@ -238,6 +248,34 @@ int main(){
     y=&x;
     return *y;
 }
+"
+
+assert 1 "
+int main(){
+    int *p;
+    alloc4(&p, 1, 2, 4, 8);
+    return *p;
+}  
+"
+
+assert 4 "
+int main(){
+    int *p;
+    alloc4(&p, 1, 2, 4, 8);
+    return *(p+2);
+}  
+"
+
+assert 8 "
+int main(){
+    int *p;
+    alloc4(&p, 1, 2, 4, 8);
+    int *q;
+    q = p + 2;
+    *q;  
+    q = p + 3;
+    return *q;
+}  
 "
 
 echo OK

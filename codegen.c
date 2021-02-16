@@ -20,6 +20,7 @@ NumNode *new_NumNode(int val){
     NumNode *node=calloc(1,sizeof(NumNode));
     node->base.kind=ND_NUM;
     node->val=val;
+    node->type=find_type_from_name("int");
     return node;
 }
 CondNode *new_CondNode(NodeKind kind,Node *cond,Node *T,Node *F){
@@ -66,24 +67,10 @@ BlockNode *new_BlockNode(){
     return node;
 }
 
-
-LVar *new_LVar(Token* token,Type *type){
-    LVar *var=calloc(1,sizeof(LVar));
-    var->next=locals;
-    var->name=token->str;
-    var->len=token->len;
-    var->type=type;
-    var->offset=locals? 
-        locals->offset + type->size 
-        : 8;
-    return var;
-}
-
 //文法部
 Node *code;
 int Lcount=0;
 Node *nullNode;
-char* pointargReg[6];
 
 void program(){
     int i=0;
@@ -312,23 +299,30 @@ Node *primary(){
 // endregion
 int min(int x,int y){return x>y?y:x;}
 void *copy(char* s, char* str,int len){strncpy(s,str,len);s[len]='\0';}
-void gen_lval(Node *node){
+
+Type *gen_lval(Node *node){
     if(node->kind == ND_LVAR){
+        LVar* var=((VarNode *)node)->var;
         printf("    mov rax, rbp\n");
-        printf("    sub rax, %d\n",((VarNode *)node)->var->offset);
+        printf("    sub rax, %d\n",var->offset);
         printf("    push rax\n");
-        return;
+        return var->type;
     }
     if(node->kind == ND_DEREF){
-        gen(((BinaryNode*)node)->lhs);
-        return;
+        Type *tp=gen(((BinaryNode*)node)->lhs);
+        if(tp->ty==PRIM)
+            error("ポインタ型でない変数を参照できません。");
+        return tp->ptr_to;
     }
-
-    error("代入の左辺値が変数もしくはポインタではありません");
+    Type *tp=gen(node);
+    if (tp->ty==PRIM)
+        error("代入の左辺値が変数もしくはポインタの参照ではありません");
+    return tp;
 }
 
-void gen(Node *node){
+Type *gen(Node *node){
     int lcount;
+    Type *tp;
     switch(node->kind){
     case ND_ROOTINE:
         {
@@ -348,15 +342,15 @@ void gen(Node *node){
                 var;
                 var=(VarNode*)var->base.next,count++)
             {
-                gen_lval((Node*)var);
+                Type *vtp=gen_lval((Node*)var);
                 printf("    pop rax\n");
                 if(count<6)    
-                    printf("    mov [rax], %s\n",pointargReg[count]);
+                    printf("    mov %s [rax], %s\n",sizeoption(vtp),registry_for_arg(vtp,count));
                 else
-                    printf("    mov [rax], [rbp+%d]\n",(count-6)*8+16);//ここ微妙
+                    printf("    mov %s [rax], [rbp+%d]\n",sizeoption(vtp),(count-6)*8+16);//ここ微妙
             }
 
-            gen(rootine->block);
+            tp=gen(rootine->block);
 
             // エピローグ
             // 最後の式の結果がRAXに残っているのでそれが返り値になる
@@ -364,171 +358,248 @@ void gen(Node *node){
             printf("    pop rbp\n");
             printf("    ret\n");
 
-            return;
+            return tp;
         }
     case ND_NUM:
-        printf("    push %d\n",((NumNode *)node)->val);
-        return;
-    case ND_LVAR:
-        gen_lval(node);
-        printf("    pop rax\n");
-        printf("    mov rax, [rax]\n");
-        printf("    push rax\n");
-        return;
-    case ND_ASSIGN:
-        gen_lval(((BinaryNode*)node)->lhs);
-        gen(((BinaryNode*)node)->rhs);
-
-        printf("    pop rdi\n");
-        printf("    pop rax\n");
-        printf("    mov [rax], rdi\n");
-        printf("    push rdi\n");
-
-        return;
-    case ND_RETURN:
-        gen(((BinaryNode*)node)->lhs);
-        //エピローグ
-        printf("    pop rax\n");
-        printf("    mov rsp, rbp\n");
-        printf("    pop rbp\n");
-        printf("    ret\n");
-        return;
-    case ND_IF:
-        lcount=Lcount++;
-        gen(((CondNode*)node)->cond);
-        printf("    pop rax\n");
-        printf("    cmp rax, 0\n");
-        printf("    push rax\n");
-        printf("    je .Lend%d\n",lcount);
-        gen(((CondNode*)node)->T);
-        printf(".Lend%d:\n",lcount);
-        return;
-    case ND_IFEL:
-        lcount=Lcount++;
-        gen(((CondNode*)node)->cond);
-        printf("    pop rax\n");
-        printf("    cmp rax, 0\n");
-        printf("    push rax\n");
-        printf("    je .Lelse%d\n",lcount);
-        gen(((CondNode*)node)->T);
-        printf("    jmp .Lend%d\n",lcount);
-        printf(".Lelse%d:\n",lcount);
-        gen(((CondNode*)node)->F);
-        printf(".Lend%d:\n",lcount);
-        return;
-    case ND_WHILE:
-        lcount=Lcount++;
-        printf(".Lbegin%d:\n",lcount);
-        gen(((CondNode*)node)->cond);
-        printf("    pop rax\n");
-        printf("    cmp rax, 0\n");
-        printf("    push rax\n");
-        printf("    je .Lend%d\n",lcount);
-        gen(((CondNode*)node)->T);
-        printf("    jmp .Lbegin%d\n",lcount);
-        printf(".Lend%d:\n",lcount);
-        return;
-    case ND_FOR:
-        lcount=Lcount++;
-        gen(((ForNode*)node)->init);
-        printf(".Lbegin%d:\n",lcount);
-        gen(((ForNode*)node)->cond);
-        printf("    pop rax\n");
-        printf("    cmp rax, 0\n");
-        printf("    push rax\n");
-        printf("    je .Lend%d\n",lcount);
-        gen(((ForNode*)node)->T);
-        gen(((ForNode*)node)->update);
-        printf("    jmp .Lbegin%d\n",lcount);
-        printf(".Lend%d:\n",lcount);
-        return;
-    case ND_BLOCK:
-        for(Node *elem=((BlockNode*)node)->block;
-            elem;
-            elem=elem->next)
         {
-            gen(elem);
-            printf("    pop rax\n");
+            printf("    push %d\n",((NumNode *)node)->val);
+            return ((NumNode *)node)->type;
         }
-        printf("    push rax\n");
-        return;
+    case ND_LVAR:
+        {
+            tp=gen_lval(node);
+            printf("    pop rax\n");
+            printf("    mov %s, %s [rax]\n",rax(tp),sizeoption(tp));
+            printf("    push rax\n");
+            return tp;
+        }
+    case ND_ASSIGN:
+        {
+            Type *ltp=gen_lval(((BinaryNode*)node)->lhs);
+            Type *rtp=gen(((BinaryNode*)node)->rhs);
+
+            if(!equal(ltp,rtp))
+                error("左辺値と右辺の評価値の型が違います。");
+            printf("    pop rdi\n");
+            printf("    pop rax\n");
+            printf("    mov %s [rax], %s\n",sizeoption(ltp),rdi(ltp));
+            printf("    push rdi\n");
+
+            return ltp;
+        }
+    case ND_RETURN:
+        {
+            tp=gen(((BinaryNode*)node)->lhs);
+            //エピローグ
+            printf("    pop rax\n");
+            printf("    mov rsp, rbp\n");
+            printf("    pop rbp\n");
+            printf("    ret\n");
+            return tp;
+        }
+    case ND_IF:
+        {
+            lcount=Lcount++;
+            gen(((CondNode*)node)->cond);
+            printf("    pop rax\n");
+            printf("    cmp rax, 0\n");
+            printf("    push rax\n");
+            printf("    je .Lend%d\n",lcount);
+            tp=gen(((CondNode*)node)->T);
+            printf(".Lend%d:\n",lcount);
+            return tp;
+        }
+    case ND_IFEL:
+        {
+            lcount=Lcount++;
+            gen(((CondNode*)node)->cond);
+            printf("    pop rax\n");
+            printf("    cmp rax, 0\n");
+            printf("    push rax\n");
+            printf("    je .Lelse%d\n",lcount);
+            Type *ttp=gen(((CondNode*)node)->T);
+            printf("    jmp .Lend%d\n",lcount);
+            printf(".Lelse%d:\n",lcount);
+            Type *ftp=gen(((CondNode*)node)->F);
+            printf(".Lend%d:\n",lcount);
+            return ttp;// TODO: ここの型管理は未完成
+        }
+    case ND_WHILE:
+        {
+            lcount=Lcount++;
+            printf(".Lbegin%d:\n",lcount);
+            gen(((CondNode*)node)->cond);
+            printf("    pop rax\n");
+            printf("    cmp rax, 0\n");
+            printf("    push rax\n");
+            printf("    je .Lend%d\n",lcount);
+            tp=gen(((CondNode*)node)->T);
+            printf("    jmp .Lbegin%d\n",lcount);
+            printf(".Lend%d:\n",lcount);
+            return tp;
+        }
+    case ND_FOR:
+        {
+            lcount=Lcount++;
+            gen(((ForNode*)node)->init);
+            printf(".Lbegin%d:\n",lcount);
+            gen(((ForNode*)node)->cond);
+            printf("    pop rax\n");
+            printf("    cmp rax, 0\n");
+            printf("    push rax\n");
+            printf("    je .Lend%d\n",lcount);
+            gen(((ForNode*)node)->T);
+            Type *tp=gen(((ForNode*)node)->update);
+            printf("    jmp .Lbegin%d\n",lcount);
+            printf(".Lend%d:\n",lcount);
+            return tp;
+        }
+    case ND_BLOCK:
+        {
+            for(Node *elem=((BlockNode*)node)->block;
+                elem;
+                elem=elem->next)
+            {
+                tp=gen(elem);
+                printf("    pop rax\n");
+            }
+            printf("    push rax\n");
+            return tp;
+        }
     case ND_FUNCTION:
         {
             FuncNode* fnode=((FuncNode*)node);
             int argcount=0;
             for(Node *elem=fnode->arg;
+                elem; 
+                elem=elem->next,argcount++);
+            Type *mem[argcount];
+            int i=argcount-1;
+            for(Node *elem=fnode->arg;
                 elem;
-                elem=elem->next,argcount++)
+                elem=elem->next,i--)
             {
-                gen(elem);
+                tp=gen(elem);
+                if(i<6)mem[i]=tp;
             }
             for(int i=0;i<min(6,argcount);i++){
                 printf("    pop rax\n");
-                printf("    mov %s, rax\n",pointargReg[i]);
+                printf("    mov %s, %s\n",registry_for_arg(mem[i],i),rax(mem[i]));
             }
 
             char str[fnode->namelen+1];
             copy(str,fnode->funcname,fnode->namelen);
             printf("    call %s\n",str);
             printf("    push rax\n");
-            return;
+            return find_type_from_name("int");// TODO: とりあえずの案
         }
     case ND_ADDR:
-        gen_lval(((BinaryNode*)node)->lhs);
-        return;
+        {
+            tp=gen_lval(((BinaryNode*)node)->lhs);
+            return new_Pointer(tp);
+        }
     case ND_DEREF:
-        gen_lval(((BinaryNode*)node)->lhs);
-        printf("    pop rax\n");
-        printf("    mov rax, [rax]\n");
-        printf("    mov rax, [rax]\n");
-        printf("    push rax\n");
-        return;
+        {
+            tp=gen(((BinaryNode*)node)->lhs);
+            if(tp->ty==PRIM)
+                error("ポインタ型でない変数を参照できません。");
+            printf("    pop rax\n");
+            printf("    mov %s, %s [rax]\n",rax(tp->ptr_to),sizeoption(tp->ptr_to));
+            printf("    push rax\n");
+            return tp->ptr_to;
+        }
     }
     
-    gen(((BinaryNode*)node)->lhs);
-    gen(((BinaryNode*)node)->rhs);
+    Type *ltp=gen(((BinaryNode*)node)->lhs);
+    Type *rtp=gen(((BinaryNode*)node)->rhs);
 
     printf("    pop rdi\n");
     printf("    pop rax\n");
 
+    Type *type_int=find_type_from_name("int");
+    tp=type_int;
     switch (node->kind)
     {
     case ND_ADD:
+        if(ltp->ty==PTR && rtp->ty==PTR)
+            error("ポインタ型同士の足し算は定義されていません");
+        if(ltp==type_int && rtp->ty==PTR){
+            printf("    imul rax, %d\n",rtp->ptr_to->size);
+            tp=rtp;
+        }
+        if(ltp->ty==PTR && rtp==type_int){
+            printf("    imul rdi, %d\n",ltp->ptr_to->size);
+            tp=ltp;
+        }
         printf("    add rax, rdi\n");
         break;
     case ND_SUB:
+        if(ltp->ty==PTR && rtp->ty==PTR)
+            error("ポインタ型同士の足し算は定義されていません");
+        if(ltp==type_int && rtp->ty==PTR){
+            printf("    imul rax, %d\n",rtp->ptr_to->size);
+            tp=rtp;
+        }
+        if(ltp->ty==PTR && rtp==type_int){
+            printf("    imul rdi, %d\n",ltp->ptr_to->size);
+            tp=ltp;
+        }
         printf("    sub rax, rdi\n");
         break;
     case ND_MUL:
-        printf("    imul rax, rdi\n");
+        if(ltp==type_int && rtp==type_int)
+            printf("    imul rax, rdi\n");
+        else 
+            error("数値型同士以外の掛け算は定義されていません");
+        tp=type_int;
         break;
     case ND_DIV:
-        printf("    cqo\n");
-        printf("    idiv rdi\n");
+        if(ltp==type_int && rtp==type_int){
+            printf("    cqo\n");
+            printf("    idiv rdi\n");
+        }else 
+            error("数値型同士以外の割り算は定義されていません");
+        tp=type_int;
         break;
     case ND_GRT:
-        printf("    cmp rax, rdi\n");
-        printf("    setl al\n");
-        printf("    movzb rax, al\n");
+        if(ltp==type_int && rtp==type_int){
+            printf("    cmp rax, rdi\n");
+            printf("    setl al\n");
+            printf("    movzb rax, al\n");
+        }else
+            error("数値型同士以外の比較演算子は定義されていません");
+        tp=type_int;
         break;
     case ND_GOE:
-        printf("    cmp rax, rdi\n");
-        printf("    setle al\n");
-        printf("    movzb rax, al\n");
+        if(ltp==type_int && rtp==type_int){
+            printf("    cmp rax, rdi\n");
+            printf("    setle al\n");
+            printf("    movzb rax, al\n");
+        }else
+            error("数値型同士以外の比較演算子は定義されていません");
+        tp=type_int;
         break;
     case ND_EQU:
+        if(ltp!=rtp)
+            error("型が違うもの同士を比較することはできません");
         printf("    cmp rax, rdi\n");
         printf("    sete al\n");
         printf("    movzb rax, al\n");
+        tp=type_int;
         break;
     case ND_NEQ:
+        if(ltp!=rtp)
+            error("型が違うもの同士を比較することはできません");
         printf("    cmp rax, rdi\n");
         printf("    setne al\n");
         printf("    movzb rax, al\n");
+        tp=type_int;
         break;
     default:
         break;
     }
 
     printf("    push rax\n");
+
+    return tp;
 }

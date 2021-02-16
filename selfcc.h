@@ -100,6 +100,7 @@ BinaryNode *new_BinaryNode(NodeKind kind,Node *lhs,Node* rhs);
 struct NumNode{
     Node base;
     int val;// for ND_NUM
+    Type *type;
 };
 NumNode *new_NumNode(int val);
 struct CondNode{
@@ -163,10 +164,8 @@ Node *mul();
 Node *unary();
 Node *primary();
 
-void gen_lval(Node *node);
-void gen(Node *node);
-
-extern char* pointargReg[6];
+Type* gen_lval(Node *node);
+Type* gen(Node *node);
 
 //型を管理
 struct Type{
@@ -180,6 +179,8 @@ struct Type{
 Type *new_Type(char* name,int len,int size);
 Type *new_Pointer(Type *type);
 Type *find_type(Token *token);
+Type *find_type_from_name(char* name);
+bool equal(Type *l,Type *r);
 bool check_Type();
 Type *consume_Type();
 extern Type *types;
@@ -209,3 +210,20 @@ struct Rootine{
     int namelen;
     Type *type;  
 };
+
+char* registry_for_arg(Type *tp,int i);
+char* sizeoption(Type *tp);
+char *rax(Type *tp);
+char *rbx(Type *tp);
+char *rcx(Type *tp);
+char *rdx(Type *tp);
+char *rsi(Type *tp);
+char *rdi(Type *tp);
+char *r8(Type *tp);
+char *r9(Type *tp);
+char *r10(Type *tp);
+char *r11(Type *tp);
+char *r12(Type *tp);
+char *r13(Type *tp);
+char *r14(Type *tp);
+
