@@ -211,4 +211,33 @@ int main(){
 }
 "
 
+assert 3 "
+int main(){
+    int x;
+    int *y;
+    y=&x;
+    *y=3;
+    return x;
+}
+"
+
+assert 3 "
+int main(){
+    int x;
+    int y;
+    *(&y+8)=3;
+    return x;
+}
+"
+
+assert 3 "
+int main(){
+    int x;
+    x=3;
+    int *y;
+    y=&x;
+    return *y;
+}
+"
+
 echo OK

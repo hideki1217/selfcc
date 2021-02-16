@@ -46,10 +46,10 @@ FuncNode *new_FuncNode(char *funcname,int namelen){
     node->namelen=namelen;
     return node;
 }
-VarNode *new_VarNode(int offset){
+VarNode *new_VarNode(LVar *var){
     VarNode *node=calloc(1,sizeof(VarNode));
     node->base.kind=ND_LVAR;
-    node->offset=offset;
+    node->var=var;
 }
 RootineNode *new_RootineNode(char *name,int len,char* moldname,int moldlen){
     RootineNode *node=calloc(1,sizeof(RootineNode));
@@ -67,14 +67,14 @@ BlockNode *new_BlockNode(){
 }
 
 
-LVar *new_LVar(Token* token,Mold *mold){
+LVar *new_LVar(Token* token,Type *type){
     LVar *var=calloc(1,sizeof(LVar));
     var->next=locals;
     var->name=token->str;
     var->len=token->len;
-    var->mold=mold;
+    var->type=type;
     var->offset=locals? 
-        locals->offset + mold->size 
+        locals->offset + type->size 
         : 8;
     return var;
 }
@@ -99,10 +99,10 @@ void program(){
 }
 Node *rootine(){
     locals=NULL;//ローカル変数をrootineごとにリセット
-    Mold *mold=expect_mold();
+    Type *type=expect_type();
     Token *token=expect_ident();
     if(consume("(")){//関数定義
-        RootineNode *node=new_RootineNode(token->str,token->len,mold->name,mold->len);
+        RootineNode *node=new_RootineNode(token->str,token->len,type->name,type->len);
 
         Node anker;
         anker.next=NULL;
@@ -110,12 +110,12 @@ Node *rootine(){
         while(!consume(")")){
             consume(",");
 
-            mold=expect_mold();
+            type=expect_type();
             token=expect_var();
-            LVar *var=add_lvar(token,mold);
+            LVar *var=add_lvar(token,type);
             locals=var;
 
-            top->next=(Node*)new_VarNode(var->offset);
+            top->next=(Node*)new_VarNode(var);
             top=top->next;
         }
         node->arg=(VarNode*)(anker.next);
@@ -191,11 +191,11 @@ Node *stmt(){
     return node;
 }
 Node *expr(){
-    if (check_mold()){
-        Mold *mold=consume_mold();
+    if (check_Type()){
+        Type *type=consume_Type();
         Token* token=expect_var();
-        LVar *var=add_lvar(token,mold);
-        return (Node*)new_VarNode(var->offset);
+        LVar *var=add_lvar(token,type);
+        return (Node*)new_VarNode(var);
     }
     return assign();
 }
@@ -288,6 +288,7 @@ Node *primary(){
     if (token){
         if(consume("(")){//関数呼び出しの場合
             FuncNode *node=new_FuncNode(token->str,token->len);
+
             Node *args=NULL;
             while(!consume(")")){
                 consume(",");
@@ -296,11 +297,12 @@ Node *primary(){
                 args=arg;
             }
             node->arg=args;
+
             return (Node*)node;
         }
         else{//変数の場合
             LVar *var=get_lvar(token);
-            return (Node*)new_VarNode(var->offset);
+            return (Node*)new_VarNode(var);
         }
     }
 
@@ -311,11 +313,18 @@ Node *primary(){
 int min(int x,int y){return x>y?y:x;}
 void *copy(char* s, char* str,int len){strncpy(s,str,len);s[len]='\0';}
 void gen_lval(Node *node){
-    if(node->kind != ND_LVAR)
-        error("代入の左辺値が変数ではありません");
-    printf("    mov rax, rbp\n");
-    printf("    sub rax, %d\n",((VarNode *)node)->offset);
-    printf("    push rax\n");
+    if(node->kind == ND_LVAR){
+        printf("    mov rax, rbp\n");
+        printf("    sub rax, %d\n",((VarNode *)node)->var->offset);
+        printf("    push rax\n");
+        return;
+    }
+    if(node->kind == ND_DEREF){
+        gen(((BinaryNode*)node)->lhs);
+        return;
+    }
+
+    error("代入の左辺値が変数もしくはポインタではありません");
 }
 
 void gen(Node *node){

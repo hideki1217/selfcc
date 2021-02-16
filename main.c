@@ -18,13 +18,15 @@ int main(int argc,char **argv){
     pointargReg[3]="rcx";
     pointargReg[4]="r8";
     pointargReg[5]="r9";
-    molds=new_Mold("int",3,8);
-    molds->next=NULL;
+    //プリミティブ型
+    types=new_Type("int",3,4);
+
+    types->next=NULL;
     program();
 
     printf(".Intel_syntax noprefix\n");
     printf(".globl main\n");//TODO:ここの意味を把握
-
+    
     for ( Node *now=code; now ; now=now->next){
         gen(now);
     }

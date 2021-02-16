@@ -1,7 +1,7 @@
 #include<stdbool.h>
 
 typedef struct Token Token;
-typedef struct Mold Mold;
+typedef struct Type Type;
 typedef struct LVar LVar;
 typedef struct Rootine Rootine;
 typedef struct Node Node;
@@ -51,7 +51,7 @@ Token *expect_var();
 void expect(char op);
 
 //型名がなければエラーを吐く
-Mold* expect_mold();
+Type* expect_type();
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_number();
@@ -126,9 +126,9 @@ struct FuncNode{
 FuncNode *new_FuncNode(char *funcname,int namelen);
 struct VarNode{
     Node base;
-    int offset;// for ND_LVAR
+    LVar *var;// for ND_LVAR
 };
-VarNode *new_VarNode(int offset);
+VarNode *new_VarNode(LVar *var);
 struct RootineNode{
     Node base;
     Node *block;
@@ -169,17 +169,20 @@ void gen(Node *node);
 extern char* pointargReg[6];
 
 //型を管理
-struct Mold{
-    Mold *next;
+struct Type{
+    enum{PRIM,PTR}ty;
+    struct Type *ptr_to;
+    Type *next;
     char* name;
     int len;
     int size;
 };
-Mold *new_Mold(char* name,int len,int size);
-Mold *find_mold(Token *token);
-bool *check_mold();
-Mold *consume_mold();
-extern Mold *molds;
+Type *new_Type(char* name,int len,int size);
+Type *new_Pointer(Type *type);
+Type *find_type(Token *token);
+bool check_Type();
+Type *consume_Type();
+extern Type *types;
 
 //変数を管理
 struct LVar{
@@ -187,14 +190,14 @@ struct LVar{
     char *name;//変数名
     int len;   //名前の長さ
     int offset;//RBPからのoffset、による型のサイズ
-    Mold *mold;
+    Type *type;
 };
-LVar *new_LVar(Token* token,Mold *mold);
+LVar *new_LVar(Token* token,Type *type);
 extern LVar *locals;
 extern int Lcount;
 
 LVar *find_lvar(Token *token);
-LVar *add_lvar(Token *token,Mold *mold);
+LVar *add_lvar(Token *token,Type *type);
 LVar *get_lvar(Token *token);
 
 
@@ -204,5 +207,5 @@ struct Rootine{
     RootineNode *node;
     char * name;
     int namelen;
-    Mold *mold;  
+    Type *type;  
 };

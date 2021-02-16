@@ -31,10 +31,10 @@ LVar *find_lvar(Token *token){
     return NULL;
 }
 //なければ作る。あれば二重に定義したことをエラー
-LVar *add_lvar(Token *token,Mold *mold){
+LVar *add_lvar(Token *token,Type *type){
     LVar* res=find_lvar(token);
     if( res==NULL ){
-        res=new_LVar(token,mold);
+        res=new_LVar(token,type);
         locals=res;
         return res;
     }
@@ -50,26 +50,34 @@ LVar *get_lvar(Token *token){
         return res;
 }
 
-Mold *new_Mold(char* name,int len,int size){
-    Mold *mold=calloc(1,sizeof(Mold));
-    mold->name=name;
-    mold->len=len;
-    mold->size=size;
-    return mold;
+Type *new_Type(char* name,int len,int size){
+    Type *type=calloc(1,sizeof(Type));
+    type->ty=PRIM;
+    type->name=name;
+    type->len=len;
+    type->size=size;
+    return type;
 }
-Mold *find_mold(Token *token){
-    for(Mold *mold=molds;
-        mold;
-        mold=mold->next)
+Type *new_Pointer(Type *base){
+    Type *type=calloc(1,sizeof(Type));
+    type->ty=PTR;
+    type->ptr_to=base;
+    type->size=8;
+    return type;
+}
+Type *find_type(Token *token){
+    for(Type *type=types;
+        type;
+        type=type->next)
     {
-        if(mold->len==token->len 
-        && memcmp(mold->name,token->str,mold->len)==0){
-            return mold;
+        if(type->len==token->len 
+        && memcmp(type->name,token->str,type->len)==0){
+            return type;
         }
     }
     return NULL;
 }
-Mold *molds;
+Type *types;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -145,30 +153,36 @@ void expect(char op){
     tkstream=tkstream->next;
 }
 
-Mold *expect_mold(){
+Type *expect_type(){
     if (tkstream->kind != TK_IDENT ){
         error_at(tkstream->str,"型名ではありません");
     }
-    Mold *mold=find_mold(tkstream);
-    if(mold ==NULL)
+    Type *type=find_type(tkstream);
+    if(type ==NULL)
         error_at(tkstream->str,"宣言されていない型です。");
     tkstream=tkstream->next;
-    return mold;
+    while(consume("*")){
+        type=new_Pointer(type);
+    }
+    return type;
 }
-bool *check_mold(){
-    Mold *mold=find_mold(tkstream);
-    if(mold ==NULL)
+bool check_Type(){
+    Type *type=find_type(tkstream);
+    if(type ==NULL)
         return false;
     return true;
 }
 // checkした後に実行すべき
-Mold *consume_mold(){
+Type *consume_Type(){
     if (tkstream->kind != TK_IDENT ){
         error_at(tkstream->str,"型名ではありません");
     }
-    Mold *mold=find_mold(tkstream);
+    Type *type=find_type(tkstream);
     tkstream=tkstream->next;
-    return mold;
+    while(consume("*")){
+        type=new_Pointer(type);
+    }
+    return type;
 }
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
