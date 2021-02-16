@@ -260,6 +260,10 @@ Node *unary(){
         return primary();
     if (consume("-"))
         return (Node*)new_BinaryNode(ND_SUB,(Node*)new_NumNode(0),primary());
+    if(consume("&"))
+        return (Node*)new_BinaryNode(ND_ADDR,unary(),NULL);
+    if(consume("*"))
+        return (Node*)new_BinaryNode(ND_DEREF,unary(),NULL);
     return primary();
 }
 Node *primary(){
@@ -339,7 +343,7 @@ void gen(Node *node){
                 if(count<6)    
                     printf("    mov [rax], %s\n",pointargReg[count]);
                 else
-                    printf("    mov [rax], [rbp+%d]\n",(count-6)*8+16);
+                    printf("    mov [rax], [rbp+%d]\n",(count-6)*8+16);//ここ微妙
             }
 
             gen(rootine->block);
@@ -459,6 +463,16 @@ void gen(Node *node){
             printf("    push rax\n");
             return;
         }
+    case ND_ADDR:
+        gen_lval(((BinaryNode*)node)->lhs);
+        return;
+    case ND_DEREF:
+        gen_lval(((BinaryNode*)node)->lhs);
+        printf("    pop rax\n");
+        printf("    mov rax, [rax]\n");
+        printf("    mov rax, [rax]\n");
+        printf("    push rax\n");
+        return;
     }
     
     gen(((BinaryNode*)node)->lhs);

@@ -76,6 +76,8 @@ typedef enum{
     ND_BLOCK,//ブロック
     ND_FUNCTION,
     ND_ROOTINE,
+    ND_ADDR,//'&'
+    ND_DEREF,//'*'
     ND_NUM
 }NodeKind;
 typedef struct Node Node;

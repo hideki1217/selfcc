@@ -5,7 +5,7 @@ assert() {
     input="$2"
 
     ./selfcc "$input" > tmp.s
-    cc -o tmp tmp.s test.o
+    cc -o tmp tmp.s test.o -g
     ./tmp
     actual="$?"
 
@@ -181,5 +181,14 @@ main(){
 #   return sum(1,1,1,1,1,1,1);
 #}
 #"
+
+assert 5 "
+main(){
+    x=5;
+    y=9;
+    z=&y + 8;
+    return *z;
+}
+"
 
 echo OK
