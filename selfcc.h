@@ -13,6 +13,7 @@ typedef struct ForNode ForNode;
 typedef struct FuncNode FuncNode;
 typedef struct VarNode VarNode;
 typedef struct RootineNode RootineNode;
+typedef struct VarInitNode VarInitNode;
 
 typedef enum{
     TK_RESERVED,
@@ -41,11 +42,15 @@ void error_at(char *loc,char *fmt, ...);
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 bool consume(char *op);
 bool check(char *op);
+//変数値があるか確認
+Token *expect_var_not_proceed();
 
 //identを一つ返し一つ進める
 Token *consume_ident();
 Token *expect_ident();
 Token *expect_var();
+//変数値があるか確認し、進めない
+Token *expect_var_not_proceed();
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op);
@@ -55,6 +60,8 @@ Type* expect_type();
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_number();
+
+bool token_ismutch(Token *token,char* str,int len);
 
 bool at_eof();
 
@@ -83,6 +90,8 @@ typedef enum{
     ND_ADDR,//'&'
     ND_DEREF,//'*'
     ND_SIZEOF,
+    ND_SET,//NDをまとめるもの
+    ND_VARINIT,//変数を初期化
     ND_NUM
 }NodeKind;
 
@@ -148,7 +157,12 @@ struct BlockNode{
     Node *block;
 };
 BlockNode *new_BlockNode();
-
+struct VarInitNode{
+    Node base;
+    LVar *var;
+    Node *value;
+};
+VarInitNode *new_VarInitNode(LVar *var,Node* value);
 
 extern Node *code;
 extern Node *nullNode;
@@ -173,21 +187,25 @@ void gen(Node *node);
 
 //型を管理
 struct Type{
-    enum{PRIM,PTR}ty;
+    enum{PRIM,PTR,ARRAY}ty;
     struct Type *ptr_to;
     Type *next;
     char* name;
     int len;
     int size;
+    int array_len;
 };
 Type *new_Type(char* name,int len,int size);
-Type *new_Pointer(Type *type);
+Type *new_Pointer(Type *base);
+Type *new_Array(Type *base,int length);
 Type *find_type(Token *token);
 Type *find_type_from_name(char* name);
 bool equal(Type *l,Type *r);
 bool check_Type();
+bool isArrayorPtr(Type *type);
 Type *consume_Type();
 extern Type *types;
+
 
 //変数を管理
 struct LVar{
@@ -198,6 +216,7 @@ struct LVar{
     Type *type;
 };
 LVar *new_LVar(Token* token,Type *type);
+int make_memorysize(Type *type);
 extern LVar *locals;
 extern int Lcount;
 

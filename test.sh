@@ -305,4 +305,35 @@ int main(){
 }
 "
 
+assert 5 "
+int main(){
+    int x=5;
+}
+"
+
+assert 3 "
+int main(){
+    int x[3];
+    *x=3;
+}
+"
+
+assert 5 "
+int main(){
+    int x[3];
+    *x=5;
+    return *x;
+}
+"
+
+assert 10 "
+int main(){
+    int x[3];
+    *x=3;
+    *(x+1)=10;
+    *(x+2)=4;
+    return *(x+1);
+}
+"
+
 echo OK
