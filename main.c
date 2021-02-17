@@ -23,6 +23,7 @@ int main(int argc,char **argv){
     printf(".globl main\n");//TODO:ここの意味を把握
     
     for ( Node *now=code; now ; now=now->next){
+        type_assign(now);
         gen(now);
     }
     return 0;

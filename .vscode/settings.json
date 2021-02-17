@@ -13,6 +13,7 @@
         "*.tcc": "c",
         "cstdbool": "c",
         "cstdint": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "collections.h": "c"
     }
 }

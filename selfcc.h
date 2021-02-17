@@ -168,8 +168,8 @@ Node *primary();
 
 Type* type_assign(Node *node);
 
-Type* gen_lval(Node *node);
-Type* gen(Node *node);
+void gen_lval(Node *node);
+void gen(Node *node);
 
 //型を管理
 struct Type{
