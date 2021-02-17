@@ -82,6 +82,7 @@ typedef enum{
     ND_ROOTINE,
     ND_ADDR,//'&'
     ND_DEREF,//'*'
+    ND_SIZEOF,
     ND_NUM
 }NodeKind;
 
@@ -89,6 +90,7 @@ typedef enum{
 struct Node{
     NodeKind kind;
     Node *next;
+    Type *type;
 };
 Node *new_Node(NodeKind kind);
 struct BinaryNode{
@@ -163,6 +165,8 @@ Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
+
+Type* type_assign(Node *node);
 
 Type* gen_lval(Node *node);
 Type* gen(Node *node);

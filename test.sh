@@ -278,4 +278,31 @@ int main(){
 }  
 "
 
+assert 4 "
+int main(){
+    int x;
+    return sizeof(x);
+}
+"
+
+assert 8 "
+int main(){
+    int *y;
+    return sizeof(y);
+}
+"
+
+assert 4 "
+int main(){
+    sizeof(5);
+}
+"
+
+assert 8 "
+int main(){
+    int *y;
+    sizeof(y+4);
+}
+"
+
 echo OK

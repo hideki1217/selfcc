@@ -1,244 +1,298 @@
 #include "selfcc.h"
 
-#include<stdarg.h>
-#include<stdio.h>
 #include<stdlib.h>
-#include<string.h>
-#include<ctype.h>
 
-
-
-Token *tkstream;
-char *user_input;
-LVar *locals;
-
-Token *new_Token(TokenKind kind,Token* cur,char *str,int len){
-    Token *token=calloc(1,sizeof(Token));
-    token->kind=kind;
-    token->str=str;
-    token->len=len;
-    cur->next =token;
-    return token;
+Node *new_Node(NodeKind kind){
+    Node *node=calloc(1,sizeof(Node));
+    node->kind=kind;
+    return node;
+}
+BinaryNode *new_BinaryNode(NodeKind kind,Node *lhs,Node* rhs){
+    BinaryNode *node=calloc(1,sizeof(BinaryNode));
+    node->base.kind=kind;
+    node->lhs=lhs;
+    node->rhs=rhs;
+    return node;
+}
+NumNode *new_NumNode(int val){
+    NumNode *node=calloc(1,sizeof(NumNode));
+    node->base.kind=ND_NUM;
+    node->val=val;
+    node->type=find_type_from_name("int");
+    return node;
+}
+CondNode *new_CondNode(NodeKind kind,Node *cond,Node *T,Node *F){
+    CondNode *node=calloc(1,sizeof(CondNode));
+    node->base.kind=kind;
+    node->cond=cond;
+    node->T=T;
+    node->F=F;
+    return node;
+}
+ForNode *new_ForNode(Node *init,Node *cond,Node *update,Node *T){
+    ForNode *node=calloc(1,sizeof(ForNode));
+    node->base.kind=ND_FOR;
+    node->init=init;
+    node->cond=cond;
+    node->update=update;
+    node->T=T;
+    return node;
+}
+FuncNode *new_FuncNode(char *funcname,int namelen){
+    FuncNode *node=calloc(1,sizeof(FuncNode));
+    node->base.kind=ND_FUNCTION;
+    node->funcname=funcname;
+    node->namelen=namelen;
+    return node;
+}
+VarNode *new_VarNode(LVar *var){
+    VarNode *node=calloc(1,sizeof(VarNode));
+    node->base.kind=ND_LVAR;
+    node->var=var;
+}
+RootineNode *new_RootineNode(char *name,int len,char* moldname,int moldlen){
+    RootineNode *node=calloc(1,sizeof(RootineNode));
+    node->base.kind=ND_ROOTINE;
+    node->name=name;
+    node->namelen=len;
+    node->moldname=moldname;
+    node->moldlen=moldlen;
+    return node;
+}
+BlockNode *new_BlockNode(){
+    BlockNode *node=calloc(1,sizeof(BlockNode));
+    node->base.kind=ND_BLOCK;
+    return node;
 }
 
-// エラーを報告するための関数
-// printfと同じ引数を取る
-void error(char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
-  exit(1);
-}
+//文法部
+Node *code;
+int Lcount=0;
+Node *nullNode;
 
-void error_at(char *loc,char *fmt, ...){
-    va_list ap;
-    va_start(ap,fmt);
-
-    int pos=loc-user_input;
-    fprintf(stderr,"%s\n",user_input);
-    fprintf(stderr,"%*s",pos," ");
-    fprintf(stderr,"^ ");
-    fprintf(stderr,fmt,ap);
-    fprintf(stderr,"\n");
-    exit(1);
-}
-
-//文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
-bool consume(char *op) {
-    if (tkstream->kind != TK_RESERVED ||
-        strlen(op) != tkstream->len ||
-        memcmp(tkstream->str,op,tkstream->len)!=0){
-        return false;
-    }
-    tkstream=tkstream->next;
-    return true;
-}
-
-//次の文字がopかどうかを判定、文字は進めない
-bool check(char *op){
-    return strlen(op) == tkstream->len &&
-        memcmp(tkstream->str,op,tkstream->len)==0;
-}
-
-//変数ならばそれを返して一つ進める
-Token *consume_ident(){
-    if (tkstream->kind != TK_IDENT)
-        return NULL;
-    Token *ident=tkstream;
-    tkstream=tkstream->next;
-    return ident;
-}
-
-Token *expect_ident(){
-    if (tkstream->kind != TK_IDENT)
-        error_at(tkstream->str,"変数もしくは関数ではありません");
-    Token *ident=tkstream;
-    tkstream=tkstream->next;
-    return ident;
-}
-
-Token *expect_var(){
-    if(tkstream->kind!=TK_IDENT && *(tkstream->next->str)!='('){
-        error_at(tkstream->str,"変数ではありません");
-    }
-    Token *ident=tkstream;
-    tkstream=tkstream->next;
-    return ident;
-}
-
-//文字が期待する文字列に当てはまらないならエラーを吐く
-void expect(char op){
-    if (tkstream->kind != TK_RESERVED || tkstream->str[0] != op){
-        error_at(tkstream->str,"\"%c\"ではありません",op);
-    }
-    tkstream=tkstream->next;
-}
-
-Type *expect_type(){
-    if (tkstream->kind != TK_IDENT ){
-        error_at(tkstream->str,"型名ではありません");
-    }
-    Type *type=find_type(tkstream);
-    if(type ==NULL)
-        error_at(tkstream->str,"宣言されていない型です。");
-    tkstream=tkstream->next;
-    while(consume("*")){
-        type=new_Pointer(type);
-    }
-    return type;
-}
-bool check_Type(){
-    Type *type=find_type(tkstream);
-    if(type ==NULL)
-        return false;
-    return true;
-}
-// checkした後に実行すべき
-Type *consume_Type(){
-    if (tkstream->kind != TK_IDENT ){
-        error_at(tkstream->str,"型名ではありません");
-    }
-    Type *type=find_type(tkstream);
-    tkstream=tkstream->next;
-    while(consume("*")){
-        type=new_Pointer(type);
-    }
-    return type;
-}
-
-//トークンが数であればそれを出力し、トークンを一つ進める。
-int expect_number(){
-    if (tkstream ->kind != TK_NUM){
-        error_at(tkstream->str,"数ではありません");
-    }
-    int val=tkstream->val;
-    tkstream= tkstream->next;
-    return val;
-}
-
-bool at_eof() {
-  return tkstream->kind == TK_EOF;
-}
-
-int is_alnum(char c) {
-  return ('a' <= c && c <= 'z') ||
-         ('A' <= c && c <= 'Z') ||
-         ('0' <= c && c <= '9') ||
-         (c == '_');
-}
-
-int is_alp(char c){
-    return ('a' <= c && c <= 'z') ||
-         ('A' <= c && c <= 'Z') ||
-         (c == '_');
-}
-
-
-Token *tokenize(char *p){
-    Token head;
+void program(){
+    int i=0;
+    Node head;
     head.next=NULL;
-    Token *cur=&head;
-    while(*p){
-        if (isspace(*p)){
-            p++;
-            continue;
-        }
-        //制御構文
-        if( memcmp(p,"return",6)==0 && !is_alnum(p[6])) { 
-            cur=new_Token(TK_RESERVED,cur,p,6);
-            p+=6;
-            continue;
-        }
+    Node *node=&head;
+    while(!at_eof()){
+        node->next=rootine();
+        node=node->next;
+    }
+    node->next=NULL;
+    code=head.next;
+}
+Node *rootine(){
+    locals=NULL;//ローカル変数をrootineごとにリセット
+    Type *type=expect_type();
+    Token *token=expect_ident();
+    if(consume("(")){//関数定義
+        RootineNode *node=new_RootineNode(token->str,token->len,type->name,type->len);
 
-        if( memcmp(p,"while",5)==0 && !is_alnum(p[5])){
-            cur=new_Token(TK_RESERVED,cur,p,5);
-            p+=5;
-            continue;
-        }
+        Node anker;
+        anker.next=NULL;
+        Node *top=&anker;
+        while(!consume(")")){
+            consume(",");
 
-        if( memcmp(p,"else",4)==0 && !is_alnum(p[4])){
-            cur=new_Token(TK_RESERVED,cur,p,4);
-            p+=4;
-            continue;
-        }
+            type=expect_type();
+            token=expect_var();
+            LVar *var=add_lvar(token,type);
+            locals=var;
 
-        if( memcmp(p,"for",3)==0 && !is_alnum(p[3])){
-            cur=new_Token(TK_RESERVED,cur,p,3);
-            p+=3;
-            continue;
+            top->next=(Node*)new_VarNode(var);
+            top=top->next;
         }
+        node->arg=(VarNode*)(anker.next);
+        node->block=stmt();
+        if(locals)node->total_offset=locals->offset;
 
-        if( memcmp(p,"if",2)==0 && !is_alnum(p[2])){
-            cur=new_Token(TK_RESERVED,cur,p,2);
-            p+=2;
-            continue;
+        return (Node*)node;
+    }
+    else{//グローバル変数
+    }
+}
+Node *stmt(){
+    if(consume("{")){
+        BlockNode *node=new_BlockNode();
+
+        Node anker;
+        anker.next=NULL;
+        Node *now=&anker;
+        while(!consume("}")){
+            Node *next=stmt();
+            now->next=next;
+            now=next;
         }
+        now->next=NULL;
+        node->block=anker.next;
 
-        //確実に非変数名なもの
-        if( memcmp(p,"!=",2)==0 || memcmp(p,"==",2)==0 
-         || memcmp(p,"<=",2)==0 || memcmp(p,">=",2)==0){
-            cur=new_Token(TK_RESERVED,cur,p,2);
-            p+=2;
-            continue;
+        return (Node*)node; 
+    }
+    if(consume("return")){
+        BinaryNode *node=new_BinaryNode(ND_RETURN,expr(),NULL);
+        expect(';');
+        return (Node*)node;
+    }
+    if(consume("if")){
+        expect('(');
+        Node *condition=expr();
+        expect(')');
+        Node *A=stmt();
+
+        CondNode *node;
+        if(consume("else")){
+            node=new_CondNode(ND_IFEL,condition,A,stmt());
         }
-
-        if( *p == '+' || *p == '-' 
-         || *p == '*' || *p == '/'
-         || *p == '(' || *p == ')'
-         || *p == '>' || *p == '<'
-         || *p == '=' || *p == ';'
-         || *p == '{' || *p == '}'
-         || *p == ',' || *p == '*'
-         || *p == '&'){
-            cur=new_Token(TK_RESERVED,cur,p++,1);
-            continue;
+        else{
+            node=new_CondNode(ND_IF,condition,A,NULL);
         }
+        return (Node*)node;
+    }
+    if(consume("while")){
+        expect('(');
+        Node *condition=expr();
+        expect(')');
+        Node *A=stmt();
 
-        //数字
-        if(isdigit(*p)){
-            char* q=p;
-            cur=new_Token(TK_NUM,cur,p,1);//数字の長さを1で適当に初期化
-            cur->val =strtol(p,&p,10);
-            cur->len=p-q;
-            continue;
+        CondNode *node=new_CondNode(ND_WHILE,condition,A,NULL);
+        return (Node*)node;
+    }
+    if(consume("for")){
+        expect('(');
+        Node *init=check(";")?nullNode:expr();
+        expect(';');
+        Node *cond=check(";")?nullNode:expr();
+        expect(';');
+        Node *update=check(")")?nullNode:expr();
+        expect(')');
+
+        ForNode *node=new_ForNode(init,cond,update,stmt());
+        
+        return (Node*)node;
+    }
+    Node *node=expr();
+    expect(';');
+    return node;
+}
+Node *expr(){
+    if (check_Type()){
+        Type *type=consume_Type();
+        Token* token=expect_var();
+        LVar *var=add_lvar(token,type);
+        return (Node*)new_VarNode(var);
+    }
+    return assign();
+}
+Node *assign(){
+    Node *node=equality();
+    if(consume("=")){
+        node=(Node*)new_BinaryNode(ND_ASSIGN,node,assign());
+    }
+    return node;
+}
+Node *equality(){
+    Node *node=relational();
+
+    while(1){
+        if(consume("==")){
+            node=(Node*)new_BinaryNode(ND_EQU,node,relational());
         }
-
-        //変数名
-        if( is_alp(*p) ){
-            char *q=p;
-            while(1){
-                p++;
-                if( !is_alnum(*p) )
-                    break;
-            }
-            cur=new_Token(TK_IDENT,cur,q,p-q);
-            continue;
+        else if(consume("!=")){
+            node=(Node*)new_BinaryNode(ND_NEQ,node,relational());
         }
+        else
+            return node;
+    }
+}
+Node *relational(){
+    Node *node=add();
 
-        error_at(p,"トークナイズできません");
+    while(1){
+        if(consume(">=")){
+            node=(Node*)new_BinaryNode(ND_GOE,add(),node);
+        }
+        else if(consume("<=")){
+            node=(Node*)new_BinaryNode(ND_GOE,node,add());
+        }
+        else if(consume(">")){
+            node=(Node*)new_BinaryNode(ND_GRT,add(),node);
+        }
+        else if(consume("<")){
+            node=(Node*)new_BinaryNode(ND_GRT,node,add());
+        }
+        else
+            return node;
+    }
+}
+Node *add(){
+    Node *node=mul();
+
+    while(1){
+        if(consume("+")){
+            node=(Node*)new_BinaryNode(ND_ADD,node,mul());
+        }
+        else if(consume("-")){
+            node=(Node*)new_BinaryNode(ND_SUB,node,mul());
+        }
+        else
+            return node;
+    }
+}
+Node *mul(){
+    Node *node=unary();
+
+    while(1){
+        if (consume("*"))
+            node=(Node*)new_BinaryNode(ND_MUL,node,unary());
+        else if (consume("/"))
+            node=(Node*)new_BinaryNode(ND_DIV,node,unary());
+        else
+            return node;
+    }
+}
+Node *unary(){
+    if (consume("+"))
+        return primary();
+    if (consume("-"))
+        return (Node*)new_BinaryNode(ND_SUB,(Node*)new_NumNode(0),primary());
+    if(consume("&"))
+        return (Node*)new_BinaryNode(ND_ADDR,unary(),NULL);
+    if(consume("*"))
+        return (Node*)new_BinaryNode(ND_DEREF,unary(),NULL);
+    if(consume("sizeof")){
+        return (Node*)new_NumNode(type_assign(unary())->size);
+    }
+    return primary();
+}
+Node *primary(){
+    if (consume("(")){
+        Node *node=expr();
+        expect(')');
+        return node;
     }
 
-    new_Token(TK_EOF,cur,p,0);
-    return head.next;
+    Token *token=consume_ident();
+    if (token){
+        if(consume("(")){//関数呼び出しの場合
+            FuncNode *node=new_FuncNode(token->str,token->len);
+
+            Node *args=NULL;
+            while(!consume(")")){
+                consume(",");
+                Node *arg=add();
+                arg->next=args;
+                args=arg;
+            }
+            node->arg=args;
+
+            return (Node*)node;
+        }
+        else{//変数の場合
+            LVar *var=get_lvar(token);
+            return (Node*)new_VarNode(var);
+        }
+    }
+
+    return (Node*)new_NumNode(expect_number());
 }
