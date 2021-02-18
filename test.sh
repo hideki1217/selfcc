@@ -336,4 +336,51 @@ int main(){
 }
 "
 
+assert 3 "
+int main(){
+    int x[3];
+    x[0]=3;
+}
+"
+
+assert 5 "
+int main(){
+    int x[3];
+    x[0]=5;
+    return x[0];
+}
+"
+
+assert 10 "
+int main(){
+    int x[3];
+    x[0]=3;
+    x[1]=10;
+    x[2]=4;
+    return x[1];
+}
+"
+
+assert 3 "
+int main(){
+    int a[2];
+    *a = 1;
+    *(a + 1) = 2;
+    int *p;
+    p = a;
+    return *p + *(p + 1);
+}
+"
+
+assert 10 "
+int main(){
+    int x[3];
+    0[x]=3;
+    x[1]=10;
+    2[x]=4;
+    return x[1];
+}
+"
+
+
 echo OK

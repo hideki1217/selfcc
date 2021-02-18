@@ -55,6 +55,12 @@ bool consume(char *op) {
     tkstream = tkstream->next;
     return true;
 }
+//　強制的に一つトークンを進める(不用意に使うべきではない)
+Token *consume_hard(){
+    Token *tk=tkstream;
+    tkstream=tkstream->next;
+    return tk;
+}
 
 //次の文字がopかどうかを判定、文字は進めない
 bool check(char *op) { return token_ismutch(tkstream, op, strlen(op)); }

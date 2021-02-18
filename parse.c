@@ -90,10 +90,10 @@ void program() {
     code = head.next;
 }
 Node *rootine() {
-    locals = NULL;  //ローカル変数をrootineごとにリセット
+    locals = NULL;  // ローカル変数をrootineごとにリセット
     Type *type = expect_type();
     Token *token = expect_ident();
-    if (consume("(")) {  //関数定義
+    if (consume("(")) {  // 関数定義
         RootineNode *node =
             new_RootineNode(token->str, token->len, type->name, type->len);
 
@@ -276,32 +276,45 @@ Node *unary() {
     return primary();
 }
 Node *primary() {
-    if (consume("(")) {
+    Node *nd;
+
+    if (consume("(")) { // ( expr)の場合
         Node *node = expr();
         expect(')');
-        return node;
-    }
-
-    Token *token = consume_ident();
-    if (token) {
-        if (consume("(")) {  //関数呼び出しの場合
-            FuncNode *node = new_FuncNode(token->str, token->len);
-
-            Node *args = NULL;
-            while (!consume(")")) {
-                consume(",");
-                Node *arg = add();
-                arg->next = args;
-                args = arg;
+        nd = node;
+    } else {
+        Token *tk = consume_hard();
+        switch (tk->kind) {
+            case TK_NUM: {  // 数値の場合
+                nd = (Node *)new_NumNode(tk->val);
+                break;
             }
-            node->arg = args;
-
-            return (Node *)node;
-        } else {  //変数の場合
-            LVar *var = get_lvar(token);
-            return (Node *)new_VarNode(var);
+            case TK_IDENT: {
+                if (consume("(")) {  // 関数の場合
+                    FuncNode *node = new_FuncNode(tk->str, tk->len);
+                    Node *args = NULL;
+                    while (!consume(")")) {
+                        consume(",");
+                        Node *arg = add();
+                        arg->next = args;
+                        args = arg;
+                    }
+                    node->arg = args;
+                    nd = (Node *)node;
+                } else {  // 変数の場合
+                    LVar *var = get_lvar(tk);
+                    nd = (Node *)new_VarNode(var);
+                }
+                break;
+            }
         }
     }
+    if (consume("[")) {  // a[x]の形の時:: a[x] -> *(a+x)
+        Node *index = add();
+        expect(']');
+        nd = (Node *)new_BinaryNode(
+            ND_DEREF, (Node *)new_BinaryNode(ND_ADD, nd, index), NULL);
+    }
 
-    return (Node *)new_NumNode(expect_number());
+    return nd;
 }

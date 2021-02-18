@@ -42,6 +42,8 @@ void error_at(char *loc,char *fmt, ...);
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 bool consume(char *op);
 bool check(char *op);
+
+Token *consume_hard();
 //変数値があるか確認
 Token *expect_var_not_proceed();
 

@@ -59,7 +59,7 @@ int make_memorysize(Type *type) {
     }
 }
 bool equal(Type *l, Type *r) {
-    while (l->ty == PTR && r->ty == PTR) {
+    while (isArrayorPtr(l) && isArrayorPtr(r)) {
         l = l->ptr_to;
         r = r->ptr_to;
     }
@@ -74,7 +74,7 @@ LVar *new_LVar(Token *token, Type *type) {
     var->name = token->str;
     var->len = token->len;
     var->type = type;
-    var->offset = locals ? locals->offset + make_memorysize(type) : type->size;
+    var->offset = locals ? locals->offset + make_memorysize(type) : make_memorysize(type);
     return var;
 }
 //宣言済み変数一覧に存在するか確認

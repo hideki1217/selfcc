@@ -400,6 +400,9 @@ void gen(Node *node) {
     Node *lhs = ((BinaryNode *)node)->lhs;
     Node *rhs = ((BinaryNode *)node)->rhs;
 
+    Type *ltp = lhs->type;
+    Type *rtp = rhs->type;
+
     gen(lhs);
     gen(rhs);
 
@@ -410,19 +413,19 @@ void gen(Node *node) {
 
     switch (node->kind) {
         case ND_ADD:
-            if (lhs->type == type_int && rhs->type->ty == PTR) {
+            if (ltp == type_int && isArrayorPtr(rtp)) {
                 printf("    imul rax, %d\n", rhs->type->ptr_to->size);
             }
-            if (lhs->type->ty == PTR && rhs->type == type_int) {
+            if (isArrayorPtr(ltp) && rtp == type_int) {
                 printf("    imul rdi, %d\n", lhs->type->ptr_to->size);
             }
             printf("    add rax, rdi\n");
             break;
         case ND_SUB:
-            if (lhs->type == type_int && rhs->type->ty == PTR) {
+            if (ltp == type_int && isArrayorPtr(rtp)) {
                 printf("    imul rax, %d\n", rhs->type->ptr_to->size);
             }
-            if (lhs->type->ty == PTR && rhs->type == type_int) {
+            if (isArrayorPtr(ltp) && rtp == type_int) {
                 printf("    imul rdi, %d\n", lhs->type->ptr_to->size);
             }
             printf("    sub rax, rdi\n");
