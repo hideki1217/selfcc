@@ -1,4 +1,5 @@
 #include<stdbool.h>
+#include"collections.h"
 
 typedef struct Token Token;
 typedef struct Type Type;
