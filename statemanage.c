@@ -5,10 +5,8 @@
 
 #include "selfcc.h"
 #include"collections.h"
+#include "utility.h"
 
-int max(int x,int y){
-    return x>y? x:y;
-}
 
 ///////////////////////型
 Type *new_Type(char *name, int len, int size) {
@@ -73,37 +71,6 @@ bool equal(Type *l, Type *r) {
 }
 bool isArrayorPtr(Type *type) { return type->ty == PTR || type->ty == ARRAY; }
 
-//////////////////////変数
-LVar *new_LVar(Token *token, Type *type) {
-    LVar *var = calloc(1, sizeof(LVar));
-    var->name = token->str;
-    var->len = token->len;
-    var->type = type;
-    var->offset = cc_map_for_var_empty(locals) ? make_memorysize(type) : locals->offset + make_memorysize(type);
-    return var;
-}
-//宣言済み変数一覧に存在するか確認
-LVar *find_lvar(Token *token) {
-    return (LVar*)cc_map_for_var_search(locals,token->str,token->len);
-}
-//なければ作る。あれば二重に定義したことをエラー
-LVar *add_lvar(Token *token, Type *type) {
-    LVar *res = find_lvar(token);
-    if (res == NULL) {
-        res = new_LVar(token, type);
-        cc_map_for_var_add(locals,res->name,res->len,res);
-        return res;
-    } else
-        error_at(token->str, "同名の変数が既に定義されています");
-}
-//宣言済み変数一覧になければエラー
-LVar *get_lvar(Token *token) {
-    LVar *res = find_lvar(token);
-    if (res == NULL)
-        error_at(token->str, "宣言されていない変数です。");
-    else
-        return res;
-}
 
 /////////////////////データ構造
 
@@ -120,7 +87,6 @@ void cc_map_for_var_clear(CC_Map_for_LVar* map){
     cc_avltree_Clear((CC_AVLTree*)map);
 }
 void cc_map_for_var_add(CC_Map_for_LVar *map,char*key,int key_len,LVar* item){
-    map->offset=max(item->offset,map->offset);
     cc_avltree_Add((CC_AVLTree*)map,key,key_len,(void*)item); 
 }
 void* cc_map_for_var_search(CC_Map_for_LVar *map,char* key,int key_len){

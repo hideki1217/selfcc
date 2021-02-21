@@ -4,12 +4,7 @@
 #include <string.h>
 
 #include "selfcc.h"
-
-int min(int x, int y) { return x > y ? y : x; }
-void *copy(char *s, char *str, int len) {
-    strncpy(s, str, len);
-    s[len] = '\0';
-}
+#include "utility.h"
 
 Type *type_assign(Node *node) {
     Type *tp;
@@ -36,7 +31,8 @@ Type *type_assign(Node *node) {
             tp = ((NumNode *)node)->type;
             break;
         }
-        case ND_LVAR: {
+        case ND_LVAR: 
+        case ND_GVAR:{
             tp = ((VarNode *)node)->var->type;
             break;
         }
@@ -122,7 +118,8 @@ Type *type_assign(Node *node) {
 
             break;
         }
-        case ND_VARINIT: {
+        case ND_LVARINIT:
+        case ND_GVARINIT: {
             VarInitNode *inode = (VarInitNode *)node;
             tp = inode->var->type;
             break;
@@ -184,9 +181,17 @@ Type *type_assign(Node *node) {
 
 void gen_lval(Node *node) {
     if (node->kind == ND_LVAR) {
-        LVar *var = ((VarNode *)node)->var;
+        LVar *var = (LVar*)((VarNode *)node)->var;
         printf("    mov rax, rbp\n");
         printf("    sub rax, %d\n", var->offset);
+        printf("    push rax\n");
+        return;
+    }
+    if(node->kind == ND_GVAR){
+        Var *var=((VarNode *)node)->var;
+        char s[var->len+1];
+        string_limitedcopy(s,var->name,var->len);
+        printf("    lea rax, %s[rip]\n",s);
         printf("    push rax\n");
         return;
     }
@@ -204,7 +209,7 @@ void gen(Node *node) {
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
             char name[rootine->namelen + 1];
-            copy(name, rootine->name, rootine->namelen);
+            string_limitedcopy(name, rootine->name, rootine->namelen);
             printf("%s:\n", name);
             // プロローグ
             // local変数分の領域を確保　
@@ -242,7 +247,8 @@ void gen(Node *node) {
             printf("    push %d\n", ((NumNode *)node)->val);
             return;
         }
-        case ND_LVAR: {
+        case ND_LVAR:
+        case ND_GVAR: {
             gen_lval(node);
             printf("    pop rax\n");
             printf("    mov %s, %s [rax]\n", rax(node->type),
@@ -348,7 +354,7 @@ void gen(Node *node) {
             }
 
             char str[fnode->namelen + 1];
-            copy(str, fnode->funcname, fnode->namelen);
+            string_limitedcopy(str, fnode->funcname, fnode->namelen);
             printf("    call %s\n", str);
             printf("    push rax\n");
             return;
@@ -376,10 +382,10 @@ void gen(Node *node) {
 
             return;
         }
-        case ND_VARINIT: {
+        case ND_LVARINIT: {
             VarInitNode *inode = (VarInitNode *)node;
-            LVar *var = inode->var;
-            if (var->type->ty == ARRAY) {
+            LVar *var = (LVar*)inode->var;
+            if (var->base.type->ty == ARRAY) {
                 printf("    mov rax, rbp\n");
                 printf("    sub rax, %d\n", var->offset);
                 printf("    mov rdi, rax\n");
@@ -392,6 +398,19 @@ void gen(Node *node) {
             } else {
                 error(
                     "現状普通の変数の場合は元の構文を使うよ。");  // TODO:　ここを消すかどうか考えるべし
+            }
+            return;
+        }
+        case ND_GVARINIT:{
+            VarInitNode *inode=(VarInitNode*)node;
+            Var *var = inode->var;
+            if(inode->value){
+                // グローバル変数の初期化についてはここに書くべし
+            }
+            else{
+                char s[var->len+1];
+                string_limitedcopy(s,var->name,var->len);
+                printf("    .comm %s,%d\n",s,var->type->size);
             }
             return;
         }

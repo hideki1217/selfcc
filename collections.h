@@ -28,6 +28,7 @@ struct CC_AVLTree{
     CC_AVLTreeNode *root;
 };
 CC_AVLTree *cc_avltree_new();
+void cc_avltree_Delete(CC_AVLTree* tree);
 void cc_avltree_Clear(CC_AVLTree *tree);
 void cc_avltree_Add(CC_AVLTree *tree,char *key,int key_len,void* item);
 void *cc_avltree_Search(CC_AVLTree *tree,char *key,int key_len);

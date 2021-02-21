@@ -11,7 +11,7 @@ test: selfcc
 		./test.sh
 
 testoftest: test.c
-		gcc -o test test.c collections.c avltree.c -g
+		gcc -o test test.c collections.c avltree.c utility.c -g
 
 clean: 
 		rm -f selfcc *.o *~ tmp*

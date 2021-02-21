@@ -47,34 +47,9 @@ struct aho* new_aho(int a,int b){
     hoge->b=b;
     return hoge;  
 }
-
 /*
+int x;
 int main(){
-    CC_AVLTree *tree=cc_avltree_new();
-    char *s_1="x_1";
-    void *item_1=new_aho(1,2);
-
-    char*s_2="x_2";
-    void*item_2=new_aho(3,4);
-
-    char*s_3="x_3";
-    void *item_3=new_aho(5,6);
-
-    char*s_4="x_4";
-    void *item_4=new_aho(7,8);
-
-    print(compare_string(s_1,3,s_2,3));
-    print(compare_string(s_2,3,s_3,3));
-    print(compare_string(s_3,3,s_4,4));
-    print(compare_string(s_2,3,s_2,3));
-
-    cc_avltree_Add(tree,s_1,3,item_1);
-    cc_avltree_Add(tree,s_2,3,item_2);
-    cc_avltree_Add(tree,s_3,3,item_3);
-    cc_avltree_Add(tree,s_4,3,item_4);
-
-    print(((struct aho*)cc_avltree_Search(tree,s_1,3))->a);
-    print(((struct aho*)cc_avltree_Search(tree,s_2,3))->a);
-    print(((struct aho*)cc_avltree_Search(tree,s_3,3))->a);
-    print(((struct aho*)cc_avltree_Search(tree,s_4,3))->a);
+    x=6;
+    return x;
 }*/

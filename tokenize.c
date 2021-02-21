@@ -9,6 +9,7 @@
 Token *tkstream;
 char *user_input;
 CC_Map_for_LVar *locals;
+CC_AVLTree* globals;
 
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     Token *token = calloc(1, sizeof(Token));

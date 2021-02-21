@@ -4,9 +4,15 @@
 #include"collections.h"
 
 typedef struct Token Token;
+
 typedef struct Type Type;
+
+typedef struct Var Var;
 typedef struct LVar LVar;
+typedef struct GVar GVar;
+
 typedef struct Rootine Rootine;
+
 typedef struct Node Node;
 typedef struct BlockNode BlockNode;
 typedef struct BinaryNode BinaryNode;
@@ -85,7 +91,8 @@ typedef enum{
     ND_GRT,//"<"
     ND_GOE,//"<="
     ND_ASSIGN,//"="
-    ND_LVAR,//変数
+    ND_LVAR,//ローカル変数
+    ND_GVAR,//グローバル変数
     ND_RETURN,
     ND_IF,
     ND_IFEL,
@@ -98,7 +105,8 @@ typedef enum{
     ND_DEREF,//'*'
     ND_SIZEOF,
     ND_SET,//NDをまとめるもの
-    ND_VARINIT,//変数を初期化
+    ND_LVARINIT,//ローカル変数を初期化
+    ND_GVARINIT,//グローバル変数を初期化
     ND_NUM
 }NodeKind;
 
@@ -145,9 +153,9 @@ struct FuncNode{
 FuncNode *new_FuncNode(char *funcname,int namelen);
 struct VarNode{
     Node base;
-    LVar *var;// for ND_LVAR
+    Var *var;// for ND_VAR
 };
-VarNode *new_VarNode(LVar *var);
+VarNode *new_VarNode(Var *var);
 struct RootineNode{
     Node base;
     Node *block;
@@ -166,10 +174,10 @@ struct BlockNode{
 BlockNode *new_BlockNode();
 struct VarInitNode{
     Node base;
-    LVar *var;
+    Var *var;
     Node *value;
 };
-VarInitNode *new_VarInitNode(LVar *var,Node* value);
+VarInitNode *new_VarInitNode(Var *var,Node* value);
 
 extern Node *code;
 extern Node *nullNode;
@@ -219,17 +227,25 @@ extern Type *types;
 
 
 //変数を管理
-//ローカル変数
-struct LVar{
-    char *name;//変数名
-    int len;   //名前の長さ
-    int offset;//RBPからのoffset、による型のサイズ
+typedef enum {
+    LOCAL,
+    GLOBAL
+}Var_kind;
+struct Var{
+    Var_kind kind;
+    char* name;
+    int len;
     Type *type;
 };
-LVar *new_LVar(Token* token,Type *type);
-LVar *find_lvar(Token *token);
+Var *find_Var(Token *token);
+Var *get_Var(Token *token);
+
+//ローカル変数
+struct LVar{
+    Var base;
+    int offset;//RBPからのoffset、による型のサイズ
+};
 LVar *add_lvar(Token *token,Type *type);
-LVar *get_lvar(Token *token);
 
 extern CC_Map_for_LVar *locals;
 extern int Lcount;
@@ -247,11 +263,9 @@ bool cc_map_for_var_empty(CC_Map_for_LVar* map);
 
 //グローバル変数
 struct GVar{
-    char *name;//変数名
-    int len;   //名前の長さ
-    int offset;//RBPからのoffset、による型のサイズ
-    Type *type;
+    Var base;
 };
+GVar *add_gvar(Token *token,Type *type);
 extern CC_AVLTree *globals;
 
 //関数を管理

@@ -4,31 +4,19 @@
 
 #include "collections.h"
 
+
+/////////////////////////////////AVLNODE
 #define CC_AVLTREE_MAX_HEIGHT 100
 #define CC_AVLTREE_TREE_LEFT 1
 #define CC_AVLTREE_TREE_RIGHT 2
 
-CC_AVLTree *cc_avltree_new(){
-    CC_AVLTree *tree=calloc(1,sizeof(CC_AVLTree));
-    tree->root=NULL;
-    return tree;
+void cc_avltree_delete(CC_AVLTreeNode* node){
+    if(node){
+        cc_avltree_delete(node->left);
+        cc_avltree_delete(node->right);
+        free(node);
+    }
 }
-void cc_avltree_Clear(CC_AVLTree *tree){
-    cc_avltree_clear(tree->root);
-    tree->root=NULL;
-}
-void cc_avltree_Add(CC_AVLTree *tree,char *key,int key_len,void* item){
-    tree->root=cc_avltree_add(tree->root,key,key_len,item);
-}
-void *cc_avltree_Search(CC_AVLTree *tree,char *key,int key_len){
-    CC_AVLTreeNode *node=cc_avltree_search(tree->root,key,key_len);
-    if(node)return node->item;
-    return NULL;
-}
-void cc_avltree_DeleteNode(CC_AVLTree *tree,char *key,int key_len){
-    tree->root=cc_avltree_deleteNode(tree->root,key,key_len);
-}
-
 /* cc_avltree_getHeight:二分探索木のノード全てを削除する
    引数１ node : 根ノードのアドレス
    返却値 : nodeを根とした木の高さ */
@@ -536,4 +524,31 @@ CC_AVLTreeNode *cc_avltree_deleteNode(CC_AVLTreeNode *root, char* key,int key_le
     }
 
     return cc_avltree_balancing(root, root, NULL, 0, branch, num_branch);
+}
+
+//////////////////////////AVLTree 
+
+CC_AVLTree *cc_avltree_new(){
+    CC_AVLTree *tree=calloc(1,sizeof(CC_AVLTree));
+    tree->root=NULL;
+    return tree;
+}
+void cc_avltree_Delete(CC_AVLTree* tree){
+    cc_avltree_delete(tree->root);
+    free(tree);
+}
+void cc_avltree_Clear(CC_AVLTree *tree){
+    cc_avltree_clear(tree->root);
+    tree->root=NULL;
+}
+void cc_avltree_Add(CC_AVLTree *tree,char *key,int key_len,void* item){
+    tree->root=cc_avltree_add(tree->root,key,key_len,item);
+}
+void *cc_avltree_Search(CC_AVLTree *tree,char *key,int key_len){
+    CC_AVLTreeNode *node=cc_avltree_search(tree->root,key,key_len);
+    if(node)return node->item;
+    return NULL;
+}
+void cc_avltree_DeleteNode(CC_AVLTree *tree,char *key,int key_len){
+    tree->root=cc_avltree_deleteNode(tree->root,key,key_len);
 }

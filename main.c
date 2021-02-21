@@ -10,6 +10,7 @@ int main(int argc,char **argv){
     // Grobal変数に値をセット
     user_input=argv[1];
     locals=cc_map_for_var_new();
+    globals=cc_avltree_new();
     tkstream=tokenize(user_input);
     nullNode=(Node*)new_NumNode(1);
     

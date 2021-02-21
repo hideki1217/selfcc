@@ -2,12 +2,8 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include "utility.h"
 
-void swap(void **a, void **b) {
-    void *c = *a;
-    *a = *b;
-    *b = c;
-}
 
 
 CC_HeapNode *new_cc_heapnode(char *key, int key_len, void *item,
@@ -85,20 +81,7 @@ void cc_heap_pop(CC_Heap *heap) {
 }
 bool cc_heap_empty(CC_Heap *heap) { return heap->root == NULL; }
 
-// a>b -> 負数, a<b -> 正数, a=b -> 0
-int compare_string(const char *a, int a_len, const char *b, int b_len) {
-    int a_i = 0, b_i = 0;
-    a_len--;
-    b_len--;
-    while (a[a_i] == b[b_i]) {
-        if (a_i == a_len && b_i < b_len) return -1;
-        if (a_i < a_len && b_i == b_len) return 1;
-        if (a_i == a_len && b_i == b_len) return 0;
-        a_i++;
-        b_i++;
-    }
-    return (a[a_i] - b[b_i]);
-}
+
 
 bool cc_queue_new(CC_Queue *table) {
     table = calloc(1, sizeof(CC_Queue));

@@ -382,5 +382,26 @@ int main(){
 }
 "
 
+assert 5 "
+int x;
+int main(){
+    x=5;
+    return x;
+}
+"
+
+assert 5 "
+int x;
+int *y;
+int main(){
+    x=5;
+    y=&x;
+    return *y;
+}
+"
+
+
+
+
 
 echo OK

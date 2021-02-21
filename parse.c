@@ -45,9 +45,12 @@ FuncNode *new_FuncNode(char *funcname, int namelen) {
     node->namelen = namelen;
     return node;
 }
-VarNode *new_VarNode(LVar *var) {
+VarNode *new_VarNode(Var *var) {
     VarNode *node = calloc(1, sizeof(VarNode));
-    node->base.kind = ND_LVAR;
+    if (var->kind == LOCAL)
+        node->base.kind = ND_LVAR;
+    else
+        node->base.kind = ND_GVAR;
     node->var = var;
 }
 RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen) {
@@ -64,9 +67,12 @@ BlockNode *new_BlockNode() {
     node->base.kind = ND_BLOCK;
     return node;
 }
-VarInitNode *new_VarInitNode(LVar *var, Node *value) {
+VarInitNode *new_VarInitNode(Var *var, Node *value) {
     VarInitNode *node = calloc(1, sizeof(VarInitNode));
-    node->base.kind = ND_VARINIT;
+    if(var->kind==LOCAL)
+        node->base.kind = ND_LVARINIT;
+    else 
+        node->base.kind=ND_GVARINIT;
     node->var = var;
     node->value = value;
     return node;
@@ -90,7 +96,9 @@ void program() {
     code = head.next;
 }
 Node *rootine() {
-    cc_map_for_var_clear(locals);  // ローカル変数をrootineごとにリセット // TODO: heapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
+    cc_map_for_var_clear(
+        locals);  // ローカル変数をrootineごとにリセット 
+                  // TODO:heapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
     Type *type = expect_type();
     Token *token = expect_ident();
     if (consume("(")) {  // 関数定義
@@ -106,9 +114,9 @@ Node *rootine() {
             type = expect_type();
             token = expect_var();
             LVar *var = add_lvar(token, type);
-            cc_map_for_var_add(locals,var->name,var->len,var);
+            cc_map_for_var_add(locals, var->base.name, var->base.len, var);
 
-            top->next = (Node *)new_VarNode(var);
+            top->next = (Node *)new_VarNode((Var *)var);
             top = top->next;
         }
         node->arg = (VarNode *)(anker.next);
@@ -117,6 +125,13 @@ Node *rootine() {
 
         return (Node *)node;
     } else {  //グローバル変数
+        GVar *var=add_gvar(token,type);
+        Node *value=NULL;
+        if(consume("=")){
+            error_at(token->str,"グローバル変数の初期化は未対応です");// TODO: グローバル変数の初期化未対応
+        }
+        expect(';');
+        return (Node*)new_VarInitNode((Var*)var,value);
     }
 }
 Node *stmt() {
@@ -195,7 +210,7 @@ Node *expr() {
             LVar *var = add_lvar(tk, type);
 
             return (Node *)new_VarInitNode(
-                var,
+                (Var*)var,
                 NULL);  // TODO:　配列初期化じの初期値を受けるならNULLを解除
         } else {  //配列でない場合
             LVar *var = add_lvar(tk, type);
@@ -278,7 +293,7 @@ Node *unary() {
 Node *primary() {
     Node *nd;
 
-    if (consume("(")) { // ( expr)の場合
+    if (consume("(")) {  // ( expr)の場合
         Node *node = expr();
         expect(')');
         nd = node;
@@ -302,7 +317,7 @@ Node *primary() {
                     node->arg = args;
                     nd = (Node *)node;
                 } else {  // 変数の場合
-                    LVar *var = get_lvar(tk);
+                    Var *var = get_Var(tk);
                     nd = (Node *)new_VarNode(var);
                 }
                 break;
