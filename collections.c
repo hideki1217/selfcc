@@ -3,30 +3,38 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+void swap(void **a, void **b) {
+    void *c = *a;
+    *a = *b;
+    *b = c;
+}
 
-CC_HeapNode* new_cc_heapnode(char* key,int key_len,void* item,CC_HeapNode* lt,CC_HeapNode* rt,int s){
-    CC_HeapNode *node=calloc(1,sizeof(CC_HeapNode));
-    node->key=key;
-    node->key_len=key_len;
-    node->item=item;
-    node->l=lt;
-    node->r=rt;
-    node->s=s;
+
+CC_HeapNode *new_cc_heapnode(char *key, int key_len, void *item,
+                             CC_HeapNode *lt, CC_HeapNode *rt, int s) {
+    CC_HeapNode *node = calloc(1, sizeof(CC_HeapNode));
+    node->key = key;
+    node->key_len = key_len;
+    node->item = item;
+    node->l = lt;
+    node->r = rt;
+    node->s = s;
     return node;
 }
-void cc_heapnode_delete(CC_HeapNode* node){
+void cc_heapnode_delete(CC_HeapNode *node) {
+    if (node == NULL) return;
     cc_heapnode_delete(node->l);
     cc_heapnode_delete(node->r);
     free(node);
 }
-CC_HeapNode* cc_heapnode_meld(CC_HeapNode *a, CC_HeapNode *b){
+CC_HeapNode *cc_heapnode_meld(CC_HeapNode *a, CC_HeapNode *b) {
     if (a == NULL) return b;
     if (b == NULL) return a;
-    if (!compare_string(a->key,a->key_len, b->key,b->key_len)) swap(a, b);
+    if (compare_string(a->key, a->key_len, b->key, b->key_len) > 0) swap((void**)&a,(void**)&b);
     if (a->l == NULL)
         a->l = b;
     else {
-        a->r = meld(a->r, b);
+        a->r = cc_heapnode_meld(a->r, b);
         if (a->l->s < a->r->s) {
             swapChildren(a);
         }
@@ -34,66 +42,63 @@ CC_HeapNode* cc_heapnode_meld(CC_HeapNode *a, CC_HeapNode *b){
     }
     return a;
 }
-void* cc_heapnode_find(CC_HeapNode *node,char *key,int key_len){
-    if(node==NULL)return NULL;
-    int result=compare_string(node->key,node->key_len,key,key_len);
-    if(result==0)return node->item;
-    else if(result>0)return cc_heapnode_find(node->l,key,key_len);
-    else return cc_heapnode_find(node->r,key,key_len);
-}
-void swapChildren(CC_HeapNode *h){
+void swapChildren(CC_HeapNode *h) {
     CC_HeapNode *tmp = h->l;
     h->l = h->r;
     h->r = tmp;
 }
 
-CC_Heap* new_cc_heap(){
-    CC_Heap *heap=calloc(1,sizeof(CC_Heap));
-    heap->root=NULL;
+CC_Heap *new_cc_heap() {
+    CC_Heap *heap = calloc(1, sizeof(CC_Heap));
+    heap->root = NULL;
 }
-void cc_heap_delete(CC_Heap* heap){
-    cc_heapnode_delete(heap->l);
-    cc_heapnode_delete(heap->r);
-    free(heap->root);
+void cc_heap_delete(CC_Heap *heap) {
+    if (heap->root != NULL) {
+        cc_heapnode_delete(heap->root->l);
+        cc_heapnode_delete(heap->root->r);
+        free(heap->root);
+    }
     free(heap);
 }
-void cc_heap_push(CC_Heap *heap,char*key,int key_len,void* item){
-    heap->root = meld(new_cc_heapnode(key,key_len,item,NULL,NULL,0), heap->root);
+void cc_heap_clear(CC_Heap *heap) {
+    if (heap->root != NULL) {
+        cc_heapnode_delete(heap->root->l);
+        cc_heapnode_delete(heap->root->r);
+        free(heap->root);
+    }
+    heap->root = NULL;
 }
-void cc_heap_meld(CC_Heap* l,CC_Heap *r){
+void cc_heap_push(CC_Heap *heap, char *key, int key_len, void *item) {
+    heap->root = cc_heapnode_meld(
+        new_cc_heapnode(key, key_len, item, NULL, NULL, 0), heap->root);
+}
+void cc_heap_meld(CC_Heap *l, CC_Heap *r) {
     if (r == l) return;
-    l->root = meld(l->root, r->root);
+    l->root = cc_heapnode_meld(l->root, r->root);
     r->root = NULL;
 }
-void* cc_heap_top(CC_Heap* heap){
-    return heap->root->item;
-}
-void* cc_heap_find(CC_Heap *heap,char *key,int key_len){
-    return cc_heapnode_find(heap->root,key,key_len);
-}
-void cc_heap_pop(CC_Heap* heap){
+void *cc_heap_top(CC_Heap *heap) { return heap->root->item; }
+void cc_heap_pop(CC_Heap *heap) {
     CC_HeapNode *oldroot = heap->root;
-    heap->root = meld(heap->root->l, heap->root->r);
+    heap->root = cc_heapnode_meld(heap->root->l, heap->root->r);
     free(oldroot);
 }
-bool cc_heap_empty(CC_Heap* heap){
-    return heap->root == NULL;
-}
+bool cc_heap_empty(CC_Heap *heap) { return heap->root == NULL; }
 
 // a>b -> 負数, a<b -> 正数, a=b -> 0
-int compare_string(const char* a,int a_len,const char* b,int b_len){
-    int a_i=0,b_i=0;
-    while(a[a_i]==b[b_i]){
+int compare_string(const char *a, int a_len, const char *b, int b_len) {
+    int a_i = 0, b_i = 0;
+    a_len--;
+    b_len--;
+    while (a[a_i] == b[b_i]) {
+        if (a_i == a_len && b_i < b_len) return -1;
+        if (a_i < a_len && b_i == b_len) return 1;
+        if (a_i == a_len && b_i == b_len) return 0;
         a_i++;
         b_i++;
-        if(a_i==a_len&&b_i!=b_len)return 1;
-        if(a_i!=a_len&&b_i==b_len)return -1;
-        if(a_i==a_len&&b_i==b_len)return 0;   
     }
-    return (*a-*b);
+    return (a[a_i] - b[b_i]);
 }
-
-
 
 bool cc_queue_new(CC_Queue *table) {
     table = calloc(1, sizeof(CC_Queue));

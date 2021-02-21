@@ -1,3 +1,5 @@
+#pragma once
+
 #include<stdbool.h>
 
 typedef struct CC_QueueNode CC_QueueNode;
@@ -7,6 +9,31 @@ typedef struct CC_LimitedQueue CC_LimitedQueue;
 
 typedef struct CC_HeapNode CC_HeapNode;
 typedef struct CC_Heap CC_Heap;
+
+typedef struct CC_AVLTreeNode CC_AVLTreeNode;
+typedef struct CC_AVLTree CC_AVLTree;
+
+struct CC_AVLTreeNode{
+    char* key;
+    int len;
+    void *item;
+    CC_AVLTreeNode *left;
+    CC_AVLTreeNode *right;
+};
+void cc_avltree_clear(CC_AVLTreeNode *root);
+CC_AVLTreeNode *cc_avltree_add(CC_AVLTreeNode *root,char *key,int key_len,void* item);
+CC_AVLTreeNode *cc_avltree_search(CC_AVLTreeNode *root,char *key,int key_len);
+CC_AVLTreeNode *cc_avltree_deleteNode(CC_AVLTreeNode *root,char *key,int key_len);
+struct CC_AVLTree{
+    CC_AVLTreeNode *root;
+};
+CC_AVLTree *cc_avltree_new();
+void cc_avltree_Clear(CC_AVLTree *tree);
+void cc_avltree_Add(CC_AVLTree *tree,char *key,int key_len,void* item);
+void *cc_avltree_Search(CC_AVLTree *tree,char *key,int key_len);
+void cc_avltree_DeleteNode(CC_AVLTree *tree,char *key,int key_len);
+
+
 
 struct CC_QueueNode{
     CC_QueueNode *back;
@@ -51,15 +78,15 @@ void swapChildren(CC_HeapNode *h);
 
 struct CC_Heap {
     CC_HeapNode *root;
-    CC_HeapNode *l, *r;
 };
 CC_Heap* new_cc_heap();
 void cc_heap_delete(CC_Heap* heap);
+void cc_heap_clear(CC_Heap* heap);
 void cc_heap_push(CC_Heap *heap,char*key,int key_len,void* item);
 void cc_heap_meld(CC_Heap* r,CC_Heap *l);
 void* cc_heap_top(CC_Heap* heap); 
 void cc_heap_pop(CC_Heap* heap);
-bool cc_heap_empty(CC_Heap* heap)
+bool cc_heap_empty(CC_Heap* heap);
 
 int compare_string(const char* a,int a_len,const char* b,int b_len);
 

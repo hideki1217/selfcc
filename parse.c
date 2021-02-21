@@ -90,7 +90,7 @@ void program() {
     code = head.next;
 }
 Node *rootine() {
-    locals = NULL;  // ローカル変数をrootineごとにリセット
+    cc_map_for_var_clear(locals);  // ローカル変数をrootineごとにリセット // TODO: heapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
     Type *type = expect_type();
     Token *token = expect_ident();
     if (consume("(")) {  // 関数定義
@@ -106,14 +106,14 @@ Node *rootine() {
             type = expect_type();
             token = expect_var();
             LVar *var = add_lvar(token, type);
-            locals = var;
+            cc_map_for_var_add(locals,var->name,var->len,var);
 
             top->next = (Node *)new_VarNode(var);
             top = top->next;
         }
         node->arg = (VarNode *)(anker.next);
         node->block = stmt();
-        if (locals) node->total_offset = locals->offset;
+        node->total_offset = locals->offset;
 
         return (Node *)node;
     } else {  //グローバル変数

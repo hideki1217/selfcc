@@ -1,3 +1,5 @@
+#pragma once
+
 #include<stdbool.h>
 #include"collections.h"
 
@@ -15,6 +17,8 @@ typedef struct FuncNode FuncNode;
 typedef struct VarNode VarNode;
 typedef struct RootineNode RootineNode;
 typedef struct VarInitNode VarInitNode;
+
+typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
 typedef enum{
     TK_RESERVED,
@@ -188,6 +192,7 @@ Type* type_assign(Node *node);
 void gen_lval(Node *node);
 void gen(Node *node);
 
+
 //型を管理
 struct Type{
     enum{PRIM,PTR,ARRAY}ty;
@@ -198,6 +203,7 @@ struct Type{
     int size;
     int array_len;
 };
+
 Type *new_Type(char* name,int len,int size);
 Type *new_Pointer(Type *base);
 Type *new_Array(Type *base,int length);
@@ -207,26 +213,46 @@ bool equal(Type *l,Type *r);
 bool check_Type();
 bool isArrayorPtr(Type *type);
 Type *consume_Type();
+int make_memorysize(Type *type);
+
 extern Type *types;
 
 
 //変数を管理
+//ローカル変数
 struct LVar{
-    LVar *next;//次の変数かNULL
     char *name;//変数名
     int len;   //名前の長さ
     int offset;//RBPからのoffset、による型のサイズ
     Type *type;
 };
 LVar *new_LVar(Token* token,Type *type);
-int make_memorysize(Type *type);
-extern LVar *locals;
-extern int Lcount;
-
 LVar *find_lvar(Token *token);
 LVar *add_lvar(Token *token,Type *type);
 LVar *get_lvar(Token *token);
 
+extern CC_Map_for_LVar *locals;
+extern int Lcount;
+
+struct CC_Map_for_LVar {
+    CC_AVLTree base;
+    int offset;
+};
+CC_Map_for_LVar* cc_map_for_var_new();
+void cc_map_for_var_delete(CC_Map_for_LVar* map);
+void cc_map_for_var_clear(CC_Map_for_LVar* map);
+void cc_map_for_var_add(CC_Map_for_LVar *map,char*key,int key_len,LVar* item);
+void* cc_map_for_var_search(CC_Map_for_LVar *map,char* key,int key_len);
+bool cc_map_for_var_empty(CC_Map_for_LVar* map);
+
+//グローバル変数
+struct GVar{
+    char *name;//変数名
+    int len;   //名前の長さ
+    int offset;//RBPからのoffset、による型のサイズ
+    Type *type;
+};
+extern CC_AVLTree *globals;
 
 //関数を管理
 struct Rootine{

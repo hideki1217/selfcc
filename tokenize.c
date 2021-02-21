@@ -8,7 +8,7 @@
 
 Token *tkstream;
 char *user_input;
-LVar *locals;
+CC_Map_for_LVar *locals;
 
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     Token *token = calloc(1, sizeof(Token));
@@ -82,7 +82,7 @@ Token *expect_ident() {
 }
 
 Token *expect_var() {
-    if (tkstream->kind != TK_IDENT && *(tkstream->next->str) != '(') {
+    if (tkstream->kind != TK_IDENT || *(tkstream->next->str) == '(') {
         error_at(tkstream->str, "変数ではありません");
     }
     Token *ident = tkstream;
@@ -90,7 +90,7 @@ Token *expect_var() {
     return ident;
 }
 Token *expect_var_not_proceed() {
-    if (tkstream->kind != TK_IDENT && *(tkstream->next->str) != '(') {
+    if (tkstream->kind != TK_IDENT || *(tkstream->next->str) == '(') {
         error_at(tkstream->str, "変数ではありません");
     }
     Token *ident = tkstream;
