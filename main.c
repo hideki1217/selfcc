@@ -12,11 +12,11 @@ int main(int argc,char **argv){
     locals=cc_map_for_var_new();
     globals=cc_avltree_new();
     tkstream=tokenize(user_input);
-    nullNode=(Node*)new_NumNode(1);
     
-    //プリミティブ型
-    types=new_Type("int",3,4);
-    types=new_Type("void",4,8);
+    type_tree=cc_avltree_new();
+    Initialize_type_tree();
+
+    nullNode=(Node*)new_NumNode(1);
 
     program();
 

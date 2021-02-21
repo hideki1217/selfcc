@@ -212,7 +212,7 @@ struct Type{
     int array_len;
 };
 
-Type *new_Type(char* name,int len,int size);
+Type *new_PrimType(char* name,int len,int size);
 Type *new_Pointer(Type *base);
 Type *new_Array(Type *base,int length);
 Type *find_type(Token *token);
@@ -224,6 +224,9 @@ Type *consume_Type();
 int make_memorysize(Type *type);
 
 extern Type *types;
+
+extern CC_AVLTree *type_tree;
+void Initialize_type_tree();
 
 
 //変数を管理

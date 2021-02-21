@@ -138,8 +138,7 @@ Type *type_assign(Node *node) {
                     if (isArrayorPtr(ltp) && rtp == type_int) tp = ltp;
                     break;
                 case ND_SUB:
-                    if (isArrayorPtr(ltp) && isArrayorPtr(rtp))
-                        error("ポインタ型同士のひき算は定義されていません");
+                    if (isArrayorPtr(ltp) && isArrayorPtr(rtp))tp = type_int;
                     if (ltp == type_int && isArrayorPtr(rtp)) tp = rtp;
                     if (isArrayorPtr(ltp) && rtp == type_int) tp = ltp;
                     break;
@@ -250,6 +249,7 @@ void gen(Node *node) {
         case ND_LVAR:
         case ND_GVAR: {
             gen_lval(node);
+            if(((VarNode*)node)->var->type->ty ==ARRAY)return;// 配列型はPOINTERみたいにしてあげる
             printf("    pop rax\n");
             printf("    mov %s, %s [rax]\n", rax(node->type),
                    sizeoption(node->type));
@@ -386,12 +386,7 @@ void gen(Node *node) {
             VarInitNode *inode = (VarInitNode *)node;
             LVar *var = (LVar*)inode->var;
             if (var->base.type->ty == ARRAY) {
-                printf("    mov rax, rbp\n");
-                printf("    sub rax, %d\n", var->offset);
-                printf("    mov rdi, rax\n");
-                printf("    add rdi, 8\n");
-                printf("    mov QWORD PTR [rax], rdi\n");
-                printf("    push 0\n");
+                printf("    push rax\n");
                 if (inode->value) {
                     // TODO: 配列の宣言時初期化について書くならここ
                 }
