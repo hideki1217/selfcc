@@ -22,6 +22,52 @@ char *registry_for_arg(Type *tp, int i) {
             exit(1);
     }
 }
+// 符号拡張しない
+char *movzx2rax(Type *tp){
+    switch(tp->size){
+        case 1:
+        case 2:
+            return "movzx eax";
+        case 4:
+            return "mov eax";
+        default:
+            return "mov rax";
+    }
+}
+char *movsx2rax(Type *tp){
+    switch(tp->size){
+        case 1:
+        case 2:
+            return "movsx eax";
+        case 4:
+            return "mov eax";
+        default:
+            return "mov rax";
+    }
+}
+
+
+
+char *movsx(Type *tp){
+    switch(tp->size){
+        case 2:
+        case 1:
+            return "movsx";
+        default:
+            return "mov";
+    }
+}
+
+char *movzx(Type *tp){
+    switch(tp->size){
+        case 2:
+        case 1:
+            return "movzx";
+        default:
+            return "mov";
+    }
+}
+
 
 char *rax(Type *tp) {
     switch (tp->size) {

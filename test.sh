@@ -410,6 +410,17 @@ int main(){
 }
 "
 
+assert 4 "
+char a[3];
+void asrt(int x){
+    a[0]=x;
+}
+int main(){
+    asrt(4);
+    return a[0];
+}
+"
+
 
 
 

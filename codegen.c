@@ -31,8 +31,8 @@ Type *type_assign(Node *node) {
             tp = ((NumNode *)node)->type;
             break;
         }
-        case ND_LVAR: 
-        case ND_GVAR:{
+        case ND_LVAR:
+        case ND_GVAR: {
             tp = ((VarNode *)node)->var->type;
             break;
         }
@@ -40,7 +40,8 @@ Type *type_assign(Node *node) {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
-            if (!equal(ltp, rtp)) error("左辺値と右辺の評価値の型が違います。");
+            if (!isAssignable(ltp, rtp))
+                error("右辺値の型が左辺値に代入できない型です。");
             tp = ltp;
             break;
         }
@@ -106,7 +107,8 @@ Type *type_assign(Node *node) {
         }
         case ND_DEREF: {
             tp = type_assign(((BinaryNode *)node)->lhs);
-            if (tp->ty == PRIM) error("ポインタ型でない変数を参照できません。");
+            if (!isArrayorPtr(tp))
+                error("ポインタ型Likeでない変数を参照できません。");
             tp = tp->ptr_to;
             break;
         }
@@ -138,7 +140,7 @@ Type *type_assign(Node *node) {
                     if (isArrayorPtr(ltp) && rtp == type_int) tp = ltp;
                     break;
                 case ND_SUB:
-                    if (isArrayorPtr(ltp) && isArrayorPtr(rtp))tp = type_int;
+                    if (isArrayorPtr(ltp) && isArrayorPtr(rtp)) tp = type_int;
                     if (ltp == type_int && isArrayorPtr(rtp)) tp = rtp;
                     if (isArrayorPtr(ltp) && rtp == type_int) tp = ltp;
                     break;
@@ -180,17 +182,17 @@ Type *type_assign(Node *node) {
 
 void gen_lval(Node *node) {
     if (node->kind == ND_LVAR) {
-        LVar *var = (LVar*)((VarNode *)node)->var;
+        LVar *var = (LVar *)((VarNode *)node)->var;
         printf("    mov rax, rbp\n");
         printf("    sub rax, %d\n", var->offset);
         printf("    push rax\n");
         return;
     }
-    if(node->kind == ND_GVAR){
-        Var *var=((VarNode *)node)->var;
-        char s[var->len+1];
-        string_limitedcopy(s,var->name,var->len);
-        printf("    lea rax, %s[rip]\n",s);
+    if (node->kind == ND_GVAR) {
+        Var *var = ((VarNode *)node)->var;
+        char s[var->len + 1];
+        string_limitedcopy(s, var->name, var->len);
+        printf("    lea rax, %s[rip]\n", s);
         printf("    push rax\n");
         return;
     }
@@ -223,8 +225,7 @@ void gen(Node *node) {
                 gen_lval((Node *)var);
                 printf("    pop rax\n");
                 if (count < 6)
-                    printf("    mov %s [rax], %s\n",
-                           sizeoption(((Node *)var)->type),
+                    printf("    mov [rax], %s\n",
                            registry_for_arg(((Node *)var)->type, count));
                 else
                     printf("    mov %s [rax], [rbp+%d]\n",
@@ -249,10 +250,12 @@ void gen(Node *node) {
         case ND_LVAR:
         case ND_GVAR: {
             gen_lval(node);
-            if(((VarNode*)node)->var->type->ty ==ARRAY)return;// 配列型はPOINTERみたいにしてあげる
+            if (((VarNode *)node)->var->type->kind == TY_ARRAY)
+                return;  // 配列型はPOINTERみたいにしてあげる
             printf("    pop rax\n");
-            printf("    mov %s, %s [rax]\n", rax(node->type),
-                   sizeoption(node->type));
+            printf("    %s, %s [rax]\n",
+                    movzx2rax(node->type), //符号拡張なしになっている 
+                    sizeoption(node->type));
             printf("    push rax\n");
             return;
         }
@@ -263,8 +266,8 @@ void gen(Node *node) {
 
             printf("    pop rdi\n");
             printf("    pop rax\n");
-            printf("    mov %s [rax], %s\n", sizeoption(bi->lhs->type),
-                   rdi(bi->rhs->type));
+            printf("    mov [rax], %s\n",
+                    rdi(bi->rhs->type));
             printf("    push rdi\n");
 
             return;
@@ -349,8 +352,9 @@ void gen(Node *node) {
             }
             for (int i = 0; i < min(6, argcount); i++) {
                 printf("    pop rax\n");
-                printf("    mov %s, %s\n", registry_for_arg(mem[i], i),
-                       rax(mem[i]));
+                printf("    mov %s, %s\n", 
+                        registry_for_arg(mem[i], i),
+                        rax(mem[i]));
             }
 
             char str[fnode->namelen + 1];
@@ -367,8 +371,9 @@ void gen(Node *node) {
             BinaryNode *bi = (BinaryNode *)node;
             gen(bi->lhs);
             printf("    pop rax\n");
-            printf("    mov %s, %s [rax]\n", rax(bi->lhs->type->ptr_to),
-                   sizeoption(bi->lhs->type->ptr_to));
+            printf("    %s, %s [rax]\n",
+                    movzx2rax(bi->lhs->type->ptr_to),// 符号拡張なしになっている
+                    sizeoption(bi->lhs->type->ptr_to));
             printf("    push rax\n");
             return;
         }
@@ -384,8 +389,8 @@ void gen(Node *node) {
         }
         case ND_LVARINIT: {
             VarInitNode *inode = (VarInitNode *)node;
-            LVar *var = (LVar*)inode->var;
-            if (var->base.type->ty == ARRAY) {
+            LVar *var = (LVar *)inode->var;
+            if (var->base.type->kind == TY_ARRAY) {
                 printf("    push rax\n");
                 if (inode->value) {
                     // TODO: 配列の宣言時初期化について書くならここ
@@ -396,16 +401,15 @@ void gen(Node *node) {
             }
             return;
         }
-        case ND_GVARINIT:{
-            VarInitNode *inode=(VarInitNode*)node;
+        case ND_GVARINIT: {
+            VarInitNode *inode = (VarInitNode *)node;
             Var *var = inode->var;
-            if(inode->value){
+            if (inode->value) {
                 // グローバル変数の初期化についてはここに書くべし
-            }
-            else{
-                char s[var->len+1];
-                string_limitedcopy(s,var->name,var->len);
-                printf("    .comm %s,%d\n",s,var->type->size);
+            } else {
+                char s[var->len + 1];
+                string_limitedcopy(s, var->name, var->len);
+                printf("    .comm %s,%d\n", s, var->type->size);
             }
             return;
         }

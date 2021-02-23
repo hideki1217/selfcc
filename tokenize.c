@@ -9,7 +9,7 @@
 Token *tkstream;
 char *user_input;
 CC_Map_for_LVar *locals;
-CC_AVLTree* globals;
+CC_AVLTree *globals;
 
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     Token *token = calloc(1, sizeof(Token));
@@ -57,9 +57,9 @@ bool consume(char *op) {
     return true;
 }
 //　強制的に一つトークンを進める(不用意に使うべきではない)
-Token *consume_hard(){
-    Token *tk=tkstream;
-    tkstream=tkstream->next;
+Token *consume_hard() {
+    Token *tk = tkstream;
+    tkstream = tkstream->next;
     return tk;
 }
 

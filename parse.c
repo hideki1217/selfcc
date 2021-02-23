@@ -125,6 +125,11 @@ Node *rootine() {
 
         return (Node *)node;
     } else {  //グローバル変数
+        if(consume("[")){
+            int size=expect_number();
+            expect(']');
+            type=new_Array(type,size);
+        }
         GVar *var=add_gvar(token,type);
         Node *value=NULL;
         if(consume("=")){
