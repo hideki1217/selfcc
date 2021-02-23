@@ -82,6 +82,13 @@ Token *expect_ident() {
     return ident;
 }
 
+Token *consume_string(){
+    if(tkstream->kind != TK_STRING)return NULL;
+    Token *str=tkstream;
+    tkstream=tkstream->next;
+    return str;
+}
+
 Token *expect_var() {
     if (tkstream->kind != TK_IDENT || *(tkstream->next->str) == '(') {
         error_at(tkstream->str, "変数ではありません");
@@ -166,6 +173,18 @@ Token *tokenize(char *p) {
             p++;
             continue;
         }
+
+        if (*p == '"'){
+            char *q=p;
+            while(*p == '"'){ // TODO:ダブルクオートの読み方をエスケープ文字に対応すべし
+                p++;
+            }
+            p++;
+            
+            cur = new_Token(TK_STRING,cur,q, p-q); 
+            continue;
+        }
+
         //制御構文
         if (memcmp(p, "return", 6) == 0 && !is_alnum(p[6])) {
             cur = new_Token(TK_RESERVED, cur, p, 6);

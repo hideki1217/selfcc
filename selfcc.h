@@ -18,6 +18,7 @@ typedef struct Node Node;
 typedef struct BlockNode BlockNode;
 typedef struct BinaryNode BinaryNode;
 typedef struct NumNode NumNode;
+typedef struct StrNode StrNode;
 typedef struct CondNode CondNode;
 typedef struct ForNode ForNode;
 typedef struct FuncNode FuncNode;
@@ -27,7 +28,12 @@ typedef struct VarInitNode VarInitNode;
 
 typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
-typedef enum { TK_RESERVED, TK_IDENT, TK_NUM, TK_EOF } TokenKind;
+
+extern int Lcount;// if,for,whileのjmp先を命名するために使用
+extern int LCcount;// string 等のconst値を指定するために使用
+
+
+typedef enum { TK_RESERVED, TK_STRING, TK_IDENT, TK_NUM, TK_EOF } TokenKind;
 
 struct Token {
     TokenKind kind;
@@ -53,6 +59,8 @@ bool check(char *op);
 Token *consume_hard();
 //変数値があるか確認
 Token *expect_var_not_proceed();
+
+Token *consume_string();
 
 // identを一つ返し一つ進める
 Token *consume_ident();
@@ -102,7 +110,8 @@ typedef enum {
     ND_SET,       // NDをまとめるもの
     ND_LVARINIT,  //ローカル変数を初期化
     ND_GVARINIT,  //グローバル変数を初期化
-    ND_NUM
+    ND_NUM,
+    ND_STR
 } NodeKind;
 
 struct Node {
@@ -123,6 +132,13 @@ struct NumNode {
     Type *type;
 };
 NumNode *new_NumNode(int val);
+struct StrNode{
+    Node base;
+    int str_id;// 文字列識別用ID
+    char *str;
+    int len;
+};
+StrNode *new_StrNode(char* str,int len);
 struct CondNode {
     Node base;
     Node *T;
@@ -255,7 +271,6 @@ struct LVar {
 LVar *add_lvar(Token *token, Type *type);
 
 extern CC_Map_for_LVar *locals;
-extern int Lcount;
 
 struct CC_Map_for_LVar {
     CC_AVLTree base;

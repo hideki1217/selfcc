@@ -21,6 +21,15 @@ NumNode *new_NumNode(int val) {
     node->type = find_type_from_name("int");
     return node;
 }
+StrNode *new_StrNode(char* str,int len){
+    StrNode *nd=calloc(1,sizeof(StrNode));
+    nd->str_id=LCcount++;
+    nd->str=str;
+    nd->len=len;
+    nd->base.kind=ND_STR;
+    nd->base.type=new_Pointer(find_type_from_name("char"));
+    return nd;
+}
 CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F) {
     CondNode *node = calloc(1, sizeof(CondNode));
     node->base.kind = kind;
@@ -69,10 +78,10 @@ BlockNode *new_BlockNode() {
 }
 VarInitNode *new_VarInitNode(Var *var, Node *value) {
     VarInitNode *node = calloc(1, sizeof(VarInitNode));
-    if(var->kind==LOCAL)
+    if (var->kind == LOCAL)
         node->base.kind = ND_LVARINIT;
-    else 
-        node->base.kind=ND_GVARINIT;
+    else
+        node->base.kind = ND_GVARINIT;
     node->var = var;
     node->value = value;
     return node;
@@ -97,8 +106,8 @@ void program() {
 }
 Node *rootine() {
     cc_map_for_var_clear(
-        locals);  // ローカル変数をrootineごとにリセット 
-                  // TODO:heapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
+        locals);  // ローカル変数をrootineごとにリセット
+                  // TODO:mapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
     Type *type = expect_type();
     Token *token = expect_ident();
     if (consume("(")) {  // 関数定義
@@ -125,18 +134,21 @@ Node *rootine() {
 
         return (Node *)node;
     } else {  //グローバル変数
-        if(consume("[")){
-            int size=expect_number();
+        if (consume("[")) {
+            int size = expect_number();
             expect(']');
-            type=new_Array(type,size);
+            type = new_Array(type, size);
         }
-        GVar *var=add_gvar(token,type);
-        Node *value=NULL;
-        if(consume("=")){
-            error_at(token->str,"グローバル変数の初期化は未対応です");// TODO: グローバル変数の初期化未対応
+        GVar *var = add_gvar(token, type);
+        Node *value = NULL;
+        if (consume("=")) {
+            error_at(
+                token->str,
+                "グローバル変数の初期化は未対応です");  // TODO:
+                                                        // グローバル変数の初期化未対応
         }
         expect(';');
-        return (Node*)new_VarInitNode((Var*)var,value);
+        return (Node *)new_VarInitNode((Var *)var, value);
     }
 }
 Node *stmt() {
@@ -215,7 +227,7 @@ Node *expr() {
             LVar *var = add_lvar(tk, type);
 
             return (Node *)new_VarInitNode(
-                (Var*)var,
+                (Var *)var,
                 NULL);  // TODO:　配列初期化じの初期値を受けるならNULLを解除
         } else {  //配列でない場合
             LVar *var = add_lvar(tk, type);
@@ -308,6 +320,9 @@ Node *primary() {
             case TK_NUM: {  // 数値の場合
                 nd = (Node *)new_NumNode(tk->val);
                 break;
+            }
+            case TK_STRING:{
+                // TODO: 要実装
             }
             case TK_IDENT: {
                 if (consume("(")) {  // 関数の場合
