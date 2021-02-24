@@ -32,11 +32,15 @@ typedef struct VarInitNode VarInitNode;
 typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
 
-extern int Lcount;// if,for,whileのjmp先を命名するために使用
-extern int LCcount;// string 等のconst値を指定するために使用 これをさわるのはCVarのみ
+
+
 
 extern Token *tkstream;
 extern char *user_input;
+extern char *filename;
+
+extern int Lcount;// if,for,whileのjmp先を命名するために使用
+extern int LCcount;// string 等のconst値を指定するために使用 これをさわるのはCVarのみ
 
 extern Node *code;
 extern Node *nullNode;

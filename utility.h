@@ -1,5 +1,7 @@
 #pragma once
 
+char *read_file(char *path);
+
 int max(int x,int y);
 int min(int x,int y);
 

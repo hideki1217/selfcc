@@ -435,6 +435,25 @@ int main(){
 }
 "
 
+assert 6 "
+int main(){
+    int x;
+    x=6;
+    //x=9;
+    return x;
+}
+"
+assert 6 "
+int main(){
+    int x;
+    x=6;
+    /*x=9;
+    x++;
+    */
+    return x;
+}
+"
+
 
 
 

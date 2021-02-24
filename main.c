@@ -9,7 +9,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     // Grobal変数に値をセット
-    user_input = argv[1];
+    user_input = argv[1];// read_file(argv[1]);
+    filename = "";// path_filename(argv[1]);
     locals = cc_map_for_var_new();
     globals = cc_avltree_new();
     tkstream = tokenize(user_input);

@@ -8,6 +8,7 @@
 
 Token *tkstream;
 char *user_input;
+char *filename;
 CC_Map_for_LVar *locals;
 CC_AVLTree *globals;
 CC_Vector *constants;
@@ -19,29 +20,6 @@ Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     token->len = len;
     cur->next = token;
     return token;
-}
-
-// エラーを報告するための関数
-// printfと同じ引数を取る
-void error(char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    exit(1);
-}
-
-void error_at(char *loc, char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-
-    int pos = loc - user_input;
-    fprintf(stderr, "%s\n", user_input);
-    fprintf(stderr, "%*s", pos, " ");
-    fprintf(stderr, "^ ");
-    fprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    exit(1);
 }
 
 bool token_ismutch(Token *token, char *str, int len) {
@@ -83,10 +61,10 @@ Token *expect_ident() {
     return ident;
 }
 
-Token *consume_string(){
-    if(tkstream->kind != TK_STRING)return NULL;
-    Token *str=tkstream;
-    tkstream=tkstream->next;
+Token *consume_string() {
+    if (tkstream->kind != TK_STRING) return NULL;
+    Token *str = tkstream;
+    tkstream = tkstream->next;
     return str;
 }
 
@@ -174,15 +152,29 @@ Token *tokenize(char *p) {
             p++;
             continue;
         }
+        if (strncmp(p, "/*", 2) == 0) {
+            char *q=strstr(p+2,"*/");
+            if(!q)
+                error_at(p,"コメントが閉じられていません");
+            p=q+2;
+            continue;
+        }
+        if (strncmp(p, "//", 2) == 0) {
+            p+=2;
+            while (*p != '\n') p++;
+            continue;
+        }
 
-        if (*p == '"'){
-            char *q=++p;
-            while(*p != '"'){ // TODO:ダブルクオートの読み方をエスケープ文字に対応すべし
+        if (*p == '"') {
+            char *q = ++p;
+            while (
+                *p !=
+                '"') {  // TODO:ダブルクオートの読み方をエスケープ文字に対応すべし
                 p++;
             }
 
-            cur = new_Token(TK_STRING,cur,q, p-q);
-            p++;// 最後の「"」を消費する 
+            cur = new_Token(TK_STRING, cur, q, p - q);
+            p++;  // 最後の「"」を消費する
             continue;
         }
 
