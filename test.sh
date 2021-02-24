@@ -17,6 +17,12 @@ assert() {
     fi
 }
 
+./selfcc "./test/test.c" > ./test/tmp.s
+cc -o ./test/tmp ./test/tmp.s ./test/fortest.o -g
+./test/tmp
+
+<< COMMENTOUT
+
 assert 0 "int main(){0;}"
 assert 42 "int main(){42;}"
 
@@ -454,7 +460,6 @@ int main(){
 }
 "
 
-
-
-
 echo OK
+
+COMMENTOUT

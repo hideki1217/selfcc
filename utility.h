@@ -11,3 +11,5 @@ void swap(void **a,void **b);
 void string_limitedcopy(char *s, char *str, int len);
 
 int compare_string(const char *a, int a_len, const char *b, int b_len);
+
+char *path_filename(char *path);

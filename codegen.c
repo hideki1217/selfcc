@@ -365,6 +365,9 @@ void gen(Node *node) {
                         rax(mem[i]));
             }
 
+            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は 0 
+            printf("    mov al, 0\n"); 
+
             char str[fnode->namelen + 1];
             string_limitedcopy(str, fnode->funcname, fnode->namelen);
             printf("    call %s\n", str);

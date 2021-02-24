@@ -10,8 +10,8 @@ CVar *new_CStr(char* text,int len){
     var->base.base.kind=GLOBAL;
     var->text=text;
     var->len=len;
-    var->base.LC_id=LCcount;
-    return var;
+    var->base.LC_id=LCcount++;
+    return (CVar*)var;
 }
 
 ////////////////ローカル変数

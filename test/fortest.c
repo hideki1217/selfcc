@@ -1,34 +1,31 @@
 #include<stdio.h>
 #include <stdlib.h>
+#include<stdarg.h>
 
-#include "collections.h"
 
 int foo(){
     printf("Hello World\n");
 }
-
 int hoge(int x,int y){
     int z=x+y;
     printf("%d\n",z);
     return z;
 }
-
 int hogege(int a,int b,int c,int d,int e,int f){
     return a+b+c+d+e+f;
 }
 int hogehoge(int a,int b,int c,int d,int e,int f,int g){
     return a+b+c+d+e+f+g;
 }
-
-int print(int x){
-    printf("%d\n",x);
+int print(char * fmt,...){
+    va_list ap;
+    va_start(ap, fmt);
+    printf(fmt,ap);
 }
-
 int fact(int x){
     if(x==1)return 1;
     return x*fact(x-1);
 }
-
 void alloc4(int **p ,int a,int b,int c,int d){
     *p=calloc(4,sizeof(int));
     **p=a;
@@ -36,20 +33,6 @@ void alloc4(int **p ,int a,int b,int c,int d){
     *(*p+2)=c;
     *(*p+3)=d;
 }
-
-struct aho{
-    int a;
-    int b;
-};
-struct aho* new_aho(int a,int b){
-    struct aho* hoge=calloc(1,sizeof(struct aho));
-    hoge->a=a;
-    hoge->b=b;
-    return hoge;  
+void doexit(int x){
+    exit(x);
 }
-/*
-int x;
-int main(){
-    x=6;
-    return x;
-}*/

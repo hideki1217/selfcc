@@ -7,7 +7,8 @@ selfcc: $(OBJS)
 
 $(OBJS): selfcc.h
 
-test: selfcc
+test: selfcc 
+		gcc -o test/fortest.o -c test/fortest.c
 		./test.sh
 
 testoftest: test.c

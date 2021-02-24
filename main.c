@@ -9,8 +9,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     // Grobal変数に値をセット
-    user_input = argv[1];// read_file(argv[1]);
-    filename = "";// path_filename(argv[1]);
+    user_input = read_file(argv[1]);
+    filename = path_filename(argv[1]);
     locals = cc_map_for_var_new();
     globals = cc_avltree_new();
     tkstream = tokenize(user_input);
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
         CStr *var=(CStr*) nd->item;
         char s[var->len+1];
         string_limitedcopy(s,var->text,var->len);
-        printf(".LC%d:\n",var->base.LC_id);
+        printf(".LC%d:\n",var->base.LC_id); 
         printf("    .string \"%s\"\n",s);
     }
 
