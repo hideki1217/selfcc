@@ -31,6 +31,10 @@ Type *type_assign(Node *node) {
             tp = ((NumNode *)node)->type;
             break;
         }
+        case ND_STR: {
+            tp =((ConstNode*)node)->base.type;
+            break;
+        }
         case ND_LVAR:
         case ND_GVAR: {
             tp = ((VarNode *)node)->var->type;
@@ -183,8 +187,7 @@ Type *type_assign(Node *node) {
 void gen_lval(Node *node) {
     if (node->kind == ND_LVAR) {
         LVar *var = (LVar *)((VarNode *)node)->var;
-        printf("    mov rax, rbp\n");
-        printf("    sub rax, %d\n", var->offset);
+        printf("    lea rax, -%d[rbp]\n", var->offset);
         printf("    push rax\n");
         return;
     }
@@ -245,6 +248,11 @@ void gen(Node *node) {
         }
         case ND_NUM: {
             printf("    push %d\n", ((NumNode *)node)->val);
+            return;
+        }
+        case ND_STR: {
+            printf("    lea rax, .LC%d[rip]\n",((ConstNode*)node)->const_id);
+            printf("    push rax\n");
             return;
         }
         case ND_LVAR:

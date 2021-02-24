@@ -13,6 +13,20 @@ typedef struct CC_Heap CC_Heap;
 typedef struct CC_AVLTreeNode CC_AVLTreeNode;
 typedef struct CC_AVLTree CC_AVLTree;
 
+typedef struct CC_Vector CC_Vector;
+typedef struct CC_VecNode CC_VecNode;
+
+struct CC_Vector{
+    CC_VecNode *first;
+};
+CC_Vector *cc_vector_new();
+void cc_vector_add(CC_Vector* vec,void *item);
+bool cc_vector_empty(CC_Vector* vec);
+struct CC_VecNode{
+    CC_VecNode* next;
+    void *item;
+};
+
 struct CC_AVLTreeNode{
     char* key;
     int len;

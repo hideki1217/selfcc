@@ -421,6 +421,20 @@ int main(){
 }
 "
 
+assert 97 "
+int main(){
+    char *x=\"ahoaho\";
+    return x[0];
+}
+"
+
+assert 7 "
+int main(){
+    char *x=\"ahoaho\";
+    return x[1]-x[0];
+}
+"
+
 
 
 

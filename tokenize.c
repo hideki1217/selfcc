@@ -10,6 +10,7 @@ Token *tkstream;
 char *user_input;
 CC_Map_for_LVar *locals;
 CC_AVLTree *globals;
+CC_Vector *constants;
 
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     Token *token = calloc(1, sizeof(Token));
@@ -175,13 +176,13 @@ Token *tokenize(char *p) {
         }
 
         if (*p == '"'){
-            char *q=p;
-            while(*p == '"'){ // TODO:ダブルクオートの読み方をエスケープ文字に対応すべし
+            char *q=++p;
+            while(*p != '"'){ // TODO:ダブルクオートの読み方をエスケープ文字に対応すべし
                 p++;
             }
-            p++;
-            
-            cur = new_Token(TK_STRING,cur,q, p-q); 
+
+            cur = new_Token(TK_STRING,cur,q, p-q);
+            p++;// 最後の「"」を消費する 
             continue;
         }
 

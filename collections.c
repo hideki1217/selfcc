@@ -5,6 +5,22 @@
 #include "utility.h"
 
 
+CC_Vector *cc_vector_new(){
+    CC_Vector* vec=calloc(1,sizeof(CC_Vector));
+    vec->first=NULL;
+    return vec;
+}
+void cc_vector_add(CC_Vector* vec,void *item){
+    CC_VecNode *nd=calloc(1,sizeof(CC_VecNode));
+    nd->next= vec->first;
+    nd->item=item;
+    
+    vec->first = nd;
+}
+bool cc_vector_empty(CC_Vector* vec){
+    return vec->first == NULL;
+}
+
 
 CC_HeapNode *new_cc_heapnode(char *key, int key_len, void *item,
                              CC_HeapNode *lt, CC_HeapNode *rt, int s) {

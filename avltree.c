@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "collections.h"
+#include "utility.h"
 
 
 /////////////////////////////////AVLNODE

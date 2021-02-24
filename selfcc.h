@@ -9,6 +9,9 @@ typedef struct Token Token;
 typedef struct Type Type;
 
 typedef struct Var Var;
+typedef struct CVar CVar;
+typedef struct CStr CStr;
+
 typedef struct LVar LVar;
 typedef struct GVar GVar;
 
@@ -18,7 +21,7 @@ typedef struct Node Node;
 typedef struct BlockNode BlockNode;
 typedef struct BinaryNode BinaryNode;
 typedef struct NumNode NumNode;
-typedef struct StrNode StrNode;
+typedef struct ConstNode ConstNode;
 typedef struct CondNode CondNode;
 typedef struct ForNode ForNode;
 typedef struct FuncNode FuncNode;
@@ -30,7 +33,20 @@ typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
 
 extern int Lcount;// if,for,whileのjmp先を命名するために使用
-extern int LCcount;// string 等のconst値を指定するために使用
+extern int LCcount;// string 等のconst値を指定するために使用 これをさわるのはCVarのみ
+
+extern Token *tkstream;
+extern char *user_input;
+
+extern Node *code;
+extern Node *nullNode;
+
+extern CC_AVLTree *type_tree;
+
+extern CC_Map_for_LVar *locals;
+extern CC_AVLTree *globals;
+
+extern CC_Vector *constants;
 
 
 typedef enum { TK_RESERVED, TK_STRING, TK_IDENT, TK_NUM, TK_EOF } TokenKind;
@@ -44,8 +60,7 @@ struct Token {
 };
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
 
-extern Token *tkstream;
-extern char *user_input;
+
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -132,13 +147,11 @@ struct NumNode {
     Type *type;
 };
 NumNode *new_NumNode(int val);
-struct StrNode{
+struct ConstNode{
     Node base;
-    int str_id;// 文字列識別用ID
-    char *str;
-    int len;
+    int const_id;// 文字列識別用ID
 };
-StrNode *new_StrNode(char* str,int len);
+ConstNode *new_ConstNode(CVar *var);
 struct CondNode {
     Node base;
     Node *T;
@@ -189,8 +202,7 @@ struct VarInitNode {
 };
 VarInitNode *new_VarInitNode(Var *var, Node *value);
 
-extern Node *code;
-extern Node *nullNode;
+
 
 //文法部
 void program();
@@ -247,10 +259,10 @@ bool isAssignable(Type *l, Type *r);
 Type *consume_Type();
 int make_memorysize(Type *type);
 
-extern Type *types;
 
-extern CC_AVLTree *type_tree;
 void Initialize_type_tree();
+
+
 
 //変数を管理
 typedef enum { LOCAL, GLOBAL } Var_kind;
@@ -263,6 +275,19 @@ struct Var {
 Var *find_Var(Token *token);
 Var *get_Var(Token *token);
 
+// 定数を管理
+struct CVar{
+    Var base;
+    int LC_id;
+};
+struct CStr{
+    CVar base;
+    char* text;
+    int len;
+};
+CVar *new_CStr(char* text,int len);
+
+
 //ローカル変数
 struct LVar {
     Var base;
@@ -270,7 +295,7 @@ struct LVar {
 };
 LVar *add_lvar(Token *token, Type *type);
 
-extern CC_Map_for_LVar *locals;
+
 
 struct CC_Map_for_LVar {
     CC_AVLTree base;
@@ -289,11 +314,10 @@ struct GVar {
     Var base;
 };
 GVar *add_gvar(Token *token, Type *type);
-extern CC_AVLTree *globals;
+
 
 //関数を管理
 struct Rootine {
-    Rootine *next;
     RootineNode *node;
     char *name;
     int namelen;

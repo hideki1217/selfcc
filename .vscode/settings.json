@@ -15,6 +15,7 @@
         "cstdint": "c",
         "typeinfo": "c",
         "collections.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "utility.h": "c"
     }
 }

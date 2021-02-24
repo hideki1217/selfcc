@@ -1,6 +1,7 @@
 #include"utility.h"
 
 #include<string.h>
+#include<stdbool.h>
 
 int max(int x,int y){
     return x>y? x:y;
@@ -14,12 +15,10 @@ void swap(void **a,void **b){
     *a=*b;
     *b=temp;
 }
-
-void string_limitedcopy(char *s, char *str, int len) {
-    strncpy(s, str, len);
+void string_limitedcopy(char *s, char *text, int len) {
+    strncpy(s, text, len);
     s[len] = '\0';
 }
-
 // a>b -> 負数, a<b -> 正数, a=b -> 0
 int compare_string(const char *a, int a_len, const char *b, int b_len) {
     int a_i = 0, b_i = 0;

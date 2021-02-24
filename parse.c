@@ -21,13 +21,11 @@ NumNode *new_NumNode(int val) {
     node->type = find_type_from_name("int");
     return node;
 }
-StrNode *new_StrNode(char* str,int len){
-    StrNode *nd=calloc(1,sizeof(StrNode));
-    nd->str_id=LCcount++;
-    nd->str=str;
-    nd->len=len;
+ConstNode *new_ConstNode(CVar *var){
+    ConstNode *nd=calloc(1,sizeof(ConstNode));
+    nd->const_id=var->LC_id;
     nd->base.kind=ND_STR;
-    nd->base.type=new_Pointer(find_type_from_name("char"));
+    nd->base.type=var->base.type;
     return nd;
 }
 CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F) {
@@ -90,6 +88,7 @@ VarInitNode *new_VarInitNode(Var *var, Node *value) {
 //文法部
 Node *code;
 int Lcount = 0;
+int LCcount = 0;
 Node *nullNode;
 
 void program() {
@@ -322,7 +321,10 @@ Node *primary() {
                 break;
             }
             case TK_STRING:{
-                // TODO: 要実装
+                CVar *var=new_CStr(tk->str,tk->len);
+                nd = (Node *) new_ConstNode(var);
+                cc_vector_add(constants,(void*)var);
+                break;
             }
             case TK_IDENT: {
                 if (consume("(")) {  // 関数の場合

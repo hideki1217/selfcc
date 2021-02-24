@@ -3,6 +3,17 @@
 #include "selfcc.h"
 #include "utility.h"
 
+////////////////定数
+CVar *new_CStr(char* text,int len){
+    CStr *var=calloc(1,sizeof(CStr));
+    var->base.base.type =new_Pointer(find_type_from_name("char"));
+    var->base.base.kind=GLOBAL;
+    var->text=text;
+    var->len=len;
+    var->base.LC_id=LCcount;
+    return var;
+}
+
 ////////////////ローカル変数
 LVar *new_LVar(Token *token, Type *type) {
     LVar *var = calloc(1, sizeof(LVar));
