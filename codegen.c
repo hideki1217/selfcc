@@ -184,11 +184,12 @@ Type *type_assign(Node *node) {
     return tp;
 }
 
-void gen_lval(Node *node) {
+void gen_lval(Node *node,bool push) {
     if (node->kind == ND_LVAR) {
         LVar *var = (LVar *)((VarNode *)node)->var;
         printf("    lea rax, -%d[rbp]\n", var->offset);
-        printf("    push rax\n");
+        if(push)
+            printf("    push rax\n");
         return;
     }
     if (node->kind == ND_GVAR) {
@@ -196,18 +197,19 @@ void gen_lval(Node *node) {
         char s[var->len + 1];
         string_limitedcopy(s, var->name, var->len);
         printf("    lea rax, %s[rip]\n", s);
-        printf("    push rax\n");
+        if(push)
+            printf("    push rax\n");
         return;
     }
     if (node->kind == ND_DEREF) {
-        gen(((BinaryNode *)node)->lhs);
+        gen(((BinaryNode *)node)->lhs,push);
         return;
     }
-    gen(node);
+    gen(node,push);
     return;
 }
 
-void gen(Node *node) {
+void gen(Node *node,bool push) {
     int lcount;
     switch (node->kind) {
         case ND_ROOTINE: {
@@ -225,8 +227,7 @@ void gen(Node *node) {
             int count = 0;
             for (VarNode *var = rootine->arg; var;
                  var = (VarNode *)var->base.next, count++) {
-                gen_lval((Node *)var);
-                printf("    pop rax\n");
+                gen_lval((Node *)var,false);
                 if (count < 6)
                     printf("    mov [rax], %s\n",
                            registry_for_arg(((Node *)var)->type, count));
@@ -236,7 +237,7 @@ void gen(Node *node) {
                            (count - 6) * 8 + 16);  //ここ微妙
             }
 
-            gen(rootine->block);
+            gen(rootine->block,false);
 
             // エピローグ
             // 最後の式の結果がRAXに残っているのでそれが返り値になる
@@ -244,172 +245,6 @@ void gen(Node *node) {
             printf("    pop rbp\n");
             printf("    ret\n");
 
-            return;
-        }
-        case ND_NUM: {
-            printf("    push %d\n", ((NumNode *)node)->val);
-            return;
-        }
-        case ND_STR: {
-            printf("    lea rax, .LC%d[rip]\n",((ConstNode*)node)->const_id);
-            printf("    push rax\n");
-            return;
-        }
-        case ND_LVAR:
-        case ND_GVAR: {
-            gen_lval(node);
-            if (((VarNode *)node)->var->type->kind == TY_ARRAY)
-                return;  // 配列型はPOINTERみたいにしてあげる
-            printf("    pop rax\n");
-            printf("    %s, %s [rax]\n",
-                    movzx2rax(node->type), //符号拡張なしになっている 
-                    sizeoption(node->type));
-            printf("    push rax\n");
-            return;
-        }
-        case ND_ASSIGN: {
-            BinaryNode *bi = (BinaryNode *)node;
-            gen_lval(bi->lhs);
-            gen(bi->rhs);
-
-            printf("    pop rdi\n");
-            printf("    pop rax\n");
-            printf("    mov [rax], %s\n",
-                    rdi(bi->rhs->type));
-            printf("    push rdi\n");
-
-            return;
-        }
-        case ND_RETURN: {
-            BinaryNode *bi = (BinaryNode *)node;
-            gen(bi->lhs);
-            //エピローグ
-            printf("    pop rax\n");
-            printf("    mov rsp, rbp\n");
-            printf("    pop rbp\n");
-            printf("    ret\n");
-            return;
-        }
-        case ND_IF: {
-            lcount = Lcount++;
-            gen(((CondNode *)node)->cond);
-            printf("    pop rax\n");
-            printf("    cmp rax, 0\n");
-            printf("    push rax\n");
-            printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T);
-            printf(".Lend%d:\n", lcount);
-            return;
-        }
-        case ND_IFEL: {
-            lcount = Lcount++;
-            gen(((CondNode *)node)->cond);
-            printf("    pop rax\n");
-            printf("    cmp rax, 0\n");
-            printf("    push rax\n");
-            printf("    je .Lelse%d\n", lcount);
-            gen(((CondNode *)node)->T);
-            printf("    jmp .Lend%d\n", lcount);
-            printf(".Lelse%d:\n", lcount);
-            gen(((CondNode *)node)->F);
-            printf(".Lend%d:\n", lcount);
-            return;
-        }
-        case ND_WHILE: {
-            lcount = Lcount++;
-            printf(".Lbegin%d:\n", lcount);
-            gen(((CondNode *)node)->cond);
-            printf("    pop rax\n");
-            printf("    cmp rax, 0\n");
-            printf("    push rax\n");
-            printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T);
-            printf("    jmp .Lbegin%d\n", lcount);
-            printf(".Lend%d:\n", lcount);
-            return;
-        }
-        case ND_FOR: {
-            lcount = Lcount++;
-            gen(((ForNode *)node)->init);
-            printf(".Lbegin%d:\n", lcount);
-            gen(((ForNode *)node)->cond);
-            printf("    pop rax\n");
-            printf("    cmp rax, 0\n");
-            printf("    push rax\n");
-            printf("    je .Lend%d\n", lcount);
-            gen(((ForNode *)node)->T);
-            gen(((ForNode *)node)->update);
-            printf("    jmp .Lbegin%d\n", lcount);
-            printf(".Lend%d:\n", lcount);
-            return;
-        }
-        case ND_BLOCK: {
-            gen(((BlockNode *)node)->block);
-            return;
-        }
-        case ND_FUNCTION: {
-            FuncNode *fnode = ((FuncNode *)node);
-            int argcount = 0;
-            for (Node *elem = fnode->arg; elem; elem = elem->next, argcount++)
-                ;
-            Type *mem[argcount];
-            int i = argcount - 1;
-            for (Node *elem = fnode->arg; elem; elem = elem->next, i--) {
-                gen(elem);
-                if (i < 6) mem[i] = elem->type;
-            }
-            for (int i = 0; i < min(6, argcount); i++) {
-                printf("    pop rax\n");
-                printf("    mov %s, %s\n", 
-                        registry_for_arg(mem[i], i),
-                        rax(mem[i]));
-            }
-
-            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は 0 
-            printf("    mov al, 0\n"); 
-
-            char str[fnode->namelen + 1];
-            string_limitedcopy(str, fnode->funcname, fnode->namelen);
-            printf("    call %s\n", str);
-            printf("    push rax\n");
-            return;
-        }
-        case ND_ADDR: {
-            gen_lval(((BinaryNode *)node)->lhs);
-            return;
-        }
-        case ND_DEREF: {
-            BinaryNode *bi = (BinaryNode *)node;
-            gen(bi->lhs);
-            printf("    pop rax\n");
-            printf("    %s, %s [rax]\n",
-                    movzx2rax(bi->lhs->type->ptr_to),// 符号拡張なしになっている
-                    sizeoption(bi->lhs->type->ptr_to));
-            printf("    push rax\n");
-            return;
-        }
-        case ND_SET: {
-            for (Node *elem = node->next; elem; elem = elem->next) {
-                gen(elem);
-                printf("    pop rax\n");
-                if (elem->kind == ND_RETURN) break;
-            }
-            printf("    push rax\n");
-
-            return;
-        }
-        case ND_LVARINIT: {
-            VarInitNode *inode = (VarInitNode *)node;
-            LVar *var = (LVar *)inode->var;
-            if (var->base.type->kind == TY_ARRAY) {
-                printf("    push rax\n");
-                if (inode->value) {
-                    // TODO: 配列の宣言時初期化について書くならここ
-                }
-            } else {
-                error(
-                    "現状普通の変数の場合は元の構文を使うよ。");  // TODO:　ここを消すかどうか考えるべし
-            }
             return;
         }
         case ND_GVARINIT: {
@@ -424,6 +259,164 @@ void gen(Node *node) {
             }
             return;
         }
+        /////////////////////////////// 以下push flagが有効
+        case ND_NUM: {
+            printf("    mov rax, %d\n",((NumNode *)node)->val);
+            if(push)printf("    push rax\n");
+            return;
+        }
+        case ND_STR: {
+            printf("    lea rax, .LC%d[rip]\n",((ConstNode*)node)->const_id);
+            if(push)printf("    push rax\n");
+            return;
+        }
+        case ND_LVAR:
+        case ND_GVAR: {
+            gen_lval(node,push);
+            if (((VarNode *)node)->var->type->kind == TY_ARRAY)
+                return;  // 配列型はPOINTERみたいにしてあげる
+            if(push)printf("    pop rax\n");
+            printf("    %s, %s [rax]\n",
+                    movzx2rax(node->type), //符号拡張なしになっている 
+                    sizeoption(node->type));
+            if(push)printf("    push rax\n");
+            return;
+        }
+        case ND_ASSIGN: {
+            BinaryNode *bi = (BinaryNode *)node;
+            gen_lval(bi->lhs,true);
+            gen(bi->rhs,false);
+            
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",
+                    rax(bi->rhs->type));
+            if(push)printf("    push rax\n");
+
+            return;
+        }
+        case ND_RETURN: {
+            BinaryNode *bi = (BinaryNode *)node;
+            gen(bi->lhs,false);
+            //エピローグ
+            printf("    mov rsp, rbp\n");
+            printf("    pop rbp\n");
+            printf("    ret\n");
+            return;
+        }
+        case ND_IF: {
+            lcount = Lcount++;
+            gen(((CondNode *)node)->cond,false);
+            printf("    cmp rax, 0\n");
+            if(push)printf("    push rax\n");
+            printf("    je .Lend%d\n", lcount);
+            gen(((CondNode *)node)->T,push);
+            printf(".Lend%d:\n", lcount);
+            return;
+        }
+        case ND_IFEL: {
+            lcount = Lcount++;
+            gen(((CondNode *)node)->cond,false);
+            printf("    cmp rax, 0\n");
+            printf("    je .Lelse%d\n", lcount);
+            gen(((CondNode *)node)->T,push);
+            printf("    jmp .Lend%d\n", lcount);
+            printf(".Lelse%d:\n", lcount);
+            gen(((CondNode *)node)->F,push);
+            printf(".Lend%d:\n", lcount);
+            return;
+        }
+        case ND_WHILE: {
+            lcount = Lcount++;
+            printf(".Lbegin%d:\n", lcount);
+            gen(((CondNode *)node)->cond,false);
+            printf("    cmp rax, 0\n");
+            if(push)printf("    push rax\n");
+            printf("    je .Lend%d\n", lcount);
+            gen(((CondNode *)node)->T,push);
+            printf("    jmp .Lbegin%d\n", lcount);
+            printf(".Lend%d:\n", lcount);
+            return;
+        }
+        case ND_FOR: {
+            lcount = Lcount++;
+            gen(((ForNode *)node)->init,false);
+            printf(".Lbegin%d:\n", lcount);
+            gen(((ForNode *)node)->cond,false);
+            printf("    cmp rax, 0\n");
+            printf("    je .Lend%d\n", lcount);
+            gen(((ForNode *)node)->T,push);
+            gen(((ForNode *)node)->update,push);
+            printf("    jmp .Lbegin%d\n", lcount);
+            printf(".Lend%d:\n", lcount);
+            return;
+        }
+        case ND_BLOCK: {
+            gen(((BlockNode *)node)->block,push);
+            return;
+        }
+        case ND_FUNCTION: {
+            FuncNode *fnode = ((FuncNode *)node);
+            int argcount = 0;
+            for (Node *elem = fnode->arg; elem; elem = elem->next, argcount++)
+                ;
+            Type *mem[argcount];
+            int i = argcount - 1;
+            for (Node *elem = fnode->arg; elem; elem = elem->next, i--) {
+                gen(elem,true);
+                if (i < 6) mem[i] = elem->type;
+            }
+            for (int i = 0; i < min(6, argcount); i++) {
+                printf("    pop rax\n");
+                printf("    mov %s, %s\n", 
+                        registry_for_arg(mem[i], i),
+                        rax(mem[i]));
+            }
+
+            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は 0 
+            printf("    mov rax, 0\n"); 
+
+            char str[fnode->namelen + 1];
+            string_limitedcopy(str, fnode->funcname, fnode->namelen);
+            printf("    call %s\n", str);
+            if(push)printf("    push rax\n");
+            return;
+        }
+        case ND_ADDR: {
+            gen_lval(((BinaryNode *)node)->lhs,push);
+            return;
+        }
+        case ND_DEREF: {
+            BinaryNode *bi = (BinaryNode *)node;
+            gen(bi->lhs,false);
+            printf("    %s, %s [rax]\n",
+                    movzx2rax(bi->lhs->type->ptr_to),// 符号拡張なしになっている
+                    sizeoption(bi->lhs->type->ptr_to));
+            if(push)printf("    push rax\n");
+            return;
+        }
+        case ND_SET: {
+            for (Node *elem = node->next; elem; elem = elem->next) {
+                gen(elem,false);
+                if (elem->kind == ND_RETURN) break;
+            }
+            if(push)printf("    push rax\n");
+
+            return;
+        }
+        case ND_LVARINIT: {
+            VarInitNode *inode = (VarInitNode *)node;
+            LVar *var = (LVar *)inode->var;
+            if (var->base.type->kind == TY_ARRAY) {
+                if(push)printf("    push rax\n");
+                if (inode->value) {
+                    // TODO: 配列の宣言時初期化について書くならここ
+                }
+            } else {
+                error(
+                    "現状普通の変数の場合は元の構文を使うよ。");  // TODO:　ここを消すかどうか考えるべし
+            }
+            return;
+        }
     }
 
     Node *lhs = ((BinaryNode *)node)->lhs;
@@ -432,8 +425,8 @@ void gen(Node *node) {
     Type *ltp = lhs->type;
     Type *rtp = rhs->type;
 
-    gen(lhs);
-    gen(rhs);
+    gen(lhs,true);
+    gen(rhs,true);
 
     printf("    pop rdi\n");
     printf("    pop rax\n");
@@ -490,7 +483,7 @@ void gen(Node *node) {
             break;
     }
 
-    printf("    push rax\n");
+    if(push)printf("    push rax\n");
 
     return;
 }

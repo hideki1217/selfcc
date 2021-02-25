@@ -1,16 +1,26 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "selfcc.h"
 #include "utility.h"
 
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        error("引数の個数が不正です\n");
-        return 1;
+    bool fromfile=true;
+    char *filepath;
+    for(int i=1;i<argc;i++){
+        if(strncmp(argv[i],"--row",5)==0){
+            user_input=argv[i+1];
+            fromfile=false;
+        }
+        filepath=argv[i];
     }
+    
     // Grobal変数に値をセット
-    user_input = read_file(argv[1]);
-    filename = path_filename(argv[1]);
+    if(fromfile)
+        user_input = read_file(filepath);
+    filename = fromfile?
+        path_filename(filepath)
+        :"";
     locals = cc_map_for_var_new();
     globals = cc_avltree_new();
     tkstream = tokenize(user_input);
@@ -39,7 +49,7 @@ int main(int argc, char **argv) {
 
     for (Node *now = code; now; now = now->next) {
         type_assign(now);
-        gen(now);
+        gen(now,false);
     }
     return 0;
 }

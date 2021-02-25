@@ -22,6 +22,12 @@ int print(char * fmt,...){
     va_start(ap, fmt);
     printf(fmt,ap);
 }
+int print_num(int x){
+    printf("%d\n",x);
+}
+int test(char* fmt){
+    printf(fmt,3,4,5);
+}
 int fact(int x){
     if(x==1)return 1;
     return x*fact(x-1);

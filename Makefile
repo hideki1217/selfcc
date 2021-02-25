@@ -1,20 +1,20 @@
 CFLAGS=-std=c11 -g -static
-SRCS=$(wildcard *.c)
-OBJS=$(SRCS:.c=.o)
+SRCS=$(wildcard *.c) test/fortest.c
+OBJS=$(SRCS:.c=.o) 
 
-selfcc: $(OBJS)
+selfcc: $(OBJS) test/fortest.c
+			gcc -o test/fortest.o -c test/fortest.c
 			$(CC) -o selfcc $(OBJS) $(LDFLAGS)
 
 $(OBJS): selfcc.h
 
 test: selfcc 
-		gcc -o test/fortest.o -c test/fortest.c
 		./test.sh
 
-testoftest: test.c
-		gcc -o test test.c collections.c avltree.c utility.c -g
+ctest: selfcc
+		./ctest.sh
 
 clean: 
 		rm -f selfcc *.o *~ tmp*
 
-.PHONY: test clean
+.PHONY: test clean ctest

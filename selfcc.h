@@ -223,8 +223,8 @@ Node *primary();
 
 Type *type_assign(Node *node);
 
-void gen_lval(Node *node);
-void gen(Node *node);
+void gen_lval(Node *node,bool push);
+void gen(Node *node,bool push);
 
 //型を管理
 typedef enum {

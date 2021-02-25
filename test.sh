@@ -4,7 +4,7 @@ assert() {
     expect="$1"
     input="$2"
 
-    ./selfcc "$input" > tmp.s
+    ./selfcc --row "$input" > tmp.s
     cc -o tmp tmp.s test.o -g
     ./tmp
     actual="$?"
@@ -17,11 +17,7 @@ assert() {
     fi
 }
 
-./selfcc "./test/test.c" > ./test/tmp.s
-cc -o ./test/tmp ./test/tmp.s ./test/fortest.o -g
-./test/tmp
 
-<< COMMENTOUT
 
 assert 0 "int main(){0;}"
 assert 42 "int main(){42;}"
@@ -107,6 +103,22 @@ assert 7 "int main(){hogehoge(1,1,1,1,1,1,1);}"
 
 assert 3 "int main(){{3;}}"
 
+assert 2 "
+
+int add(int x,int y){
+    int z;
+    z=x+y;
+    return z;
+}
+int main(){
+    int x=1;
+    int y=1;
+    int z;
+    z=add(x,y);
+    return z;
+}
+"
+
 assert 144 "
 int Fibonacci(int x,int y){
     int z;
@@ -124,7 +136,7 @@ int main(){
         z=Fibonacci(x,y);
         x=y;
         y=z;
-        print(y);
+        print(\"%d\n\",y);
     }
     return y;
 }
@@ -461,5 +473,3 @@ int main(){
 "
 
 echo OK
-
-COMMENTOUT

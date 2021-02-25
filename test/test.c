@@ -13,13 +13,15 @@ int test12(){4+1>3;}
 int test13(){4*1>=4;}
 int test14(){4*1<+3;}
 int test15(){4*1 <= -(-4);}
+int test16(){(4*3)-1!=5*2;}
+int test17(){int x;x=3; x*4+3;}
 
 int count;
 int assert(int answer,int res){
     if(answer == res){
-        print("expect: %d,actual: %d, test%d is pass\n",answer,res,count);
+        print("test%d is pass :: expect: %d, actual: %d\n\0",count,answer,res);
     }else{
-        print("expect: %d,actual: %d, test%d is fail\n",answer,res,count);
+        print("test%d is failed :: expect: %d, actual: %d\n\0",count,answer,res);
         doexit(1);
     }
     count=count+1;
@@ -42,4 +44,8 @@ int main(){
     assert(1,test13());
     assert(0,test14());
     assert(1,test15());
+    assert(1,test16());
+    assert(15,test17());
+
+    print("OK\n");
 }
