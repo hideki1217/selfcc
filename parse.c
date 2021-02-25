@@ -2,92 +2,131 @@
 
 #include "selfcc.h"
 
-Node *new_Node(NodeKind kind) {
-    Node *node = calloc(1, sizeof(Node));
+
+void set_Node(Node* node,NodeKind kind){
     node->kind = kind;
-    return node;
 }
-BinaryNode *new_BinaryNode(NodeKind kind, Node *lhs, Node *rhs) {
-    BinaryNode *node = calloc(1, sizeof(BinaryNode));
+void set_BinaryNode(BinaryNode *node,NodeKind kind, Node *lhs, Node *rhs){
     node->base.kind = kind;
     node->lhs = lhs;
     node->rhs = rhs;
-    return node;
 }
-UnaryNode *new_UnaryNode(NodeKind kind, Node *target){
-    UnaryNode *node= calloc(1,sizeof(UnaryNode));
+void set_UnaryNode(UnaryNode *node,NodeKind kind, Node *target){
     node->base.kind=kind;
     node->target = target;
-    return node;
 }
-NumNode *new_NumNode(int val) {
-    NumNode *node = calloc(1, sizeof(NumNode));
+void set_NumNode(NumNode* node,int val){
     node->base.kind = ND_NUM;
     node->val = val;
     node->type = find_type_from_name("int");
-    return node;
 }
-ConstNode *new_ConstNode(CVar *var){
-    ConstNode *nd=calloc(1,sizeof(ConstNode));
+void set_ConstNode(ConstNode* nd,CVar *var){
     nd->const_id=var->LC_id;
     nd->base.kind=ND_STR;
     nd->base.type=var->base.type;
-    return nd;
 }
-CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F) {
-    CondNode *node = calloc(1, sizeof(CondNode));
+void set_CondNode(CondNode* node,NodeKind kind, Node *cond, Node *T, Node *F){
     node->base.kind = kind;
     node->cond = cond;
     node->T = T;
     node->F = F;
-    return node;
 }
-ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *T) {
-    ForNode *node = calloc(1, sizeof(ForNode));
+void set_ForNode(ForNode* node,Node *init, Node *cond, Node *update, Node *T){
     node->base.kind = ND_FOR;
     node->init = init;
     node->cond = cond;
     node->update = update;
     node->T = T;
-    return node;
 }
-FuncNode *new_FuncNode(char *funcname, int namelen) {
-    FuncNode *node = calloc(1, sizeof(FuncNode));
+void set_FuncNode(FuncNode* node,char *funcname, int namelen){
     node->base.kind = ND_FUNCTION;
     node->funcname = funcname;
     node->namelen = namelen;
-    return node;
 }
-VarNode *new_VarNode(Var *var) {
-    VarNode *node = calloc(1, sizeof(VarNode));
+void set_VarNode(VarNode *node,Var *var){
     if (var->kind == LOCAL)
         node->base.kind = ND_LVAR;
     else
         node->base.kind = ND_GVAR;
     node->var = var;
 }
-RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen) {
-    RootineNode *node = calloc(1, sizeof(RootineNode));
+void set_RootineNode(RootineNode* node,char *name, int len, char *moldname, int moldlen){
     node->base.kind = ND_ROOTINE;
     node->name = name;
     node->namelen = len;
     node->moldname = moldname;
     node->moldlen = moldlen;
-    return node;
 }
-BlockNode *new_BlockNode() {
-    BlockNode *node = calloc(1, sizeof(BlockNode));
+void set_BlockNode(BlockNode* node){
     node->base.kind = ND_BLOCK;
-    return node;
 }
-VarInitNode *new_VarInitNode(Var *var, Node *value) {
-    VarInitNode *node = calloc(1, sizeof(VarInitNode));
+void set_VarInitNode(VarInitNode* node,Var *var, Node *value){
     if (var->kind == LOCAL)
         node->base.kind = ND_LVARINIT;
     else
         node->base.kind = ND_GVARINIT;
     node->var = var;
     node->value = value;
+}
+
+Node *new_Node(NodeKind kind) {
+    Node *node = calloc(1, sizeof(Node));
+    set_Node(node,kind);
+    return node;
+}
+BinaryNode *new_BinaryNode(NodeKind kind, Node *lhs, Node *rhs) {
+    BinaryNode *node = calloc(1, sizeof(BinaryNode));
+    set_BinaryNode(node,kind,lhs,rhs);
+    return node;
+}
+UnaryNode *new_UnaryNode(NodeKind kind, Node *target){
+    UnaryNode *node= calloc(1,sizeof(UnaryNode));
+    set_UnaryNode(node,kind,target);
+    return node;
+}
+NumNode *new_NumNode(int val) {
+    NumNode *node = calloc(1, sizeof(NumNode));
+    set_NumNode(node,val);
+    return node;
+}
+ConstNode *new_ConstNode(CVar *var){
+    ConstNode *nd=calloc(1,sizeof(ConstNode));
+    set_ConstNode(nd,var);
+    return nd;
+}
+CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F) {
+    CondNode *node = calloc(1, sizeof(CondNode));
+    set_CondNode(node,kind,cond,T,F);
+    return node;
+}
+ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *T) {
+    ForNode *node = calloc(1, sizeof(ForNode));
+    set_ForNode(node,init,cond,update,T);
+    return node;
+}
+FuncNode *new_FuncNode(char *funcname, int namelen) {
+    FuncNode *node = calloc(1, sizeof(FuncNode));
+    set_FuncNode(node,funcname,namelen);
+    return node;
+}
+VarNode *new_VarNode(Var *var) {
+    VarNode *node = calloc(1, sizeof(VarNode));
+    set_VarNode(node,var);
+    return node;
+}
+RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen) {
+    RootineNode *node = calloc(1, sizeof(RootineNode));
+    set_RootineNode(node,name,len, moldname, moldlen);
+    return node;
+}
+BlockNode *new_BlockNode() {
+    BlockNode *node = calloc(1, sizeof(BlockNode));
+    set_BlockNode( node);
+    return node;
+}
+VarInitNode *new_VarInitNode(Var *var, Node *value) {
+    VarInitNode *node = calloc(1, sizeof(VarInitNode));
+    set_VarInitNode(node,var,value);
     return node;
 }
 
@@ -313,8 +352,8 @@ Node *unary() {
     if(consume("--")) return (Node*)new_BinaryNode(ND_SUB,primary(), (Node *)new_NumNode(1)); // --x
 
     Node *node= primary();
-    if(consume("++")) return (Node*)new_UnaryNode(ND_INCRE,node); // x++
-    if(consume("--")) return (Node*)new_UnaryNode(ND_DECRE,node); // x--
+    if(consume("++")) return (Node*)new_BinaryNode(ND_INCRE,node,(Node *)new_NumNode(1)); // x++
+    if(consume("--")) return (Node*)new_BinaryNode(ND_DECRE,node,(Node *)new_NumNode(1)); // x--
 
     return node;
 }

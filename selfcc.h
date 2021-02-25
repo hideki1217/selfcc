@@ -142,28 +142,33 @@ struct Node {
     Type *type;
 };
 Node *new_Node(NodeKind kind);
+void set_Node(Node* nd,NodeKind kind);
 struct BinaryNode {
     Node base;
     Node *lhs;
     Node *rhs;
 };
 BinaryNode *new_BinaryNode(NodeKind kind, Node *lhs, Node *rhs);
+void set_BinaryNode(BinaryNode *nd,NodeKind kind, Node *lhs, Node *rhs);
 struct UnaryNode{
     Node base;
     Node *target;
 };
 UnaryNode *new_UnaryNode(NodeKind kind, Node *target);
+void set_UnaryNode(UnaryNode *nd,NodeKind kind, Node *target);
 struct NumNode {
     Node base;
     int val;  // for ND_NUM
     Type *type;
 };
 NumNode *new_NumNode(int val);
+void set_NumNode(NumNode* nd,int val);
 struct ConstNode{
     Node base;
     int const_id;// 文字列識別用ID
 };
 ConstNode *new_ConstNode(CVar *var);
+void set_ConstNode(ConstNode* nd,CVar *var);
 struct CondNode {
     Node base;
     Node *T;
@@ -171,6 +176,7 @@ struct CondNode {
     Node *cond;
 };
 CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F);
+void set_CondNode(CondNode* nd,NodeKind kind, Node *cond, Node *T, Node *F);
 struct ForNode {
     Node base;
     Node *init;
@@ -179,6 +185,7 @@ struct ForNode {
     Node *update;
 };
 ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *A);
+void set_ForNode(ForNode* nd,Node *init, Node *cond, Node *update, Node *A);
 struct FuncNode {
     Node base;
     char *funcname;
@@ -186,11 +193,13 @@ struct FuncNode {
     Node *arg;
 };
 FuncNode *new_FuncNode(char *funcname, int namelen);
+void set_FuncNode(FuncNode* nd,char *funcname, int namelen);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
 };
 VarNode *new_VarNode(Var *var);
+void set_VarNode(VarNode *nd,Var *var);
 struct RootineNode {
     Node base;
     Node *block;
@@ -202,17 +211,20 @@ struct RootineNode {
     int moldlen;
 };
 RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen);
+void set_RootineNode(RootineNode* nd,char *name, int len, char *moldname, int moldlen);
 struct BlockNode {
     Node base;
     Node *block;
 };
 BlockNode *new_BlockNode();
+void set_BlockNode(BlockNode* nd);
 struct VarInitNode {
     Node base;
     Var *var;
     Node *value;
 };
 VarInitNode *new_VarInitNode(Var *var, Node *value);
+void set_VarInitNode(VarInitNode* nd,Var *var, Node *value);
 
 
 

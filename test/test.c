@@ -38,6 +38,25 @@ int test104(){
     }
     return x;
 }
+int test105(){
+    char *x="ahoaho";
+    x++;
+    return x[0]-x[2];
+}
+int test106(){
+    int x[5];
+    for(int i=0;i<5;i++){
+        x[i]=i;
+    }
+    int *y=x+2;
+    print_num(*y);
+    y++;
+    print_num(*y);
+    y--;
+    print_num(*y);
+    y--;
+    return *y;
+}
 
 int count;
 int assert(int answer,int res){
@@ -75,6 +94,8 @@ int main(){
     assert(0,test102());
     assert(1,test103());
     assert(10,test104());
+    assert(7,test105());
+    assert(1,test106());
 
     print("OK\n");
 }

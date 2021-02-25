@@ -131,7 +131,7 @@ Type *type_assign(Node *node) {
         }
         case ND_INCRE:
         case ND_DECRE:{
-            tp= type_assign(((UnaryNode*)node)->target); // もしtpがstructやfunctionならコンパイルエラー
+            tp= type_assign(((BinaryNode*)node)->lhs); // もしtpがstructやfunctionならコンパイルエラー
             break;
         }
         default: {
@@ -425,25 +425,33 @@ void gen(Node *node,bool push) {
             return;
         }
         case ND_INCRE:{
-            UnaryNode *unode= (UnaryNode*)node;
+            BinaryNode *bnode= (BinaryNode*)node;
 
-            gen_lval(unode->target,false);
+            gen_lval(bnode->lhs,false);
             printf("    push [rax]\n");
-            printf("    %s, %s [rax]\n",movzx2rdi(unode->target->type),sizeoption(unode->target->type));
-            printf("    add rdi, 1\n");
-            printf("    mov [rax], %s\n",rdi(node->type));
+            printf("    push rax\n");
+            BinaryNode tmp;
+            set_BinaryNode(&tmp,ND_ADD,bnode->lhs,bnode->rhs);
+            type_assign((Node*)&tmp);
+            gen((Node *)&tmp,false);
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",rax(node->type));
             printf("    pop rax\n");
             if(push) printf("   push rax\n");
             return;
         }
         case ND_DECRE:{
-            UnaryNode *unode= (UnaryNode*)node;
+            BinaryNode *bnode= (BinaryNode*)node;
 
-            gen_lval(unode->target,false);
+            gen_lval(bnode->lhs,false);
             printf("    push [rax]\n");
-            printf("    %s, %s [rax]\n",movzx2rdi(unode->target->type),sizeoption(unode->target->type));
-            printf("    sub rdi, 1\n");
-            printf("    mov [rax], %s\n",rdi(node->type));
+            printf("    push rax\n");
+            BinaryNode tmp;
+            set_BinaryNode(&tmp,ND_SUB,bnode->lhs,bnode->rhs);
+            type_assign((Node*)&tmp);
+            gen((Node *)&tmp,false);
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",rax(node->type));
             printf("    pop rax\n");
             if(push) printf("   push rax\n");
             return;
