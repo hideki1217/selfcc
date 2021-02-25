@@ -5,7 +5,7 @@ assert() {
     input="$2"
 
     ./selfcc --row "$input" > tmp.s
-    cc -o tmp tmp.s test.o -g
+    cc -o tmp tmp.s test/fortest.o -g
     ./tmp
     actual="$?"
 
@@ -18,7 +18,7 @@ assert() {
 }
 
 
-
+<< MOVED
 assert 0 "int main(){0;}"
 assert 42 "int main(){42;}"
 
@@ -44,6 +44,7 @@ assert 0 "int main(){(4*3)-1==(3+2)*2;}"
 assert 1 "int main(){(4*3)-1!=5*2;}"
 
 assert 15 "int main(){int x;x=3; x*4+3;}"
+MOVED
 assert 48 "int main(){int a;a=4;int d; d=3*a; +(a+d)*3;}"
 
 assert 4 "int main(){int abc;abc=4;}"

@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     program();
 
     printf(".Intel_syntax noprefix\n");
-    printf(".globl main\n");  // TODO:ここの意味を把握
+    printf(".globl main\n");  
 
     for(CC_VecNode *nd=constants->first;
         nd!=NULL;

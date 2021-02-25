@@ -153,23 +153,22 @@ Token *tokenize(char *p) {
             continue;
         }
         if (strncmp(p, "/*", 2) == 0) {
-            char *q=strstr(p+2,"*/");
-            if(!q)
-                error_at(p,"コメントが閉じられていません");
-            p=q+2;
+            char *q = strstr(p + 2, "*/");
+            if (!q) error_at(p, "コメントが閉じられていません");
+            p = q + 2;
             continue;
         }
         if (strncmp(p, "//", 2) == 0) {
-            p+=2;
+            p += 2;
             while (*p != '\n') p++;
             continue;
         }
 
         if (*p == '"') {
             char *q = ++p;
-            while (
-                *p !=
-                '"') {  // TODO:ダブルクオートの読み方をエスケープ文字に対応すべし
+            while (*p !=
+                   '"') {  // TODO:
+                           // ダブルクオートの読み方をエスケープ文字に対応すべし
                 p++;
             }
 
@@ -217,7 +216,8 @@ Token *tokenize(char *p) {
 
         //確実に非変数名なもの
         if (memcmp(p, "!=", 2) == 0 || memcmp(p, "==", 2) == 0 ||
-            memcmp(p, "<=", 2) == 0 || memcmp(p, ">=", 2) == 0) {
+            memcmp(p, "<=", 2) == 0 || memcmp(p, ">=", 2) == 0 ||
+            memcmp(p, "++", 2) == 0 || memcmp(p, "--", 2) == 0) {
             cur = new_Token(TK_RESERVED, cur, p, 2);
             p += 2;
             continue;

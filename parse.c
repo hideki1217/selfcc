@@ -14,6 +14,12 @@ BinaryNode *new_BinaryNode(NodeKind kind, Node *lhs, Node *rhs) {
     node->rhs = rhs;
     return node;
 }
+UnaryNode *new_UnaryNode(NodeKind kind, Node *target){
+    UnaryNode *node= calloc(1,sizeof(UnaryNode));
+    node->base.kind=kind;
+    node->target = target;
+    return node;
+}
 NumNode *new_NumNode(int val) {
     NumNode *node = calloc(1, sizeof(NumNode));
     node->base.kind = ND_NUM;
@@ -106,7 +112,7 @@ void program() {
 Node *rootine() {
     cc_map_for_var_clear(
         locals);  // ローカル変数をrootineごとにリセット
-                  // TODO:mapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
+                  // TODO: mapをqueueにぶちこんで管理するBlockに入るたびにpushしていき出るときにpop
     Type *type = expect_type();
     Token *token = expect_ident();
     if (consume("(")) {  // 関数定義
@@ -143,8 +149,7 @@ Node *rootine() {
         if (consume("=")) {
             error_at(
                 token->str,
-                "グローバル変数の初期化は未対応です");  // TODO:
-                                                        // グローバル変数の初期化未対応
+                "グローバル変数の初期化は未対応です");  // TODO: グローバル変数の初期化未対応
         }
         expect(';');
         return (Node *)new_VarInitNode((Var *)var, value);
@@ -220,14 +225,14 @@ Node *expr() {
             consume_ident();
             consume("[");
             int size =
-                expect_number();  // TODO:定数値を実装し次第それも入れるべし
+                expect_number();  // TODO: 定数値を実装し次第それも入れるべし
             expect(']');
             type = new_Array(type, size);
             LVar *var = add_lvar(tk, type);
 
             return (Node *)new_VarInitNode(
                 (Var *)var,
-                NULL);  // TODO:　配列初期化じの初期値を受けるならNULLを解除
+                NULL);  // TODO: 配列初期化じの初期値を受けるならNULLを解除
         } else {  //配列でない場合
             LVar *var = add_lvar(tk, type);
             return assign();
@@ -304,7 +309,14 @@ Node *unary() {
     if (consume("sizeof")) {
         return (Node *)new_NumNode(type_assign(unary())->size);
     }
-    return primary();
+    if(consume("++")) return (Node*)new_BinaryNode(ND_ADD, (Node *)new_NumNode(1),primary()); // ++x
+    if(consume("--")) return (Node*)new_BinaryNode(ND_SUB,primary(), (Node *)new_NumNode(1)); // --x
+
+    Node *node= primary();
+    if(consume("++")) return (Node*)new_UnaryNode(ND_INCRE,node); // x++
+    if(consume("--")) return (Node*)new_UnaryNode(ND_DECRE,node); // x--
+
+    return node;
 }
 Node *primary() {
     Node *nd;

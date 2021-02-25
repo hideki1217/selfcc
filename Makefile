@@ -10,11 +10,10 @@ $(OBJS): selfcc.h
 
 test: selfcc 
 		./test.sh
-
-ctest: selfcc
 		./ctest.sh
+		
 
 clean: 
 		rm -f selfcc *.o *~ tmp*
 
-.PHONY: test clean ctest
+.PHONY: test clean 

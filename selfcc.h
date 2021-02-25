@@ -20,6 +20,7 @@ typedef struct Rootine Rootine;
 typedef struct Node Node;
 typedef struct BlockNode BlockNode;
 typedef struct BinaryNode BinaryNode;
+typedef struct UnaryNode UnaryNode;
 typedef struct NumNode NumNode;
 typedef struct ConstNode ConstNode;
 typedef struct CondNode CondNode;
@@ -125,6 +126,8 @@ typedef enum {
     ND_ROOTINE,
     ND_ADDR,   //'&'
     ND_DEREF,  //'*'
+    ND_INCRE,//'++'
+    ND_DECRE,//'--'
     ND_SIZEOF,
     ND_SET,       // NDをまとめるもの
     ND_LVARINIT,  //ローカル変数を初期化
@@ -145,6 +148,11 @@ struct BinaryNode {
     Node *rhs;
 };
 BinaryNode *new_BinaryNode(NodeKind kind, Node *lhs, Node *rhs);
+struct UnaryNode{
+    Node base;
+    Node *target;
+};
+UnaryNode *new_UnaryNode(NodeKind kind, Node *target);
 struct NumNode {
     Node base;
     int val;  // for ND_NUM
@@ -330,9 +338,11 @@ struct Rootine {
 
 char *registry_for_arg(Type *tp, int i);
 char *sizeoption(Type *tp);
-char *movzx2rax(Type *tp);
-// 符号拡張する(あっているか怪しい)
-char *movsx2rax(Type *tp);
+char *movzx2rax(Type *tp);// 符号拡張しない
+char *movsx2rax(Type *tp);// 符号拡張する(あっているか怪しい)
+char *movzx2rdi(Type *tp);
+char *movsx2rdi(Type *tp);
+
 // 符号拡張あり
 char *movsx(Type *tp);
 // 符号拡張なし

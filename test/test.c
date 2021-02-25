@@ -15,6 +15,29 @@ int test14(){4*1<+3;}
 int test15(){4*1 <= -(-4);}
 int test16(){(4*3)-1!=5*2;}
 int test17(){int x;x=3; x*4+3;}
+int test100(){
+    int x=0;
+    return ++x;
+}
+int test101(){
+    int x=1;
+    return --x;
+}
+int test102(){
+    int x=0;
+    return x++;
+}
+int test103(){
+    int x=1;
+    return x--;
+}
+int test104(){
+    int x=0;
+    for(int i=0;i<5;i++){
+        x=x+i;
+    }
+    return x;
+}
 
 int count;
 int assert(int answer,int res){
@@ -46,6 +69,12 @@ int main(){
     assert(1,test15());
     assert(1,test16());
     assert(15,test17());
+
+    assert(1,test100());
+    assert(0,test101());
+    assert(0,test102());
+    assert(1,test103());
+    assert(10,test104());
 
     print("OK\n");
 }

@@ -22,8 +22,7 @@ Type *type_assign(Node *node) {
             }
 
             tp = type_assign(
-                rootine->block);  // TODO:
-                                  // 関数の情報から返り値の型があっているか確認
+                rootine->block);  // TODO: 関数の情報から返り値の型があっているか確認
 
             break;
         }
@@ -99,7 +98,7 @@ Type *type_assign(Node *node) {
             FuncNode *fnode = ((FuncNode *)node);
 
             for (Node *elem = fnode->arg; elem; elem = elem->next) {
-                tp = type_assign(elem);  // TODO:関数の引数チェック
+                tp = type_assign(elem);  // TODO: 関数の引数チェック
             }
             tp = find_type_from_name("int");  // TODO: 関数の型を返す
             break;
@@ -130,12 +129,17 @@ Type *type_assign(Node *node) {
             tp = inode->var->type;
             break;
         }
+        case ND_INCRE:
+        case ND_DECRE:{
+            tp= type_assign(((UnaryNode*)node)->target); // もしtpがstructやfunctionならコンパイルエラー
+            break;
+        }
         default: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
             Type *type_int = find_type_from_name("int");
-            tp = type_int;
+            tp = type_int; //default の型は今のところ int
             switch (node->kind) {
                 case ND_ADD:
                     if (isArrayorPtr(ltp) && isArrayorPtr(rtp))
@@ -205,8 +209,11 @@ void gen_lval(Node *node,bool push) {
         gen(((BinaryNode *)node)->lhs,push);
         return;
     }
-    gen(node,push);
-    return;
+    if(isArrayorPtr(node->type)){
+        gen(node,push);
+        return;
+    }
+    error("左辺値になれない値に代入や参照をしようとしました。");
 }
 
 void gen(Node *node,bool push) {
@@ -413,8 +420,32 @@ void gen(Node *node,bool push) {
                 }
             } else {
                 error(
-                    "現状普通の変数の場合は元の構文を使うよ。");  // TODO:　ここを消すかどうか考えるべし
+                    "現状普通の変数の場合は元の構文を使うよ。");  // TODO: ここを消すかどうか考えるべし
             }
+            return;
+        }
+        case ND_INCRE:{
+            UnaryNode *unode= (UnaryNode*)node;
+
+            gen_lval(unode->target,false);
+            printf("    push [rax]\n");
+            printf("    %s, %s [rax]\n",movzx2rdi(unode->target->type),sizeoption(unode->target->type));
+            printf("    add rdi, 1\n");
+            printf("    mov [rax], %s\n",rdi(node->type));
+            printf("    pop rax\n");
+            if(push) printf("   push rax\n");
+            return;
+        }
+        case ND_DECRE:{
+            UnaryNode *unode= (UnaryNode*)node;
+
+            gen_lval(unode->target,false);
+            printf("    push [rax]\n");
+            printf("    %s, %s [rax]\n",movzx2rdi(unode->target->type),sizeoption(unode->target->type));
+            printf("    sub rdi, 1\n");
+            printf("    mov [rax], %s\n",rdi(node->type));
+            printf("    pop rax\n");
+            if(push) printf("   push rax\n");
             return;
         }
     }
@@ -484,6 +515,5 @@ void gen(Node *node,bool push) {
     }
 
     if(push)printf("    push rax\n");
-
     return;
 }

@@ -45,6 +45,29 @@ char *movsx2rax(Type *tp){
             return "mov rax";
     }
 }
+// 符号拡張しない
+char *movzx2rdi(Type *tp){
+    switch(tp->size){
+        case 1:
+        case 2:
+            return "movzx edi";
+        case 4:
+            return "mov edi";
+        default:
+            return "mov rdi";
+    }
+}
+char *movsx2rdi(Type *tp){
+    switch(tp->size){
+        case 1:
+        case 2:
+            return "movsx edi";
+        case 4:
+            return "mov edi";
+        default:
+            return "mov rdi";
+    }
+}
 
 
 
