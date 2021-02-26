@@ -45,6 +45,7 @@ assert 1 "int main(){(4*3)-1!=5*2;}"
 
 assert 15 "int main(){int x;x=3; x*4+3;}"
 MOVED
+
 assert 48 "int main(){int a;a=4;int d; d=3*a; +(a+d)*3;}"
 
 assert 4 "int main(){int abc;abc=4;}"

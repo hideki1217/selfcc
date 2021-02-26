@@ -32,16 +32,13 @@ typedef struct VarInitNode VarInitNode;
 
 typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
-
-
-
-
 extern Token *tkstream;
 extern char *user_input;
 extern char *filename;
 
-extern int Lcount;// if,for,whileのjmp先を命名するために使用
-extern int LCcount;// string 等のconst値を指定するために使用 これをさわるのはCVarのみ
+extern int Lcount;  // if,for,whileのjmp先を命名するために使用
+extern int
+    LCcount;  // string 等のconst値を指定するために使用 これをさわるのはCVarのみ
 
 extern Node *code;
 extern Node *nullNode;
@@ -53,7 +50,6 @@ extern CC_AVLTree *globals;
 
 extern CC_Vector *constants;
 
-
 typedef enum { TK_RESERVED, TK_STRING, TK_IDENT, TK_NUM, TK_EOF } TokenKind;
 
 struct Token {
@@ -64,8 +60,6 @@ struct Token {
     int len;
 };
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
-
-
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -124,10 +118,14 @@ typedef enum {
     ND_BLOCK,  //ブロック
     ND_FUNCTION,
     ND_ROOTINE,
-    ND_ADDR,   //'&'
-    ND_DEREF,  //'*'
-    ND_INCRE,//'++'
-    ND_DECRE,//'--'
+    ND_ADDR,    //'&'
+    ND_DEREF,   //'*'
+    ND_INCRE,   //'++'
+    ND_DECRE,   //'--'
+    ND_ADDASS,  // '+='
+    ND_SUBASS,  // '-='
+    ND_MULASS,  //'*='
+    ND_DIVASS,  //'/='
     ND_SIZEOF,
     ND_SET,       // NDをまとめるもの
     ND_LVARINIT,  //ローカル変数を初期化
@@ -142,33 +140,33 @@ struct Node {
     Type *type;
 };
 Node *new_Node(NodeKind kind);
-void set_Node(Node* nd,NodeKind kind);
+void set_Node(Node *nd, NodeKind kind);
 struct BinaryNode {
     Node base;
     Node *lhs;
     Node *rhs;
 };
 BinaryNode *new_BinaryNode(NodeKind kind, Node *lhs, Node *rhs);
-void set_BinaryNode(BinaryNode *nd,NodeKind kind, Node *lhs, Node *rhs);
-struct UnaryNode{
+void set_BinaryNode(BinaryNode *nd, NodeKind kind, Node *lhs, Node *rhs);
+struct UnaryNode {
     Node base;
     Node *target;
 };
 UnaryNode *new_UnaryNode(NodeKind kind, Node *target);
-void set_UnaryNode(UnaryNode *nd,NodeKind kind, Node *target);
+void set_UnaryNode(UnaryNode *nd, NodeKind kind, Node *target);
 struct NumNode {
     Node base;
     int val;  // for ND_NUM
     Type *type;
 };
 NumNode *new_NumNode(int val);
-void set_NumNode(NumNode* nd,int val);
-struct ConstNode{
+void set_NumNode(NumNode *nd, int val);
+struct ConstNode {
     Node base;
-    int const_id;// 文字列識別用ID
+    int const_id;  // 文字列識別用ID
 };
 ConstNode *new_ConstNode(CVar *var);
-void set_ConstNode(ConstNode* nd,CVar *var);
+void set_ConstNode(ConstNode *nd, CVar *var);
 struct CondNode {
     Node base;
     Node *T;
@@ -176,7 +174,7 @@ struct CondNode {
     Node *cond;
 };
 CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F);
-void set_CondNode(CondNode* nd,NodeKind kind, Node *cond, Node *T, Node *F);
+void set_CondNode(CondNode *nd, NodeKind kind, Node *cond, Node *T, Node *F);
 struct ForNode {
     Node base;
     Node *init;
@@ -185,7 +183,7 @@ struct ForNode {
     Node *update;
 };
 ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *A);
-void set_ForNode(ForNode* nd,Node *init, Node *cond, Node *update, Node *A);
+void set_ForNode(ForNode *nd, Node *init, Node *cond, Node *update, Node *A);
 struct FuncNode {
     Node base;
     char *funcname;
@@ -193,13 +191,13 @@ struct FuncNode {
     Node *arg;
 };
 FuncNode *new_FuncNode(char *funcname, int namelen);
-void set_FuncNode(FuncNode* nd,char *funcname, int namelen);
+void set_FuncNode(FuncNode *nd, char *funcname, int namelen);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
 };
 VarNode *new_VarNode(Var *var);
-void set_VarNode(VarNode *nd,Var *var);
+void set_VarNode(VarNode *nd, Var *var);
 struct RootineNode {
     Node base;
     Node *block;
@@ -211,22 +209,21 @@ struct RootineNode {
     int moldlen;
 };
 RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen);
-void set_RootineNode(RootineNode* nd,char *name, int len, char *moldname, int moldlen);
+void set_RootineNode(RootineNode *nd, char *name, int len, char *moldname,
+                     int moldlen);
 struct BlockNode {
     Node base;
     Node *block;
 };
 BlockNode *new_BlockNode();
-void set_BlockNode(BlockNode* nd);
+void set_BlockNode(BlockNode *nd);
 struct VarInitNode {
     Node base;
     Var *var;
     Node *value;
 };
 VarInitNode *new_VarInitNode(Var *var, Node *value);
-void set_VarInitNode(VarInitNode* nd,Var *var, Node *value);
-
-
+void set_VarInitNode(VarInitNode *nd, Var *var, Node *value);
 
 //文法部
 void program();
@@ -243,8 +240,8 @@ Node *primary();
 
 Type *type_assign(Node *node);
 
-void gen_lval(Node *node,bool push);
-void gen(Node *node,bool push);
+void gen_lval(Node *node, bool push);
+void gen(Node *node, bool push);
 
 //型を管理
 typedef enum {
@@ -279,14 +276,17 @@ bool isArrayorPtr(Type *type);
 bool isNum(Type *type);
 bool isInteger(Type *type);
 bool isAssignable(Type *l, Type *r);
+bool isLeftsidevalue(Type *tp);
+bool isAddSubable(Type *l, Type *r);
+bool isMulDivable(Type *l, Type *r);
+
+char *type2str(Type *tp);
+
 
 Type *consume_Type();
 int make_memorysize(Type *type);
 
-
 void Initialize_type_tree();
-
-
 
 //変数を管理
 typedef enum { LOCAL, GLOBAL } Var_kind;
@@ -300,17 +300,16 @@ Var *find_Var(Token *token);
 Var *get_Var(Token *token);
 
 // 定数を管理
-struct CVar{
+struct CVar {
     Var base;
     int LC_id;
 };
-struct CStr{
+struct CStr {
     CVar base;
-    char* text;
+    char *text;
     int len;
 };
-CVar *new_CStr(char* text,int len);
-
+CVar *new_CStr(char *text, int len);
 
 //ローカル変数
 struct LVar {
@@ -318,8 +317,6 @@ struct LVar {
     int offset;  // RBPからのoffset、による型のサイズ
 };
 LVar *add_lvar(Token *token, Type *type);
-
-
 
 struct CC_Map_for_LVar {
     CC_AVLTree base;
@@ -339,7 +336,6 @@ struct GVar {
 };
 GVar *add_gvar(Token *token, Type *type);
 
-
 //関数を管理
 struct Rootine {
     RootineNode *node;
@@ -350,8 +346,8 @@ struct Rootine {
 
 char *registry_for_arg(Type *tp, int i);
 char *sizeoption(Type *tp);
-char *movzx2rax(Type *tp);// 符号拡張しない
-char *movsx2rax(Type *tp);// 符号拡張する(あっているか怪しい)
+char *movzx2rax(Type *tp);  // 符号拡張しない
+char *movsx2rax(Type *tp);  // 符号拡張する(あっているか怪しい)
 char *movzx2rdi(Type *tp);
 char *movsx2rdi(Type *tp);
 

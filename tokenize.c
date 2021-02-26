@@ -143,6 +143,10 @@ int is_alp(char c) {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || (c == '_');
 }
 
+bool match(const char *p, const char *word) {
+    return memcmp(p, word, strlen(word))==0;
+}
+
 Token *tokenize(char *p) {
     Token head;
     head.next = NULL;
@@ -152,13 +156,13 @@ Token *tokenize(char *p) {
             p++;
             continue;
         }
-        if (strncmp(p, "/*", 2) == 0) {
+        if (match(p, "/*")) {
             char *q = strstr(p + 2, "*/");
             if (!q) error_at(p, "コメントが閉じられていません");
             p = q + 2;
             continue;
         }
-        if (strncmp(p, "//", 2) == 0) {
+        if (match(p, "//")) {
             p += 2;
             while (*p != '\n') p++;
             continue;
@@ -166,9 +170,8 @@ Token *tokenize(char *p) {
 
         if (*p == '"') {
             char *q = ++p;
-            while (*p !=
-                   '"') {  // TODO:
-                           // ダブルクオートの読み方をエスケープ文字に対応すべし
+            while (*p != '"') {
+                if (*p == '\\') p++;
                 p++;
             }
 
@@ -178,46 +181,47 @@ Token *tokenize(char *p) {
         }
 
         //制御構文
-        if (memcmp(p, "return", 6) == 0 && !is_alnum(p[6])) {
+        if (match(p, "return") && !is_alnum(p[6])) {
             cur = new_Token(TK_RESERVED, cur, p, 6);
             p += 6;
             continue;
         }
 
-        if (memcmp(p, "while", 5) == 0 && !is_alnum(p[5])) {
+        if (match(p, "while") && !is_alnum(p[5])) {
             cur = new_Token(TK_RESERVED, cur, p, 5);
             p += 5;
             continue;
         }
 
-        if (memcmp(p, "else", 4) == 0 && !is_alnum(p[4])) {
+        if (match(p, "else") && !is_alnum(p[4])) {
             cur = new_Token(TK_RESERVED, cur, p, 4);
             p += 4;
             continue;
         }
 
-        if (memcmp(p, "for", 3) == 0 && !is_alnum(p[3])) {
+        if (match(p, "for") && !is_alnum(p[3])) {
             cur = new_Token(TK_RESERVED, cur, p, 3);
             p += 3;
             continue;
         }
 
-        if (memcmp(p, "if", 2) == 0 && !is_alnum(p[2])) {
+        if (match(p, "if") && !is_alnum(p[2])) {
             cur = new_Token(TK_RESERVED, cur, p, 2);
             p += 2;
             continue;
         }
         //演算子
-        if (memcmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
+        if (match(p, "sizeof") && !is_alnum(p[6])) {
             cur = new_Token(TK_RESERVED, cur, p, 6);
             p += 6;
             continue;
         }
 
         //確実に非変数名なもの
-        if (memcmp(p, "!=", 2) == 0 || memcmp(p, "==", 2) == 0 ||
-            memcmp(p, "<=", 2) == 0 || memcmp(p, ">=", 2) == 0 ||
-            memcmp(p, "++", 2) == 0 || memcmp(p, "--", 2) == 0) {
+        if (match(p, "!=") || match(p, "==") || match(p, "<=") ||
+            match(p, ">=") || match(p, "++") || match(p, "--") ||
+            match(p, "+=") || match(p, "-=") || match(p, "*=") ||
+            match(p, "/=")) {
             cur = new_Token(TK_RESERVED, cur, p, 2);
             p += 2;
             continue;

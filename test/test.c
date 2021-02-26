@@ -15,35 +15,35 @@ int test14(){4*1<+3;}
 int test15(){4*1 <= -(-4);}
 int test16(){(4*3)-1!=5*2;}
 int test17(){int x;x=3; x*4+3;}
-int test100(){
+int test18(){
     int x=0;
     return ++x;
 }
-int test101(){
+int test19(){
     int x=1;
     return --x;
 }
-int test102(){
+int test20(){
     int x=0;
     return x++;
 }
-int test103(){
+int test21(){
     int x=1;
     return x--;
 }
-int test104(){
+int test22(){
     int x=0;
     for(int i=0;i<5;i++){
         x=x+i;
     }
     return x;
 }
-int test105(){
+int test23(){
     char *x="ahoaho";
     x++;
     return x[0]-x[2];
 }
-int test106(){
+int test24(){
     int x[5];
     for(int i=0;i<5;i++){
         x[i]=i;
@@ -57,13 +57,33 @@ int test106(){
     y--;
     return *y;
 }
+int test25(){
+    int x=9;
+    x+=3;
+    return x;
+}
+int test26(){
+    int x=9;
+    x-=4;
+    return x;
+}
+int test27(){
+    int x=9;
+    x*=2;
+    return x;
+}
+int test28(){
+    int x=9;
+    x/=3;
+    return x;
+}
 
 int count;
 int assert(int answer,int res){
     if(answer == res){
-        print("test%d is pass :: expect: %d, actual: %d\n\0",count,answer,res);
+        print("test%d is pass :: expect: %d, actual: %d\n",count,answer,res);
     }else{
-        print("test%d is failed :: expect: %d, actual: %d\n\0",count,answer,res);
+        print("test%d is failed :: expect: %d, actual: %d\n",count,answer,res);
         doexit(1);
     }
     count=count+1;
@@ -89,13 +109,17 @@ int main(){
     assert(1,test16());
     assert(15,test17());
 
-    assert(1,test100());
-    assert(0,test101());
-    assert(0,test102());
-    assert(1,test103());
-    assert(10,test104());
-    assert(7,test105());
-    assert(1,test106());
+    assert(1,test18());
+    assert(0,test19());
+    assert(0,test20());
+    assert(1,test21());
+    assert(10,test22());
+    assert(7,test23());
+    assert(1,test24());
+    assert(12,test25());
+    assert(5,test26());
+    assert(18,test27());
+    assert(3,test28());
 
     print("OK\n");
 }

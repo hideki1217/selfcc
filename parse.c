@@ -281,9 +281,17 @@ Node *expr() {
 }
 Node *assign() {
     Node *node = equality();
-    if (consume("=")) {
-        node = (Node *)new_BinaryNode(ND_ASSIGN, node, assign());
-    }
+    if (consume("=")) 
+        return (Node *)new_BinaryNode(ND_ASSIGN, node, assign());
+    if(consume("+="))
+        return (Node*)new_BinaryNode(ND_ADDASS,node,assign());
+    if(consume("-="))
+        return (Node*)new_BinaryNode(ND_SUBASS,node,assign());
+    if(consume("*="))
+        return (Node*)new_BinaryNode(ND_MULASS,node,assign());
+    if(consume("/="))
+        return (Node*)new_BinaryNode(ND_DIVASS,node,assign());
+    
     return node;
 }
 Node *equality() {

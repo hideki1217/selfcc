@@ -1,5 +1,5 @@
 #include<stdio.h>
-#include <stdlib.h>
+#include<stdlib.h>
 #include<stdarg.h>
 
 
@@ -17,10 +17,11 @@ int hogege(int a,int b,int c,int d,int e,int f){
 int hogehoge(int a,int b,int c,int d,int e,int f,int g){
     return a+b+c+d+e+f+g;
 }
-int print(char * fmt,...){
+int print(const char *fmt,...){
     va_list ap;
     va_start(ap, fmt);
-    printf(fmt,ap);
+    vprintf(fmt,ap);
+    va_end(ap);
 }
 int print_num(int x){
     printf("%d\n",x);

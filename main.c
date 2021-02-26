@@ -15,7 +15,6 @@ int main(int argc, char **argv) {
         filepath=argv[i];
     }
     
-    // Grobal変数に値をセット
     if(fromfile)
         user_input = read_file(filepath);
     filename = fromfile?
@@ -36,6 +35,9 @@ int main(int argc, char **argv) {
     printf(".Intel_syntax noprefix\n");
     printf(".globl main\n");  
 
+
+    // データセクション
+    printf("    .section .data\n");
     for(CC_VecNode *nd=constants->first;
         nd!=NULL;
         nd=nd->next)
@@ -47,6 +49,8 @@ int main(int argc, char **argv) {
         printf("    .string \"%s\"\n",s);
     }
 
+    // テキストセクション
+    printf("    .section .text\n");
     for (Node *now = code; now; now = now->next) {
         type_assign(now);
         gen(now,false);

@@ -25,6 +25,30 @@ void Initialize_type_tree() {
 }
 
 ///////////////////////型
+char *type2str(Type *tp){
+    if(tp==NULL)return "";
+    char *res=type2str(tp->ptr_to);
+    char *buffer=malloc(strlen(res)+30);
+    switch(tp->kind){
+        case TY_ARRAY:
+            sprintf(buffer,"[%d] %s",tp->array_len,res);
+            break;
+        case TY_PTR:
+            sprintf(buffer,"* %s",res);
+            break;
+        case TY_STRUCT:{
+            char s[tp->len+1];
+            string_limitedcopy(s,tp->name,tp->len);
+            sprintf(buffer,"%s %s",s,res);
+            break;
+        }
+        default:
+            sprintf(buffer,"%s %s",tp->name,res);
+            break;
+    }
+    free(res);
+    return buffer;
+}
 
 Type *new_PrimType(TypeKind kind, char *name, int len, int size) {
     Type *type = calloc(1, sizeof(Type));
@@ -98,6 +122,15 @@ bool isAssignable(Type *l, Type *r) {
     }
     return false;
 }
+bool isLeftsidevalue(Type *tp){
+    return !(tp->kind == TY_ARRAY || tp->kind == TY_STRUCT);
+}
+bool isAddSubable(Type *l, Type *r){
+    return isAssignable(l,r); // TODO: ちゃんと考えるべし
+}
+bool isMulDivable(Type *l, Type *r){
+    return isNum(l) && isNum(r);
+}
 
 /////////////////////データ構造
 
@@ -112,6 +145,7 @@ void cc_map_for_var_delete(CC_Map_for_LVar *map) {
 }
 void cc_map_for_var_clear(CC_Map_for_LVar *map) {
     cc_avltree_Clear((CC_AVLTree *)map);
+    map->offset=0;
 }
 void cc_map_for_var_add(CC_Map_for_LVar *map, char *key, int key_len,
                         LVar *item) {

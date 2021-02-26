@@ -131,7 +131,31 @@ Type *type_assign(Node *node) {
         }
         case ND_INCRE:
         case ND_DECRE:{
-            tp= type_assign(((BinaryNode*)node)->lhs); // もしtpがstructやfunctionならコンパイルエラー
+            tp= type_assign(((BinaryNode*)node)->lhs);
+            if(!isLeftsidevalue(tp))
+                error("変更可能な左辺値でなければいけません");
+            break;
+        }
+        case ND_ADDASS:
+        case ND_SUBASS:{
+            Type *ltp= type_assign(((BinaryNode*)node)->lhs);
+            Type *rtp= type_assign(((BinaryNode*)node)->rhs);
+            if(!isAddSubable(ltp,rtp))
+                error("%s と %s は足したり引いたりできません。",type2str(ltp),type2str(rtp));
+            if(!isLeftsidevalue(ltp))
+                error("変更可能な左辺値でなければいけません");
+            tp=ltp;
+            break;
+        }
+        case ND_MULASS:
+        case ND_DIVASS:{
+            Type *ltp= type_assign(((BinaryNode*)node)->lhs);
+            Type *rtp= type_assign(((BinaryNode*)node)->rhs);
+            if(!isMulDivable(ltp,rtp))
+                error("%s と %s はかけたり、割ったりできません。",type2str(ltp),type2str(rtp));
+            if(!isLeftsidevalue(ltp))
+                error("変更可能な左辺値でなければいけません");
+            tp=ltp;
             break;
         }
         default: {
@@ -448,6 +472,62 @@ void gen(Node *node,bool push) {
             printf("    push rax\n");
             BinaryNode tmp;
             set_BinaryNode(&tmp,ND_SUB,bnode->lhs,bnode->rhs);
+            type_assign((Node*)&tmp);
+            gen((Node *)&tmp,false);
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    pop rax\n");
+            if(push) printf("   push rax\n");
+            return;
+        }
+        case ND_ADDASS:{
+            BinaryNode *bnode= (BinaryNode*)node;
+
+            gen_lval(bnode->lhs,true);
+            BinaryNode tmp;
+            set_BinaryNode(&tmp,ND_ADD,bnode->lhs,bnode->rhs);
+            type_assign((Node*)&tmp);
+            gen((Node *)&tmp,false);
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    pop rax\n");
+            if(push) printf("   push rax\n");
+            return;
+        }
+        case ND_SUBASS:{
+            BinaryNode *bnode= (BinaryNode*)node;
+
+            gen_lval(bnode->lhs,true);
+            BinaryNode tmp;
+            set_BinaryNode(&tmp,ND_SUB,bnode->lhs,bnode->rhs);
+            type_assign((Node*)&tmp);
+            gen((Node *)&tmp,false);
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    pop rax\n");
+            if(push) printf("   push rax\n");
+            return;
+        }
+        case ND_MULASS:{
+            BinaryNode *bnode= (BinaryNode*)node;
+
+            gen_lval(bnode->lhs,true);
+            BinaryNode tmp;
+            set_BinaryNode(&tmp,ND_MUL,bnode->lhs,bnode->rhs);
+            type_assign((Node*)&tmp);
+            gen((Node *)&tmp,false);
+            printf("    pop rdi\n");
+            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    pop rax\n");
+            if(push) printf("   push rax\n");
+            return;
+        }
+        case ND_DIVASS:{
+            BinaryNode *bnode= (BinaryNode*)node;
+
+            gen_lval(bnode->lhs,true);
+            BinaryNode tmp;
+            set_BinaryNode(&tmp,ND_DIV,bnode->lhs,bnode->rhs);
             type_assign((Node*)&tmp);
             gen((Node *)&tmp,false);
             printf("    pop rdi\n");
