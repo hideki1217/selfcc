@@ -253,7 +253,10 @@ typedef enum {
     TY_DOUBLE,
     TY_PTR,
     TY_ARRAY,
-    TY_STRUCT
+    TY_STRUCT,
+    TY_UNION,
+    TY_ENUM,
+    TY_ALIAS
 } TypeKind;
 struct Type {
     TypeKind kind;

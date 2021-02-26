@@ -137,7 +137,6 @@ int LCcount = 0;
 Node *nullNode;
 
 void program() {
-    int i = 0;
     Node head;
     head.next = NULL;
     Node *node = &head;
@@ -291,7 +290,7 @@ Node *assign() {
         return (Node*)new_BinaryNode(ND_MULASS,node,assign());
     if(consume("/="))
         return (Node*)new_BinaryNode(ND_DIVASS,node,assign());
-    
+
     return node;
 }
 Node *equality() {

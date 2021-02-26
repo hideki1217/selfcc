@@ -77,6 +77,30 @@ int test28(){
     x/=3;
     return x;
 }
+int test29(){int a;a=4;int d; d=3*a; +(a+d)*3;}
+int test30(){int abc;abc=4;}
+int test31(){int abc;int abcd;abc=5;abcd=abc/5;}
+int test32(){
+    int x;
+    x=6;
+    /*x=9;
+    x++;
+    */
+    return x;
+}
+int test33(){
+    int x;
+    x=6;
+    //x=9;
+    return x;
+}
+int test34(){int aho;int aho_aho;aho=3; aho_aho=aho*2; return aho_aho*aho;}
+int test35(){int x_1;int x_2;x_1=100;x_2=2;return x_1/x_2; return 0;}
+int test36(){int x;x=9; if(x==9)return 5;return 3;}
+int test37(){int x;x=9; if(x!=9)return 5;return 3;}
+int test38(){int x;x=9; if(x!=9)return 5;else return 3;return 1;}
+int test39(){int x;x=9; if(x==5)x=x*3;else x=x*4;return x;}
+int test40(){int x;x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;}
 
 int count;
 int assert(int answer,int res){
@@ -108,7 +132,6 @@ int main(){
     assert(1,test15());
     assert(1,test16());
     assert(15,test17());
-
     assert(1,test18());
     assert(0,test19());
     assert(0,test20());
@@ -120,6 +143,18 @@ int main(){
     assert(5,test26());
     assert(18,test27());
     assert(3,test28());
+    assert(48,test29());
+    assert(4,test30());
+    assert(1,test31());
+    assert(6,test32());
+    assert(6,test33());
+    assert(18,test34());
+    assert(50,test35());
+    assert(5,test36());
+    assert(3,test37());
+    assert(3,test38());
+    assert(36,test39());
+    assert(6,test40());
 
     print("OK\n");
 }

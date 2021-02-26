@@ -144,10 +144,19 @@ int is_alp(char c) {
 }
 
 bool match(const char *p, const char *word) {
-    return memcmp(p, word, strlen(word))==0;
+    return memcmp(p, word, strlen(word)) == 0;
 }
 
+#define keyword(p, s)                            \
+    n = strlen(s);                               \
+    if (match(p, s) && !is_alnum(p[n])) {        \
+        cur = new_Token(TK_RESERVED, cur, p, n); \
+        p += n;                                  \
+        continue;                                \
+    }
+
 Token *tokenize(char *p) {
+    int n;
     Token head;
     head.next = NULL;
     Token *cur = &head;
@@ -174,50 +183,37 @@ Token *tokenize(char *p) {
                 if (*p == '\\') p++;
                 p++;
             }
-
             cur = new_Token(TK_STRING, cur, q, p - q);
             p++;  // 最後の「"」を消費する
             continue;
         }
 
         //制御構文
-        if (match(p, "return") && !is_alnum(p[6])) {
-            cur = new_Token(TK_RESERVED, cur, p, 6);
-            p += 6;
-            continue;
-        }
+        keyword(p, "return");
+        keyword(p, "while");
+        keyword(p, "else");
+        keyword(p, "for");
+        keyword(p, "if");
+        //演算子
+        keyword(p, "sizeof");
+        //修飾子
+        keyword(p, "extern");
+        keyword(p, "register");
+        keyword(p, "auto");
+        keyword(p, "static");
+        keyword(p, "typedef");
+        //データ構造
+        keyword(p,"struct");
+        keyword(p,"union");
+        keyword(p,"enum");
 
-        if (match(p, "while") && !is_alnum(p[5])) {
-            cur = new_Token(TK_RESERVED, cur, p, 5);
-            p += 5;
-            continue;
-        }
-
-        if (match(p, "else") && !is_alnum(p[4])) {
-            cur = new_Token(TK_RESERVED, cur, p, 4);
-            p += 4;
-            continue;
-        }
-
-        if (match(p, "for") && !is_alnum(p[3])) {
+        //確実に非変数名なもの
+        if (match(p, "...")) {
             cur = new_Token(TK_RESERVED, cur, p, 3);
             p += 3;
             continue;
         }
 
-        if (match(p, "if") && !is_alnum(p[2])) {
-            cur = new_Token(TK_RESERVED, cur, p, 2);
-            p += 2;
-            continue;
-        }
-        //演算子
-        if (match(p, "sizeof") && !is_alnum(p[6])) {
-            cur = new_Token(TK_RESERVED, cur, p, 6);
-            p += 6;
-            continue;
-        }
-
-        //確実に非変数名なもの
         if (match(p, "!=") || match(p, "==") || match(p, "<=") ||
             match(p, ">=") || match(p, "++") || match(p, "--") ||
             match(p, "+=") || match(p, "-=") || match(p, "*=") ||

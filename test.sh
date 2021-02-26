@@ -44,12 +44,13 @@ assert 0 "int main(){(4*3)-1==(3+2)*2;}"
 assert 1 "int main(){(4*3)-1!=5*2;}"
 
 assert 15 "int main(){int x;x=3; x*4+3;}"
-MOVED
+
 
 assert 48 "int main(){int a;a=4;int d; d=3*a; +(a+d)*3;}"
 
 assert 4 "int main(){int abc;abc=4;}"
 assert 1 "int main(){int abc;int abcd;abc=5;abcd=abc/5;}"
+
 
 assert 18 "int main(){int aho;int aho_aho;aho=3; aho_aho=aho*2; return aho_aho*aho;}"
 assert 50 "int main(){int x_1;int x_2;x_1=100;x_2=2;return x_1/x_2; return 0;}"
@@ -60,7 +61,7 @@ assert 3 "int main(){int x;x=9; if(x!=9)return 5;return 3;}"
 assert 3 "int main(){int x;x=9; if(x!=9)return 5;else return 3;return 1;}"
 assert 36 "int main(){int x;x=9; if(x==5)x=x*3;else x=x*4;return x;}"
 assert 6 "int main(){int x;x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;}"
-
+MOVED
 assert 5 "int main(){int x;x=0; while(x<5)x=x+1; return x;}"
 assert 8 "int main(){int x;x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;}"
 
