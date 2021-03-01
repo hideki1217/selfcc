@@ -61,7 +61,7 @@ assert 3 "int main(){int x;x=9; if(x!=9)return 5;return 3;}"
 assert 3 "int main(){int x;x=9; if(x!=9)return 5;else return 3;return 1;}"
 assert 36 "int main(){int x;x=9; if(x==5)x=x*3;else x=x*4;return x;}"
 assert 6 "int main(){int x;x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;}"
-MOVED
+
 assert 5 "int main(){int x;x=0; while(x<5)x=x+1; return x;}"
 assert 8 "int main(){int x;x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;}"
 
@@ -171,6 +171,7 @@ int main(){
 }
 "
 assert 24 "
+extern int fact(int);
 int main(){
     return fact(4);
 }
@@ -270,8 +271,9 @@ int main(){
     return *y;
 }
 "
-
+MOVED
 assert 1 "
+extern void alloc4(int **,int,int,int,int);
 int main(){
     int *p;
     alloc4(&p, 1, 2, 4, 8);
@@ -280,6 +282,7 @@ int main(){
 "
 
 assert 4 "
+extern void alloc4(int **,int,int,int,int);
 int main(){
     int *p;
     alloc4(&p, 1, 2, 4, 8);
@@ -288,6 +291,7 @@ int main(){
 "
 
 assert 8 "
+extern void alloc4(int **,int,int,int,int);
 int main(){
     int *p;
     alloc4(&p, 1, 2, 4, 8);

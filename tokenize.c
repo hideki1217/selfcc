@@ -7,6 +7,7 @@
 #include "selfcc.h"
 
 Token *tkstream;
+Token *nowToken;
 char *user_input;
 char *filename;
 CC_Map_for_LVar *locals;
@@ -25,6 +26,12 @@ Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
 bool token_ismutch(Token *token, char *str, int len) {
     return token->len == len && memcmp(token->str, str, len) == 0;
 }
+Token *forward() {
+    Token *tk = tkstream;
+    tkstream = tkstream->next;
+    nowToken = tk;
+    return tk;
+}
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 bool consume(char *op) {
@@ -32,56 +39,49 @@ bool consume(char *op) {
         !token_ismutch(tkstream, op, strlen(op))) {
         return false;
     }
-    tkstream = tkstream->next;
+    forward();
     return true;
 }
 //　強制的に一つトークンを進める(不用意に使うべきではない)
-Token *consume_hard() {
-    Token *tk = tkstream;
-    tkstream = tkstream->next;
-    return tk;
-}
+Token *consume_hard() { return forward(); }
 
 //次の文字がopかどうかを判定、文字は進めない
 bool check(char *op) { return token_ismutch(tkstream, op, strlen(op)); }
 
+bool check_ahead(char *s) {
+    return token_ismutch(tkstream->next, s, strlen(s));
+}
+
 //変数ならばそれを返して一つ進める
-Token *consume_ident() {
-    if (tkstream->kind != TK_IDENT) return NULL;
-    Token *ident = tkstream;
-    tkstream = tkstream->next;
-    return ident;
+bool consume_ident(Token **tk) {
+    if (tkstream->kind != TK_IDENT) return false;
+    *tk = forward();
+    return true;
 }
 
 Token *expect_ident() {
     if (tkstream->kind != TK_IDENT)
         error_at(tkstream->str, "変数もしくは関数ではありません");
-    Token *ident = tkstream;
-    tkstream = tkstream->next;
-    return ident;
+    return forward();
 }
 
-Token *consume_string() {
-    if (tkstream->kind != TK_STRING) return NULL;
-    Token *str = tkstream;
-    tkstream = tkstream->next;
-    return str;
+bool consume_string(Token **tk) {
+    if (tkstream->kind != TK_STRING) return false;
+    *tk = forward();
+    return true;
 }
 
 Token *expect_var() {
     if (tkstream->kind != TK_IDENT || *(tkstream->next->str) == '(') {
         error_at(tkstream->str, "変数ではありません");
     }
-    Token *ident = tkstream;
-    tkstream = tkstream->next;
-    return ident;
+    return forward();
 }
 Token *expect_var_not_proceed() {
     if (tkstream->kind != TK_IDENT || *(tkstream->next->str) == '(') {
         error_at(tkstream->str, "変数ではありません");
     }
-    Token *ident = tkstream;
-    return ident;
+    return tkstream;
 }
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
@@ -89,7 +89,14 @@ void expect(char op) {
     if (tkstream->kind != TK_RESERVED || tkstream->str[0] != op) {
         error_at(tkstream->str, "\"%c\"ではありません", op);
     }
-    tkstream = tkstream->next;
+    forward();
+}
+void expect_str(char *s) {
+    if (tkstream->kind != TK_RESERVED || tkstream->len != strlen(s) ||
+        memcmp(s, tkstream->str, strlen(s)) == 0) {
+        error_at(tkstream->str, "\"%s\"ではありません", s);
+    }
+    forward();
 }
 
 Type *expect_type() {
@@ -98,7 +105,7 @@ Type *expect_type() {
     }
     Type *type = find_type(tkstream);
     if (type == NULL) error_at(tkstream->str, "宣言されていない型です。");
-    tkstream = tkstream->next;
+    forward();
     while (consume("*")) {
         type = new_Pointer(type);
     }
@@ -110,26 +117,43 @@ bool check_Type() {
     return true;
 }
 // checkした後に実行すべき
-Type *consume_Type() {
-    if (tkstream->kind != TK_IDENT) {
-        error_at(tkstream->str, "型名ではありません");
-    }
+bool consume_Type(Type **tp) {
+    if (tkstream->kind != TK_IDENT) return false;
     Type *type = find_type(tkstream);
-    tkstream = tkstream->next;
-    while (consume("*")) {
-        type = new_Pointer(type);
-    }
-    return type;
+    if (!type) return false;
+    *tp = type;
+    forward();
+    return true;
 }
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
-int expect_number() {
+int expect_integer() {
     if (tkstream->kind != TK_NUM) {
         error_at(tkstream->str, "数ではありません");
     }
     int val = tkstream->val;
-    tkstream = tkstream->next;
+    forward();
     return val;
+}
+bool consume_integer(Token **tk) {
+    if (tkstream->kind != TK_NUM) return false;
+    *tk = forward();
+    return true;
+}
+bool consume_float(Token **tk) {
+    if (tkstream->kind != TK_FLOAT) return false;
+    *tk = forward();
+    return true;
+}
+bool consume_char(Token **tk) {
+    if (tkstream->kind != TK_CHAR) return false;
+    *tk = forward();
+    return true;
+}
+bool consume_enum(Token **tk) {
+    if (tkstream->kind != TK_ENUM) return false;
+    *tk = forward();
+    return true;
 }
 
 bool at_eof() { return tkstream->kind == TK_EOF; }
@@ -189,23 +213,33 @@ Token *tokenize(char *p) {
         }
 
         //制御構文
-        keyword(p, "return");
         keyword(p, "while");
         keyword(p, "else");
         keyword(p, "for");
         keyword(p, "if");
+        keyword(p, "switch");
+        keyword(p, "case");
+        keyword(p, "default");
+        keyword(p, "goto");
         //演算子
         keyword(p, "sizeof");
         //修飾子
-        keyword(p, "extern");
-        keyword(p, "register");
-        keyword(p, "auto");
-        keyword(p, "static");
-        keyword(p, "typedef");
+        keyword(p, "extern");    // TODO
+        keyword(p, "register");  // TODO
+        keyword(p, "auto");      // TODO
+        keyword(p, "static");    // TODO
+        keyword(p, "typedef");   // TODO
         //データ構造
-        keyword(p,"struct");
-        keyword(p,"union");
-        keyword(p,"enum");
+        keyword(p, "struct");  // TODO
+        keyword(p, "union");   // TODO
+        keyword(p, "enum");    // TODO
+        //制御文字
+        keyword(p, "return");
+        keyword(p, "continue");  // TODO
+        keyword(p, "break");     // TODO
+        //変数修飾子
+        keyword(p,"const");
+        keyword(p,"volatile");
 
         //確実に非変数名なもの
         if (match(p, "...")) {
@@ -217,7 +251,8 @@ Token *tokenize(char *p) {
         if (match(p, "!=") || match(p, "==") || match(p, "<=") ||
             match(p, ">=") || match(p, "++") || match(p, "--") ||
             match(p, "+=") || match(p, "-=") || match(p, "*=") ||
-            match(p, "/=")) {
+            match(p, "/=") || match(p, "||") || match(p, "&&") ||
+            match(p, "->") || match(p, "<<") || match(p, ">>")) {
             cur = new_Token(TK_RESERVED, cur, p, 2);
             p += 2;
             continue;
@@ -226,13 +261,15 @@ Token *tokenize(char *p) {
         if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
             *p == ')' || *p == '>' || *p == '<' || *p == '=' || *p == ';' ||
             *p == '{' || *p == '}' || *p == ',' || *p == '*' || *p == '&' ||
-            *p == '[' || *p == ']') {
+            *p == '[' || *p == ']' || *p == '?' || *p == ':' || *p == '|' ||
+            *p == '?' || *p == '%' || *p == '.' || *p == '~') {
             cur = new_Token(TK_RESERVED, cur, p++, 1);
             continue;
         }
 
         //数字
-        if (isdigit(*p)) {
+        if (isdigit(*p)) {  // TODO: int->float->
+                            // doubleと自動で読み込むレベルをあげるようにすべき
             char *q = p;
             cur = new_Token(TK_NUM, cur, p, 1);  //数字の長さを1で適当に初期化
             cur->val = strtol(p, &p, 10);

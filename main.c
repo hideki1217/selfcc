@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
         filepath=argv[i];
     }
     
+    ////////////////////////////グローバル変数たち
     if(fromfile)
         user_input = read_file(filepath);
     filename = fromfile?
@@ -23,12 +24,15 @@ int main(int argc, char **argv) {
     locals = cc_map_for_var_new();
     globals = cc_avltree_new();
     tkstream = tokenize(user_input);
+    nowToken=NULL;
     constants = cc_vector_new();
 
-    type_tree = cc_avltree_new();
+    code=NULL;
+    
     Initialize_type_tree();
 
     nullNode = (Node *)new_NumNode(1);
+    /////////////////////////////////////////////
 
     program();
 

@@ -22,17 +22,26 @@ typedef struct BlockNode BlockNode;
 typedef struct BinaryNode BinaryNode;
 typedef struct UnaryNode UnaryNode;
 typedef struct NumNode NumNode;
+typedef struct FloatNode FloatNode;
+typedef struct CharNode CharNode;
+typedef struct EnumNode EnumNode;
 typedef struct ConstNode ConstNode;
+typedef struct CastNode CastNode;
 typedef struct CondNode CondNode;
 typedef struct ForNode ForNode;
 typedef struct FuncNode FuncNode;
 typedef struct VarNode VarNode;
 typedef struct RootineNode RootineNode;
 typedef struct VarInitNode VarInitNode;
+typedef struct LabelNode LabelNode;
 
 typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
+typedef int flag_n;
+
+//////////////////////////// グローバル変数
 extern Token *tkstream;
+extern Token *nowToken;
 extern char *user_input;
 extern char *filename;
 
@@ -43,14 +52,23 @@ extern int
 extern Node *code;
 extern Node *nullNode;
 
-extern CC_AVLTree *type_tree;
-
 extern CC_Map_for_LVar *locals;
 extern CC_AVLTree *globals;
 
 extern CC_Vector *constants;
 
-typedef enum { TK_RESERVED, TK_STRING, TK_IDENT, TK_NUM, TK_EOF } TokenKind;
+//////////////////////////////////
+
+typedef enum {
+    TK_RESERVED,
+    TK_STRING,
+    TK_IDENT,
+    TK_NUM,
+    TK_EOF,
+    TK_FLOAT,
+    TK_CHAR,
+    TK_ENUM
+} TokenKind;
 
 struct Token {
     TokenKind kind;
@@ -63,21 +81,24 @@ Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
-void error(char *fmt, ...);
+void error(char *msg, ...);
 void error_at(char *loc, char *fmt, ...);
+void error_here(bool flag, char *fmt, ...);
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 bool consume(char *op);
 bool check(char *op);
+//一個先を見る
+bool check_ahead(char *s);
 
 Token *consume_hard();
 //変数値があるか確認
 Token *expect_var_not_proceed();
 
-Token *consume_string();
+bool consume_string(Token **tk);
 
 // identを一つ返し一つ進める
-Token *consume_ident();
+bool consume_ident(Token **tk);
 Token *expect_ident();
 Token *expect_var();
 //変数値があるか確認し、進めない
@@ -85,12 +106,18 @@ Token *expect_var_not_proceed();
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op);
+void expect_str(char* s);
 
 //型名がなければエラーを吐く
 Type *expect_type();
+bool consume_Type(Type **tp);
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
-int expect_number();
+int expect_integer();
+bool consume_integer(Token **tk);
+bool consume_float(Token **tk);
+bool consume_char(Token **tk);
+bool consume_enum(Token **tk);
 
 bool token_ismutch(Token *token, char *str, int len);
 
@@ -103,19 +130,38 @@ typedef enum {
     ND_SUB,     //"-"
     ND_MUL,     //"*"
     ND_DIV,     //"/"
+    ND_OR,      //"|" TODO
+    ND_XOR,     //"^" TODO
+    ND_AND,     //"&" TODO
+    ND_NOT,     //"~" TODO
+    ND_MOD,     //"%" TODO
+    ND_RSHFT,   //">>" TODO
+    ND_LSHFT,   //"<<" TODO
     ND_EQU,     //"=="
     ND_NEQ,     //"!="
     ND_GRT,     //"<"
     ND_GOE,     //"<="
+    ND_LGCOR,   //"||" TODO
+    ND_LGCAND,  //"&&" TODO
+    ND_LGCNOT,  //"!" TODO
     ND_ASSIGN,  //"="
     ND_LVAR,    //ローカル変数
     ND_GVAR,    //グローバル変数
     ND_RETURN,
+    ND_GOTO, // TODO
+    ND_BREAK, // TODO
+    ND_CONTINUE, // TODO
+    ND_LABEL, // TODO "** : ..."ってやつ
+    ND_CASE, // case ** : ...
+    ND_DEFAULT, // defalut: ...
     ND_IF,
     ND_IFEL,
     ND_WHILE,
+    ND_DOWHILE, // TODO
     ND_FOR,
+    ND_SWITCH, // TODO
     ND_BLOCK,  //ブロック
+    ND_CAST,   // TODO
     ND_FUNCTION,
     ND_ROOTINE,
     ND_ADDR,    //'&'
@@ -126,12 +172,22 @@ typedef enum {
     ND_SUBASS,  // '-='
     ND_MULASS,  //'*='
     ND_DIVASS,  //'/='
+    ND_MODASS,  //'%=' TODO
+    ND_LSHASS,  //'<<=' TODO
+    ND_RSHASS,  //'>>=' TODO
+    ND_ANDASS,  //'&=' TODO
+    ND_ORASS,   //'|=' TODO
+    ND_XORASS,  //'^=' TODO
     ND_SIZEOF,
     ND_SET,       // NDをまとめるもの
     ND_LVARINIT,  //ローカル変数を初期化
     ND_GVARINIT,  //グローバル変数を初期化
-    ND_NUM,
-    ND_STR
+    ND_ENUM,      // TODO
+    ND_INT,
+    ND_FLOAT,  // TODO
+    ND_CHAR,   // TODO
+    ND_STR,
+    ND_NULL // 何もしないノード
 } NodeKind;
 
 struct Node {
@@ -156,17 +212,42 @@ UnaryNode *new_UnaryNode(NodeKind kind, Node *target);
 void set_UnaryNode(UnaryNode *nd, NodeKind kind, Node *target);
 struct NumNode {
     Node base;
-    int val;  // for ND_NUM
-    Type *type;
+    int val;  // for ND_INT
 };
 NumNode *new_NumNode(int val);
 void set_NumNode(NumNode *nd, int val);
+struct FloatNode {
+    Node base;
+    double val;
+};
+FloatNode *new_FloatNode(float val);
+void set_FloatNode(FloatNode *node, float val);
+struct CharNode {
+    Node base;
+    char val;
+};
+CharNode *new_CharNode(char val);
+void set_CharNode(CharNode *node, char val);
+struct EnumNode {
+    Node base;
+    char *name;
+    int len;
+};
+EnumNode *new_EnumNode(char *name, int len);
+void set_EnumNode(EnumNode *node, char *name, int len);
 struct ConstNode {
     Node base;
-    int const_id;  // 文字列識別用ID
+    int const_id;  // 定数価識別用ID
 };
 ConstNode *new_ConstNode(CVar *var);
 void set_ConstNode(ConstNode *nd, CVar *var);
+struct CastNode {
+    Node base;
+    Node *target;
+    Type *cast;
+};
+CastNode *new_CastNode(Type *cast, Node *target);
+void set_CastNode(CastNode *node, Type *cast, Node *target);
 struct CondNode {
     Node base;
     Node *T;
@@ -190,8 +271,8 @@ struct FuncNode {
     int namelen;
     Node *arg;
 };
-FuncNode *new_FuncNode(char *funcname, int namelen);
-void set_FuncNode(FuncNode *nd, char *funcname, int namelen);
+FuncNode *new_FuncNode(Var *var);
+void set_FuncNode(FuncNode *nd,Var *var);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
@@ -215,8 +296,8 @@ struct BlockNode {
     Node base;
     Node *block;
 };
-BlockNode *new_BlockNode();
-void set_BlockNode(BlockNode *nd);
+BlockNode *new_BlockNode(NodeKind kind);
+void set_BlockNode(BlockNode *nd,NodeKind kind);
 struct VarInitNode {
     Node base;
     Var *var;
@@ -224,10 +305,18 @@ struct VarInitNode {
 };
 VarInitNode *new_VarInitNode(Var *var, Node *value);
 void set_VarInitNode(VarInitNode *nd, Var *var, Node *value);
+struct LabelNode{
+    Node base;
+    char *label;
+    int len;
+};
+LabelNode *new_LabelNode(NodeKind kind,char *label,int len);
+void set_LabelNode(LabelNode* node,NodeKind kind,char *label,int len);
 
 //文法部
 void program();
 Node *rootine();
+Node *extern_declaration();
 Node *stmt();
 Node *expr();
 Node *assign();
@@ -237,6 +326,36 @@ Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
+Type *type_name();
+void abstract_declarator(Type **base);// 保留
+/*flag_nを返す。typedef なら-1を返す*/
+flag_n storage_specifier();
+
+Node *constant_expr();
+Node *condition_expr();
+Node *logical_or_expr();
+Node *logical_and_expr();
+Node *or_expr();
+Node *xor_expr();
+Node *and_expression();
+Node *equality_expr();
+Node *relational_expr();
+Node *shift_expr();
+Node *add_expr();
+Node *mul_expr();
+Node *cast_expr();
+Node *unary_expr();
+Node *postfix_expr();
+Node *primary_expr();
+Node *constant();
+Node *expression();
+Node *assignment_expr();
+Node *statement();
+Node *labeled_stmt();
+Node *expression_stmt();
+Node *selection_stmt();
+Node *iteration_stmt();
+Node *jump_stmt();
 
 Type *type_assign(Node *node);
 
@@ -256,21 +375,27 @@ typedef enum {
     TY_STRUCT,
     TY_UNION,
     TY_ENUM,
+    TY_FUNCTION,
     TY_ALIAS
 } TypeKind;
 struct Type {
     TypeKind kind;
     Type *ptr_to;
+    Type *next;
     char *name;
     int len;
     int size;
     int array_len;
+    bool isConst;
+    bool isVolatile;
 };
 
 Type *new_PrimType(TypeKind kind, char *name, int len, int size);
 Type *new_Pointer(Type *base);
+Type *new_Function(Type *base,Type *arg);
 Type *new_Array(Type *base, int length);
 Type *new_Struct(Type *bases);
+Type *clone_Type(Type *tp);
 Type *find_type(Token *token);
 Type *find_type_from_name(char *name);
 bool equal(Type *l, Type *r);
@@ -285,8 +410,6 @@ bool isMulDivable(Type *l, Type *r);
 
 char *type2str(Type *tp);
 
-
-Type *consume_Type();
 int make_memorysize(Type *type);
 
 void Initialize_type_tree();
@@ -298,9 +421,33 @@ struct Var {
     char *name;
     int len;
     Type *type;
+    flag_n flag;
 };
+/* 
+tokenの文字列をつかい、
+宣言済みの変数や関数の中から
+一致するものを探す。
+もしなければ、NULLを返す
+*/
 Var *find_Var(Token *token);
+/* 
+tokenの文字列をつかい、
+宣言済みの変数や関数の中から
+一致するものを探す。
+もしなければ、エラー終了 
+*/
 Var *get_Var(Token *token);
+
+bool IsExtern(flag_n flag);
+bool IsStatic(flag_n flag);
+bool IsAuto(flag_n flag);
+bool IsRegister(flag_n flag);
+flag_n setExtern(flag_n flag,bool tof);
+flag_n setStatic(flag_n flag,bool tof);
+flag_n setAuto(flag_n flag,bool tof);
+flag_n setRegister(flag_n flag,bool tof);
+flag_n makeFlag(bool isExtern,bool isStatic,bool isAuto,bool isRegister);
+
 
 // 定数を管理
 struct CVar {
@@ -312,14 +459,14 @@ struct CStr {
     char *text;
     int len;
 };
-CVar *new_CStr(char *text, int len);
+CVar *add_CStr(char *text, int len);
 
 //ローカル変数
 struct LVar {
     Var base;
     int offset;  // RBPからのoffset、による型のサイズ
 };
-LVar *add_lvar(Token *token, Type *type);
+LVar *add_lvar(Token *token, Type *type,int flag);
 
 struct CC_Map_for_LVar {
     CC_AVLTree base;
@@ -337,7 +484,7 @@ bool cc_map_for_var_empty(CC_Map_for_LVar *map);
 struct GVar {
     Var base;
 };
-GVar *add_gvar(Token *token, Type *type);
+GVar *add_gvar(Token *token, Type *type,int flag);
 
 //関数を管理
 struct Rootine {

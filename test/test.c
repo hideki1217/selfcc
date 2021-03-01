@@ -1,3 +1,14 @@
+extern int foo();
+extern int hoge(int x,int y);
+extern int hogege(int a,int b,int c,int d,int e,int f);
+extern int hogehoge(int a,int b,int c,int d,int e,int f,int g);
+extern int print(const char *fmt,...);
+extern int print_num(int x);
+extern int test(char* fmt);
+extern int fact(int x);
+extern void alloc4(int **p ,int a,int b,int c,int d);
+extern void doexit(int x);
+
 int test1(){0;}
 int test2(){42;}
 int test3(){4+3-5;}
@@ -101,20 +112,174 @@ int test37(){int x;x=9; if(x!=9)return 5;return 3;}
 int test38(){int x;x=9; if(x!=9)return 5;else return 3;return 1;}
 int test39(){int x;x=9; if(x==5)x=x*3;else x=x*4;return x;}
 int test40(){int x;x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;}
-
-int count;
-int assert(int answer,int res){
-    if(answer == res){
-        print("test%d is pass :: expect: %d, actual: %d\n",count,answer,res);
-    }else{
-        print("test%d is failed :: expect: %d, actual: %d\n",count,answer,res);
-        doexit(1);
+int test41(){int x;x=0; while(x<5)x=x+1; return x;}
+int test42(){int x;x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;}
+int test43(){int i;int x;i=0;for(x=0;x<5;x=x+1)i=i+x;return i;}
+int test44(){int i;int x;i=0;for(x=0;x<5;x=x+1)if(x==3)i=i+x;return i;}
+int test45(){3;}
+int test46(){int x;{x=3;x*4;}return 5;}
+int test47(){
+    int y_1;
+    int y_2;
+    int z;
+    y_1=0;
+    y_2=1;
+    int x;
+    for(x=0;x<3;x=x+1){
+        z=y_1;
+        y_1=y_2;
+        y_2=z+y_2;
     }
-    count=count+1;
+    return y_2;
+}
+int test48(){int i;int x;for(i=0;i<5;i=i+1)foo(); x=3;}
+int test49(){int x;int y;int z;x=3;y=5;z=hoge(x,y);}
+int test50(){
+    int x;
+    int y;
+    int z;
+    x=1;
+    y=1;
+    int i;
+    for(i=0;i<5;i=i+1){
+        z=hoge(x,y);
+        x=y;
+        y=z;
+    }
+    return y;
+}
+int test51(){hogege(1,1,1,1,1,1);}
+int test52(){hogehoge(1,1,1,1,1,1,1);}
+int test53(){{3;}}
+int add(int x,int y){
+    int z;
+    z=x+y;
+    return z;
+}
+int test54(){
+    int x=1;
+    int y=1;
+    int z;
+    z=add(x,y);
+    return z;
+}
+int Fibonacci(int x,int y){
+    int z;
+    z=x+y;
+    return z;
+}
+int test55(){
+    int x;
+    int y;
+    x=1;
+    y=1;
+    int i;
+    int z;
+    for(i=0;i<10;i=i+1){
+        z=Fibonacci(x,y);
+        x=y;
+        y=z;
+        print("%d\n",y);
+    }
+    return y;
+}
+int max(int x,int y){
+    if(x>y)return x;
+    else return y;
+}
+int test56(){
+    int x;
+    int y;
+    x=6;
+    y=5;
+    return max(x,y);
+}
+int huga(int x){
+    x=3;
+}
+int test57(){
+    int x;
+    x=5;
+    huga(x);
+    return x;
+}
+int test58(){
+    return fact(4);
+}
+int rec(int x){
+    if(x==0)return 0;
+    return x+rec(x-1);
+}
+int test59(){
+    return rec(5);
+}
+int Euclid(int x,int y){
+    int z;
+    if(x>y){
+        z=x;
+        x=y;
+        y=z;
+    }
+    if(x==0)return y;
+    return Euclid(x,y-x);
+}
+int test60(){
+    return Euclid(6,222);
+}
+int sum6(int a,int b,int c,int d,int e,int f){
+    return a+b+c+d+e+f;
+}
+int test61(){
+    return sum6(1,1,1,1,1,1);
+}
+int test62(){
+    int x;
+    int *y;
+    x=5;
+    y=&x;
+    return *y;
+}
+int test63(){
+    int x;
+    int *y;
+    y=&x;
+    *y=3;
+    return x;
+}
+int test64(){
+    int x;
+    int y;
+    int *z;
+    x=5;
+    y=9;
+    z=&y + 1;
+    return *z;
+}
+int test65(){
+    int x;
+    int y;
+    *(&y+1)=3;
+    return x;
+}
+int test66(){
+    int x;
+    x=3;
+    int *y;
+    y=&x;
+    return *y;
+}
+int sum7(int a,int b,int c,int d,int e,int f,int g){
+    return a+b+c+d+e+f+g;
+}
+int test67(){
+   return sum7(1,1,1,1,1,1,1);
 }
 
-int main(){
-    count=1;
+
+
+extern int assert(int,int);
+////////////////////////////////^テスト部
+int Test(){
     assert(0,test1());
     assert(42,test2());
     assert(2,test3());
@@ -155,6 +320,49 @@ int main(){
     assert(3,test38());
     assert(36,test39());
     assert(6,test40());
+    assert(5,test41());
+    assert(8,test42());
+    assert(10,test43());
+    assert(3,test44());
+    assert(3,test45());
+    assert(5,test46());
+    assert(3,test47());
+    assert(3,test48());
+    assert(8,test49());
+    assert(13,test50());
+    assert(6,test51());
+    assert(7,test52());
+    assert(3,test53());
+    assert(2,test54());
+    assert(144,test55());
+    assert(6,test56());
+    assert(5,test57());
+    assert(24,test58());
+    assert(15,test59());
+    assert(6,test60());
+    assert(6,test61());
+    assert(5,test62());
+    assert(3,test63());
+    assert(5,test64());
+    assert(3,test65());
+    assert(3,test66());
+    assert(7,test67());
+}
+//////////////////////////////////////// 
+int count;
+int assert(int answer,int res){
+    if(answer == res){
+        print("test%d is pass :: expect: %d, actual: %d\n",count,answer,res);
+    }else{
+        print("test%d is failed :: expect: %d, actual: %d\n",count,answer,res);
+        doexit(1);
+    }
+    count=count+1;
+}
 
+int main(){
+    count=1;
+    Test();
     print("OK\n");
+    return 0;
 }

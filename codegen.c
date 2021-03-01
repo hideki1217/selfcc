@@ -9,6 +9,9 @@
 Type *type_assign(Node *node) {
     Type *tp;
     switch (node->kind) {
+        case ND_NULL:
+            tp = find_type_from_name("void");
+            break;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
 
@@ -22,16 +25,9 @@ Type *type_assign(Node *node) {
             }
 
             tp = type_assign(
-                rootine->block);  // TODO: 関数の情報から返り値の型があっているか確認
+                rootine->block);  // TODO:
+                                  // 関数の情報から返り値の型があっているか確認
 
-            break;
-        }
-        case ND_NUM: {
-            tp = ((NumNode *)node)->type;
-            break;
-        }
-        case ND_STR: {
-            tp =((ConstNode*)node)->base.type;
             break;
         }
         case ND_LVAR:
@@ -104,19 +100,20 @@ Type *type_assign(Node *node) {
             break;
         }
         case ND_ADDR: {
-            tp = type_assign(((BinaryNode *)node)->lhs);
+            tp = type_assign(((UnaryNode *)node)->target);
             tp = new_Pointer(tp);
             break;
         }
         case ND_DEREF: {
-            tp = type_assign(((BinaryNode *)node)->lhs);
+            tp = type_assign(((UnaryNode *)node)->target);
             if (!isArrayorPtr(tp))
                 error("ポインタ型Likeでない変数を参照できません。");
             tp = tp->ptr_to;
             break;
         }
         case ND_SET: {
-            for (Node *elem = node->next; elem; elem = elem->next) {
+            BlockNode *bnode = (BlockNode *)node;
+            for (Node *elem = bnode->block; elem; elem = elem->next) {
                 tp = type_assign(elem);
                 if (elem->kind == ND_RETURN) break;
             }
@@ -130,32 +127,42 @@ Type *type_assign(Node *node) {
             break;
         }
         case ND_INCRE:
-        case ND_DECRE:{
-            tp= type_assign(((BinaryNode*)node)->lhs);
-            if(!isLeftsidevalue(tp))
+        case ND_DECRE: {
+            tp = type_assign(((BinaryNode *)node)->lhs);
+            if (!isLeftsidevalue(tp))
                 error("変更可能な左辺値でなければいけません");
             break;
         }
         case ND_ADDASS:
-        case ND_SUBASS:{
-            Type *ltp= type_assign(((BinaryNode*)node)->lhs);
-            Type *rtp= type_assign(((BinaryNode*)node)->rhs);
-            if(!isAddSubable(ltp,rtp))
-                error("%s と %s は足したり引いたりできません。",type2str(ltp),type2str(rtp));
-            if(!isLeftsidevalue(ltp))
+        case ND_SUBASS: {
+            Type *ltp = type_assign(((BinaryNode *)node)->lhs);
+            Type *rtp = type_assign(((BinaryNode *)node)->rhs);
+            if (!isAddSubable(ltp, rtp))
+                error("%s と %s は足したり引いたりできません。", type2str(ltp),
+                      type2str(rtp));
+            if (!isLeftsidevalue(ltp))
                 error("変更可能な左辺値でなければいけません");
-            tp=ltp;
+            tp = ltp;
             break;
         }
         case ND_MULASS:
-        case ND_DIVASS:{
-            Type *ltp= type_assign(((BinaryNode*)node)->lhs);
-            Type *rtp= type_assign(((BinaryNode*)node)->rhs);
-            if(!isMulDivable(ltp,rtp))
-                error("%s と %s はかけたり、割ったりできません。",type2str(ltp),type2str(rtp));
-            if(!isLeftsidevalue(ltp))
+        case ND_DIVASS: {
+            Type *ltp = type_assign(((BinaryNode *)node)->lhs);
+            Type *rtp = type_assign(((BinaryNode *)node)->rhs);
+            if (!isMulDivable(ltp, rtp))
+                error("%s と %s はかけたり、割ったりできません。",
+                      type2str(ltp), type2str(rtp));
+            if (!isLeftsidevalue(ltp))
                 error("変更可能な左辺値でなければいけません");
-            tp=ltp;
+            tp = ltp;
+            break;
+        }
+        case ND_INT:
+        case ND_CHAR:
+        case ND_FLOAT:
+        case ND_ENUM:
+        case ND_STR: {
+            tp = node->type;
             break;
         }
         default: {
@@ -163,25 +170,25 @@ Type *type_assign(Node *node) {
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
             Type *type_int = find_type_from_name("int");
-            tp = type_int; //default の型は今のところ int
+            tp = type_int;  // default の型は今のところ int
             switch (node->kind) {
                 case ND_ADD:
                     if (isArrayorPtr(ltp) && isArrayorPtr(rtp))
                         error("ポインタ型同士の足し算は定義されていません");
-                    if (ltp == type_int && isArrayorPtr(rtp)) tp = rtp;
-                    if (isArrayorPtr(ltp) && rtp == type_int) tp = ltp;
+                    if (equal(ltp, type_int) && isArrayorPtr(rtp)) tp = rtp;
+                    if (isArrayorPtr(ltp) && equal(rtp, type_int)) tp = ltp;
                     break;
                 case ND_SUB:
                     if (isArrayorPtr(ltp) && isArrayorPtr(rtp)) tp = type_int;
-                    if (ltp == type_int && isArrayorPtr(rtp)) tp = rtp;
-                    if (isArrayorPtr(ltp) && rtp == type_int) tp = ltp;
+                    if (equal(ltp, type_int) && isArrayorPtr(rtp)) tp = rtp;
+                    if (isArrayorPtr(ltp) && equal(rtp, type_int)) tp = ltp;
                     break;
                 case ND_MUL:
-                    if (ltp != type_int || rtp != type_int)
+                    if (!isNum(ltp) || !isNum(rtp))
                         error("数値型同士以外の掛け算は定義されていません");
                     break;
                 case ND_DIV:
-                    if (ltp != type_int || rtp != type_int)
+                    if (!isNum(ltp) || !isNum(rtp))
                         error("数値型同士以外の割り算は定義されていません");
                     break;
                 case ND_GRT:
@@ -212,12 +219,11 @@ Type *type_assign(Node *node) {
     return tp;
 }
 
-void gen_lval(Node *node,bool push) {
+void gen_lval(Node *node, bool push) {
     if (node->kind == ND_LVAR) {
         LVar *var = (LVar *)((VarNode *)node)->var;
         printf("    lea rax, -%d[rbp]\n", var->offset);
-        if(push)
-            printf("    push rax\n");
+        if (push) printf("    push rax\n");
         return;
     }
     if (node->kind == ND_GVAR) {
@@ -225,24 +231,25 @@ void gen_lval(Node *node,bool push) {
         char s[var->len + 1];
         string_limitedcopy(s, var->name, var->len);
         printf("    lea rax, %s[rip]\n", s);
-        if(push)
-            printf("    push rax\n");
+        if (push) printf("    push rax\n");
         return;
     }
     if (node->kind == ND_DEREF) {
-        gen(((BinaryNode *)node)->lhs,push);
+        gen(((BinaryNode *)node)->lhs, push);
         return;
     }
-    if(isArrayorPtr(node->type)){
-        gen(node,push);
+    if (isArrayorPtr(node->type)) {
+        gen(node, push);
         return;
     }
     error("左辺値になれない値に代入や参照をしようとしました。");
 }
 
-void gen(Node *node,bool push) {
+void gen(Node *node, bool push) {
     int lcount;
     switch (node->kind) {
+        case ND_NULL:
+            return;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
             char name[rootine->namelen + 1];
@@ -255,20 +262,23 @@ void gen(Node *node,bool push) {
             printf("    sub rsp, %d\n", rootine->total_offset);
 
             //引数の読み込み(ローカル変数として)
-            int count = 0;
+            int count = 0, offset = 0;
+            Type *tp;
             for (VarNode *var = rootine->arg; var;
                  var = (VarNode *)var->base.next, count++) {
-                gen_lval((Node *)var,false);
+                gen_lval((Node *)var, false);
+                tp = ((Node *)var)->type;
                 if (count < 6)
-                    printf("    mov [rax], %s\n",
-                           registry_for_arg(((Node *)var)->type, count));
-                else
-                    printf("    mov %s [rax], [rbp+%d]\n",
-                           sizeoption(((Node *)var)->type),
-                           (count - 6) * 8 + 16);  //ここ微妙
+                    printf("    mov [rax], %s\n", registry_for_arg(tp, count));
+                else {
+                    printf("    mov %s, %s [rbp+%d]\n", rdi(tp), sizeoption(tp),
+                           offset + 16);
+                    printf("    mov [rax], %s\n", rdi(tp));
+                    offset += make_memorysize(tp);
+                }
             }
 
-            gen(rootine->block,false);
+            gen(rootine->block, false);
 
             // エピローグ
             // 最後の式の結果がRAXに残っているのでそれが返り値になる
@@ -291,43 +301,42 @@ void gen(Node *node,bool push) {
             return;
         }
         /////////////////////////////// 以下push flagが有効
-        case ND_NUM: {
-            printf("    mov rax, %d\n",((NumNode *)node)->val);
-            if(push)printf("    push rax\n");
+        case ND_INT: {
+            printf("    mov rax, %d\n", ((NumNode *)node)->val);
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_STR: {
-            printf("    lea rax, .LC%d[rip]\n",((ConstNode*)node)->const_id);
-            if(push)printf("    push rax\n");
+            printf("    lea rax, .LC%d[rip]\n", ((ConstNode *)node)->const_id);
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_LVAR:
         case ND_GVAR: {
-            gen_lval(node,push);
+            gen_lval(node, push);
             if (((VarNode *)node)->var->type->kind == TY_ARRAY)
                 return;  // 配列型はPOINTERみたいにしてあげる
-            if(push)printf("    pop rax\n");
+            if (push) printf("    pop rax\n");
             printf("    %s, %s [rax]\n",
-                    movzx2rax(node->type), //符号拡張なしになっている 
-                    sizeoption(node->type));
-            if(push)printf("    push rax\n");
+                   movzx2rax(node->type),  //符号拡張なしになっている
+                   sizeoption(node->type));
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_ASSIGN: {
             BinaryNode *bi = (BinaryNode *)node;
-            gen_lval(bi->lhs,true);
-            gen(bi->rhs,false);
-            
+            gen_lval(bi->lhs, true);
+            gen(bi->rhs, false);
+
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",
-                    rax(bi->rhs->type));
-            if(push)printf("    push rax\n");
+            printf("    mov [rdi], %s\n", rax(bi->rhs->type));
+            if (push) printf("    push rax\n");
 
             return;
         }
         case ND_RETURN: {
             BinaryNode *bi = (BinaryNode *)node;
-            gen(bi->lhs,false);
+            gen(bi->lhs, false);
             //エピローグ
             printf("    mov rsp, rbp\n");
             printf("    pop rbp\n");
@@ -336,53 +345,53 @@ void gen(Node *node,bool push) {
         }
         case ND_IF: {
             lcount = Lcount++;
-            gen(((CondNode *)node)->cond,false);
+            gen(((CondNode *)node)->cond, false);
             printf("    cmp rax, 0\n");
-            if(push)printf("    push rax\n");
+            if (push) printf("    push rax\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T,push);
+            gen(((CondNode *)node)->T, push);
             printf(".Lend%d:\n", lcount);
             return;
         }
         case ND_IFEL: {
             lcount = Lcount++;
-            gen(((CondNode *)node)->cond,false);
+            gen(((CondNode *)node)->cond, false);
             printf("    cmp rax, 0\n");
             printf("    je .Lelse%d\n", lcount);
-            gen(((CondNode *)node)->T,push);
+            gen(((CondNode *)node)->T, push);
             printf("    jmp .Lend%d\n", lcount);
             printf(".Lelse%d:\n", lcount);
-            gen(((CondNode *)node)->F,push);
+            gen(((CondNode *)node)->F, push);
             printf(".Lend%d:\n", lcount);
             return;
         }
         case ND_WHILE: {
             lcount = Lcount++;
             printf(".Lbegin%d:\n", lcount);
-            gen(((CondNode *)node)->cond,false);
+            gen(((CondNode *)node)->cond, false);
             printf("    cmp rax, 0\n");
-            if(push)printf("    push rax\n");
+            if (push) printf("    push rax\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T,push);
+            gen(((CondNode *)node)->T, push);
             printf("    jmp .Lbegin%d\n", lcount);
             printf(".Lend%d:\n", lcount);
             return;
         }
         case ND_FOR: {
             lcount = Lcount++;
-            gen(((ForNode *)node)->init,false);
+            gen(((ForNode *)node)->init, false);
             printf(".Lbegin%d:\n", lcount);
-            gen(((ForNode *)node)->cond,false);
+            gen(((ForNode *)node)->cond, false);
             printf("    cmp rax, 0\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((ForNode *)node)->T,push);
-            gen(((ForNode *)node)->update,push);
+            gen(((ForNode *)node)->T, push);
+            gen(((ForNode *)node)->update, push);
             printf("    jmp .Lbegin%d\n", lcount);
             printf(".Lend%d:\n", lcount);
             return;
         }
         case ND_BLOCK: {
-            gen(((BlockNode *)node)->block,push);
+            gen(((BlockNode *)node)->block, push);
             return;
         }
         case ND_FUNCTION: {
@@ -393,44 +402,47 @@ void gen(Node *node,bool push) {
             Type *mem[argcount];
             int i = argcount - 1;
             for (Node *elem = fnode->arg; elem; elem = elem->next, i--) {
-                gen(elem,true);
+                gen(elem, true);
                 if (i < 6) mem[i] = elem->type;
             }
             for (int i = 0; i < min(6, argcount); i++) {
                 printf("    pop rax\n");
-                printf("    mov %s, %s\n", 
-                        registry_for_arg(mem[i], i),
-                        rax(mem[i]));
+                printf("    mov %s, %s\n", registry_for_arg(mem[i], i),
+                       rax(mem[i]));
             }
 
-            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は 0 
-            printf("    mov rax, 0\n"); 
+            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は
+            // 0
+            printf("    mov rax, 0\n");
 
             char str[fnode->namelen + 1];
             string_limitedcopy(str, fnode->funcname, fnode->namelen);
             printf("    call %s\n", str);
-            if(push)printf("    push rax\n");
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_ADDR: {
-            gen_lval(((BinaryNode *)node)->lhs,push);
+            gen_lval(((UnaryNode *)node)->target, push);
             return;
         }
         case ND_DEREF: {
-            BinaryNode *bi = (BinaryNode *)node;
-            gen(bi->lhs,false);
-            printf("    %s, %s [rax]\n",
-                    movzx2rax(bi->lhs->type->ptr_to),// 符号拡張なしになっている
-                    sizeoption(bi->lhs->type->ptr_to));
-            if(push)printf("    push rax\n");
+            UnaryNode *unode = (UnaryNode *)node;
+            gen(unode->target, false);
+            printf(
+                "    %s, %s [rax]\n",
+                movzx2rax(
+                    unode->target->type->ptr_to),  // 符号拡張なしになっている
+                sizeoption(unode->target->type->ptr_to));
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_SET: {
-            for (Node *elem = node->next; elem; elem = elem->next) {
-                gen(elem,false);
+            BlockNode *bnode = (BlockNode *)node;
+            for (Node *elem = bnode->block; elem; elem = elem->next) {
+                gen(elem, false);
                 if (elem->kind == ND_RETURN) break;
             }
-            if(push)printf("    push rax\n");
+            if (push) printf("    push rax\n");
 
             return;
         }
@@ -438,102 +450,103 @@ void gen(Node *node,bool push) {
             VarInitNode *inode = (VarInitNode *)node;
             LVar *var = (LVar *)inode->var;
             if (var->base.type->kind == TY_ARRAY) {
-                if(push)printf("    push rax\n");
+                if (push) printf("    push rax\n");
                 if (inode->value) {
                     // TODO: 配列の宣言時初期化について書くならここ
                 }
             } else {
                 error(
-                    "現状普通の変数の場合は元の構文を使うよ。");  // TODO: ここを消すかどうか考えるべし
+                    "現状普通の変数の場合は元の構文を使うよ。");  // TODO:
+                                                                  // ここを消すかどうか考えるべし
             }
             return;
         }
-        case ND_INCRE:{
-            BinaryNode *bnode= (BinaryNode*)node;
+        case ND_INCRE: {
+            BinaryNode *bnode = (BinaryNode *)node;
 
-            gen_lval(bnode->lhs,false);
+            gen_lval(bnode->lhs, false);
             printf("    push [rax]\n");
             printf("    push rax\n");
             BinaryNode tmp;
-            set_BinaryNode(&tmp,ND_ADD,bnode->lhs,bnode->rhs);
-            type_assign((Node*)&tmp);
-            gen((Node *)&tmp,false);
+            set_BinaryNode(&tmp, ND_ADD, bnode->lhs, bnode->rhs);
+            type_assign((Node *)&tmp);
+            gen((Node *)&tmp, false);
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    mov [rdi], %s\n", rax(node->type));
             printf("    pop rax\n");
-            if(push) printf("   push rax\n");
+            if (push) printf("   push rax\n");
             return;
         }
-        case ND_DECRE:{
-            BinaryNode *bnode= (BinaryNode*)node;
+        case ND_DECRE: {
+            BinaryNode *bnode = (BinaryNode *)node;
 
-            gen_lval(bnode->lhs,false);
+            gen_lval(bnode->lhs, false);
             printf("    push [rax]\n");
             printf("    push rax\n");
             BinaryNode tmp;
-            set_BinaryNode(&tmp,ND_SUB,bnode->lhs,bnode->rhs);
-            type_assign((Node*)&tmp);
-            gen((Node *)&tmp,false);
+            set_BinaryNode(&tmp, ND_SUB, bnode->lhs, bnode->rhs);
+            type_assign((Node *)&tmp);
+            gen((Node *)&tmp, false);
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    mov [rdi], %s\n", rax(node->type));
             printf("    pop rax\n");
-            if(push) printf("   push rax\n");
+            if (push) printf("   push rax\n");
             return;
         }
-        case ND_ADDASS:{
-            BinaryNode *bnode= (BinaryNode*)node;
+        case ND_ADDASS: {
+            BinaryNode *bnode = (BinaryNode *)node;
 
-            gen_lval(bnode->lhs,true);
+            gen_lval(bnode->lhs, true);
             BinaryNode tmp;
-            set_BinaryNode(&tmp,ND_ADD,bnode->lhs,bnode->rhs);
-            type_assign((Node*)&tmp);
-            gen((Node *)&tmp,false);
+            set_BinaryNode(&tmp, ND_ADD, bnode->lhs, bnode->rhs);
+            type_assign((Node *)&tmp);
+            gen((Node *)&tmp, false);
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    mov [rdi], %s\n", rax(node->type));
             printf("    pop rax\n");
-            if(push) printf("   push rax\n");
+            if (push) printf("   push rax\n");
             return;
         }
-        case ND_SUBASS:{
-            BinaryNode *bnode= (BinaryNode*)node;
+        case ND_SUBASS: {
+            BinaryNode *bnode = (BinaryNode *)node;
 
-            gen_lval(bnode->lhs,true);
+            gen_lval(bnode->lhs, true);
             BinaryNode tmp;
-            set_BinaryNode(&tmp,ND_SUB,bnode->lhs,bnode->rhs);
-            type_assign((Node*)&tmp);
-            gen((Node *)&tmp,false);
+            set_BinaryNode(&tmp, ND_SUB, bnode->lhs, bnode->rhs);
+            type_assign((Node *)&tmp);
+            gen((Node *)&tmp, false);
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    mov [rdi], %s\n", rax(node->type));
             printf("    pop rax\n");
-            if(push) printf("   push rax\n");
+            if (push) printf("   push rax\n");
             return;
         }
-        case ND_MULASS:{
-            BinaryNode *bnode= (BinaryNode*)node;
+        case ND_MULASS: {
+            BinaryNode *bnode = (BinaryNode *)node;
 
-            gen_lval(bnode->lhs,true);
+            gen_lval(bnode->lhs, true);
             BinaryNode tmp;
-            set_BinaryNode(&tmp,ND_MUL,bnode->lhs,bnode->rhs);
-            type_assign((Node*)&tmp);
-            gen((Node *)&tmp,false);
+            set_BinaryNode(&tmp, ND_MUL, bnode->lhs, bnode->rhs);
+            type_assign((Node *)&tmp);
+            gen((Node *)&tmp, false);
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    mov [rdi], %s\n", rax(node->type));
             printf("    pop rax\n");
-            if(push) printf("   push rax\n");
+            if (push) printf("   push rax\n");
             return;
         }
-        case ND_DIVASS:{
-            BinaryNode *bnode= (BinaryNode*)node;
+        case ND_DIVASS: {
+            BinaryNode *bnode = (BinaryNode *)node;
 
-            gen_lval(bnode->lhs,true);
+            gen_lval(bnode->lhs, true);
             BinaryNode tmp;
-            set_BinaryNode(&tmp,ND_DIV,bnode->lhs,bnode->rhs);
-            type_assign((Node*)&tmp);
-            gen((Node *)&tmp,false);
+            set_BinaryNode(&tmp, ND_DIV, bnode->lhs, bnode->rhs);
+            type_assign((Node *)&tmp);
+            gen((Node *)&tmp, false);
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n",rax(node->type));
+            printf("    mov [rdi], %s\n", rax(node->type));
             printf("    pop rax\n");
-            if(push) printf("   push rax\n");
+            if (push) printf("   push rax\n");
             return;
         }
     }
@@ -544,8 +557,8 @@ void gen(Node *node,bool push) {
     Type *ltp = lhs->type;
     Type *rtp = rhs->type;
 
-    gen(lhs,true);
-    gen(rhs,true);
+    gen(lhs, true);
+    gen(rhs, true);
 
     printf("    pop rdi\n");
     printf("    pop rax\n");
@@ -554,19 +567,19 @@ void gen(Node *node,bool push) {
 
     switch (node->kind) {
         case ND_ADD:
-            if (ltp == type_int && isArrayorPtr(rtp)) {
+            if (equal(ltp, type_int) && isArrayorPtr(rtp)) {
                 printf("    imul rax, %d\n", rhs->type->ptr_to->size);
             }
-            if (isArrayorPtr(ltp) && rtp == type_int) {
+            if (isArrayorPtr(ltp) && equal(rtp, type_int)) {
                 printf("    imul rdi, %d\n", lhs->type->ptr_to->size);
             }
             printf("    add rax, rdi\n");
             break;
         case ND_SUB:
-            if (ltp == type_int && isArrayorPtr(rtp)) {
+            if (equal(ltp, type_int) && isArrayorPtr(rtp)) {
                 printf("    imul rax, %d\n", rhs->type->ptr_to->size);
             }
-            if (isArrayorPtr(ltp) && rtp == type_int) {
+            if (isArrayorPtr(ltp) && equal(rtp, type_int)) {
                 printf("    imul rdi, %d\n", lhs->type->ptr_to->size);
             }
             printf("    sub rax, rdi\n");
@@ -602,6 +615,6 @@ void gen(Node *node,bool push) {
             break;
     }
 
-    if(push)printf("    push rax\n");
+    if (push) printf("    push rax\n");
     return;
 }
