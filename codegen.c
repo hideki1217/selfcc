@@ -6,6 +6,8 @@
 #include "selfcc.h"
 #include "utility.h"
 
+#define ARG_MAX 30
+
 Type *type_assign(Node *node) {
     Type *tp;
     switch (node->kind) {
@@ -14,20 +16,14 @@ Type *type_assign(Node *node) {
             break;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
-
-            //引数の読み込み(ローカル変数として)
-            int count = 0;
-            for (VarNode *var = rootine->arg; var;
-                 var = (VarNode *)var->base.next, count++) {
-                Type *vtp = type_assign(
-                    (Node *)
-                        var);  // TODO: 関数の情報から引数の型があっているか確認
+            for (Node *nd = (Node*)rootine->arg; nd; nd = nd->next) {
+                type_assign(nd);
             }
-
-            tp = type_assign(
-                rootine->block);  // TODO:
-                                  // 関数の情報から返り値の型があっているか確認
-
+            Type *return_type = type_assign(rootine->block);
+            // TODO:
+            // 返り値について明示的なreturnがなければvoidでもいけることを実装
+            // if(!equal(node->type->ptr_to,return_type))
+            //    error("宣言での返り値の型と実際の型が一致しません。");
             break;
         }
         case ND_LVAR:
@@ -40,7 +36,7 @@ Type *type_assign(Node *node) {
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
             if (!isAssignable(ltp, rtp))
-                error("右辺値の型が左辺値に代入できない型です。");
+                error_at(node->pos,"右辺値の型が左辺値に代入できない型です。");
             tp = ltp;
             break;
         }
@@ -49,9 +45,8 @@ Type *type_assign(Node *node) {
             break;
         }
         case ND_IF: {
-            tp = type_assign(
-                ((CondNode *)node)
-                    ->cond);  // TODO: 条件式がNULLの場合はfalseにする
+            // TODO: 条件式がNULLの場合はfalseにする
+            tp = type_assign(((CondNode *)node)->cond);
 
             tp = type_assign(((CondNode *)node)->T);
 
@@ -90,13 +85,33 @@ Type *type_assign(Node *node) {
 
             break;
         }
-        case ND_FUNCTION: {
-            FuncNode *fnode = ((FuncNode *)node);
+        case ND_CALL: {
+            CallNode *fnode = ((CallNode *)node);
 
+            Params act_par;
+            set_Params(&act_par);
+            Param par[ARG_MAX];
+            int i = 0;
+            // fnodeのargは逆順で出てくる
             for (Node *elem = fnode->arg; elem; elem = elem->next) {
-                tp = type_assign(elem);  // TODO: 関数の引数チェック
+                Param *param = par + (i++);
+                set_Param(param, type_assign(elem));
+                param->next = act_par.root;
+                act_par.root = param;// 逆順にいれていく
             }
-            tp = find_type_from_name("int");  // TODO: 関数の型を返す
+
+            // 関数の引数チェック
+            int res = params_compare(node->type->params, &act_par);
+            switch (res) {
+                case 1:
+                    error_at(node->pos,"引数の型が違います。");
+                case 2:
+                    error_at(node->pos,"引数が少なすぎます。");
+                case 3:
+                    error_at(node->pos,"引数が多すぎます。");
+            }
+
+            tp = node->type->ptr_to;  // 関数の返り値の型
             break;
         }
         case ND_ADDR: {
@@ -107,7 +122,7 @@ Type *type_assign(Node *node) {
         case ND_DEREF: {
             tp = type_assign(((UnaryNode *)node)->target);
             if (!isArrayorPtr(tp))
-                error("ポインタ型Likeでない変数を参照できません。");
+                error_at(node->pos,"ポインタ型Likeでない変数を参照できません。");
             tp = tp->ptr_to;
             break;
         }
@@ -130,7 +145,7 @@ Type *type_assign(Node *node) {
         case ND_DECRE: {
             tp = type_assign(((BinaryNode *)node)->lhs);
             if (!isLeftsidevalue(tp))
-                error("変更可能な左辺値でなければいけません");
+                error_at(node->pos,"変更可能な左辺値でなければいけません");
             break;
         }
         case ND_ADDASS:
@@ -138,10 +153,10 @@ Type *type_assign(Node *node) {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
             if (!isAddSubable(ltp, rtp))
-                error("%s と %s は足したり引いたりできません。", type2str(ltp),
+                error_at(node->pos,"%s と %s は足したり引いたりできません。", type2str(ltp),
                       type2str(rtp));
             if (!isLeftsidevalue(ltp))
-                error("変更可能な左辺値でなければいけません");
+                error_at(node->pos,"変更可能な左辺値でなければいけません");
             tp = ltp;
             break;
         }
@@ -150,10 +165,10 @@ Type *type_assign(Node *node) {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
             if (!isMulDivable(ltp, rtp))
-                error("%s と %s はかけたり、割ったりできません。",
+                error_at(node->pos,"%s と %s はかけたり、割ったりできません。",
                       type2str(ltp), type2str(rtp));
             if (!isLeftsidevalue(ltp))
-                error("変更可能な左辺値でなければいけません");
+                error_at(node->pos,"変更可能な左辺値でなければいけません");
             tp = ltp;
             break;
         }
@@ -174,7 +189,7 @@ Type *type_assign(Node *node) {
             switch (node->kind) {
                 case ND_ADD:
                     if (isArrayorPtr(ltp) && isArrayorPtr(rtp))
-                        error("ポインタ型同士の足し算は定義されていません");
+                        error_at(node->pos,"ポインタ型同士の足し算は定義されていません");
                     if (equal(ltp, type_int) && isArrayorPtr(rtp)) tp = rtp;
                     if (isArrayorPtr(ltp) && equal(rtp, type_int)) tp = ltp;
                     break;
@@ -185,27 +200,27 @@ Type *type_assign(Node *node) {
                     break;
                 case ND_MUL:
                     if (!isNum(ltp) || !isNum(rtp))
-                        error("数値型同士以外の掛け算は定義されていません");
+                        error_at(node->pos,"数値型同士以外の掛け算は定義されていません");
                     break;
                 case ND_DIV:
                     if (!isNum(ltp) || !isNum(rtp))
-                        error("数値型同士以外の割り算は定義されていません");
+                        error_at(node->pos,"数値型同士以外の割り算は定義されていません");
                     break;
                 case ND_GRT:
                     if (!equal(ltp, rtp))
-                        error("型が違うものを比較することはできません");
+                        error_at(node->pos,"型が違うものを比較することはできません");
                     break;
                 case ND_GOE:
                     if (!equal(ltp, rtp))
-                        error("型が違うものを比較することはできません");
+                        error_at(node->pos,"型が違うものを比較することはできません");
                     break;
                 case ND_EQU:
                     if (!equal(ltp, rtp))
-                        error("型が違うもの同士を比較することはできません");
+                        error_at(node->pos,"型が違うもの同士を比較することはできません");
                     break;
                 case ND_NEQ:
                     if (!equal(ltp, rtp))
-                        error("型が違うもの同士を比較することはできません");
+                        error_at(node->pos,"型が違うもの同士を比較することはできません");
                     break;
                 default:
                     error("未定義のタグが使用されています。");
@@ -242,7 +257,7 @@ void gen_lval(Node *node, bool push) {
         gen(node, push);
         return;
     }
-    error("左辺値になれない値に代入や参照をしようとしました。");
+    error_at(node->pos,"左辺値になれない値に代入や参照をしようとしました。");
 }
 
 void gen(Node *node, bool push) {
@@ -262,7 +277,7 @@ void gen(Node *node, bool push) {
             printf("    sub rsp, %d\n", rootine->total_offset);
 
             //引数の読み込み(ローカル変数として)
-            int count = 0, offset = 0;
+            int count = 0;
             Type *tp;
             for (VarNode *var = rootine->arg; var;
                  var = (VarNode *)var->base.next, count++) {
@@ -272,9 +287,8 @@ void gen(Node *node, bool push) {
                     printf("    mov [rax], %s\n", registry_for_arg(tp, count));
                 else {
                     printf("    mov %s, %s [rbp+%d]\n", rdi(tp), sizeoption(tp),
-                           offset + 16);
+                           8 * (count - 6) + 16);
                     printf("    mov [rax], %s\n", rdi(tp));
-                    offset += make_memorysize(tp);
                 }
             }
 
@@ -318,7 +332,7 @@ void gen(Node *node, bool push) {
                 return;  // 配列型はPOINTERみたいにしてあげる
             if (push) printf("    pop rax\n");
             printf("    %s, %s [rax]\n",
-                   movzx2rax(node->type),  //符号拡張なしになっている
+                   movsx2rax(node->type),  //符号拡張ありになっている
                    sizeoption(node->type));
             if (push) printf("    push rax\n");
             return;
@@ -329,7 +343,7 @@ void gen(Node *node, bool push) {
             gen(bi->rhs, false);
 
             printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n", rax(bi->rhs->type));
+            printf("    mov [rdi], %s\n", rax(bi->lhs->type));
             if (push) printf("    push rax\n");
 
             return;
@@ -394,8 +408,8 @@ void gen(Node *node, bool push) {
             gen(((BlockNode *)node)->block, push);
             return;
         }
-        case ND_FUNCTION: {
-            FuncNode *fnode = ((FuncNode *)node);
+        case ND_CALL: {
+            CallNode *fnode = ((CallNode *)node);
             int argcount = 0;
             for (Node *elem = fnode->arg; elem; elem = elem->next, argcount++)
                 ;
@@ -430,8 +444,8 @@ void gen(Node *node, bool push) {
             gen(unode->target, false);
             printf(
                 "    %s, %s [rax]\n",
-                movzx2rax(
-                    unode->target->type->ptr_to),  // 符号拡張なしになっている
+                movsx2rax(
+                    unode->target->type->ptr_to),  // 符号拡張ありになっている
                 sizeoption(unode->target->type->ptr_to));
             if (push) printf("    push rax\n");
             return;

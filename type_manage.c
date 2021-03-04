@@ -58,9 +58,9 @@ char *type2str(Type *tp) {
     free(res);
     return buffer;
 }
-void InitType(Type *tp){
-    tp->isConst =false;
-    tp->isVolatile =false;
+void InitType(Type *tp) {
+    tp->isConst = false;
+    tp->isVolatile = false;
 }
 Type *new_PrimType(TypeKind kind, char *name, int len, int size) {
     Type *type = calloc(1, sizeof(Type));
@@ -79,13 +79,13 @@ Type *new_Pointer(Type *base) {
     type->size = 8;
     return type;
 }
-Type *new_Function(Type *base,Type *arg){
-    Type *type=calloc(1,sizeof(Type));
+Type *new_Function(Type *base, Params *arg) {
+    Type *type = calloc(1, sizeof(Type));
     InitType(type);
     type->kind = TY_FUNCTION;
     type->ptr_to = base;
-    type->next=arg;
-    type->size=8;
+    type->params = arg;
+    type->size = 8;
     return type;
 }
 Type *new_Array(Type *base, int length) {
@@ -100,52 +100,50 @@ Type *new_Array(Type *base, int length) {
 Type *new_Struct(Type *bases) {
     return NULL;  // TODO: struct を作ったらここに加筆
 }
-Type *clone_Type(Type *tp){
-    Type *type=calloc(1,sizeof(Type));
-    memcpy(type,tp,sizeof(Type));
+Type *clone_Type(Type *tp) {
+    Type *type = calloc(1, sizeof(Type));
+    memcpy(type, tp, sizeof(Type));
     return type;
 }
 Type *find_type_from_name(char *name) {
     Type *type = (Type *)cc_avltree_Search(type_tree, name, strlen(name));
-    if (type) return clone_Type(type); // そのものではなくてコピーを渡す
+    if (type) return clone_Type(type);  // そのものではなくてコピーを渡す
     return NULL;
 }
 Type *find_type(Token *token) {
     Type *type = (Type *)cc_avltree_Search(type_tree, token->str, token->len);
-    if (type) return clone_Type(type); // そのものではなくてコピーを渡す
+    if (type) return clone_Type(type);  // そのものではなくてコピーを渡す
     return NULL;
 }
 int make_memorysize(Type *type) { return type->size; }
 bool equal(Type *l, Type *r) {
-    if(l==NULL && r!=NULL || l!=NULL && r==NULL )return false;
-    if(l==r)return true;
-    while (l->kind == r->kind) {
-        switch (r->kind)
-        {
+    if (l == NULL && r != NULL || l != NULL && r == NULL) return false;
+    if (l == r) return true;
+    if (l->kind != r->kind) return false;
+    switch (r->kind) {
         case TY_PTR:
-            return equal(l->ptr_to,r->ptr_to);
+            return equal(l->ptr_to, r->ptr_to);
         case TY_ARRAY:
-            return l->array_len == r->array_len ? equal(l->ptr_to,r->ptr_to): false;
-        case TY_FUNCTION:{
-            Type *larg,*rarg;
-            for(larg=l->next,rarg=r->next;
-                larg != NULL && rarg != NULL;
-                larg = larg->next, rarg = rarg->next)
-            {
-                if(!equal(larg,rarg))return false;
+            return l->array_len == r->array_len ? equal(l->ptr_to, r->ptr_to)
+                                                : false;
+        case TY_FUNCTION: {
+            Params *lpar = l->params;
+            Params *rpar = r->params;
+            Param *lp, *rp;
+            for (lp = lpar->root, rp = rpar->root; lp != NULL && rp != NULL;
+                 lp = lp->next, rp = rp->next) {
+                if (!equal(lp->type, rp->type)) return false;
             }
-            return larg == rarg;
+            return lp == rp;
         }
         case TY_STRUCT:
         case TY_UNION:
         case TY_ENUM:
-            return l->len == r->len && memcmp(l->name,r->name,l->len)==0;
+            return l->len == r->len && memcmp(l->name, r->name, l->len) == 0;
         default:
             return l->kind == r->kind;
-        }
     }
 }
-
 
 bool isArrayorPtr(Type *type) {
     return type->kind == TY_PTR || type->kind == TY_ARRAY;
@@ -162,13 +160,17 @@ bool isAssignable(Type *l, Type *r) {
     if (equal(l, r)) return true;
     if (l->kind == TY_PTR && l->ptr_to->kind == TY_VOID && r->kind == TY_PTR)
         return true;
+    if (l->kind == TY_PTR && isArrayorPtr(r))return true;
     switch (l->kind) {
         case TY_DOUBLE:
+            return isNum(r);
         case TY_FLOAT:
+            return isNum(r) && r->kind != TY_DOUBLE;
         case TY_LONG:
+            return isInteger(r);
         case TY_INT:
         case TY_CHAR:
-            return isNum(r);
+            return isInteger(r) && r->kind != TY_LONG;
     }
     return false;
 }

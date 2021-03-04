@@ -274,6 +274,148 @@ int sum7(int a,int b,int c,int d,int e,int f,int g){
 int test67(){
    return sum7(1,1,1,1,1,1,1);
 }
+int test68(){
+    int *p;
+    alloc4(&p, 1, 2, 4, 8);
+    return *p;
+}  
+int test69(){
+    int *p;
+    alloc4(&p, 1, 2, 4, 8);
+    return *(p+2);
+}  
+int test70(){
+    int *p;
+    alloc4(&p, 1, 2, 4, 8);
+    int *q;
+    q = p + 2;
+    *q;  
+    q = p + 3;
+    return *q;
+}  
+int test71(){
+    int x;
+    return sizeof(x);
+}
+int test72(){
+    int *y;
+    return sizeof(y);
+}
+int test73(){
+    sizeof(5);
+}
+int test74(){
+    int *y;
+    sizeof(y+4);
+}
+int test75(){
+    int x=5;
+}
+int test76(){
+    int x[3];
+    *x=3;
+}
+int test77(){
+    int x[3];
+    *x=5;
+    return *x;
+}
+int test78(){
+    int x[3];
+    *x=3;
+    *(x+1)=10;
+    *(x+2)=4;
+    return *(x+1);
+}
+int test79(){
+    int x[3];
+    x[0]=3;
+}
+int test80(){
+    int x[3];
+    x[0]=5;
+    return x[0];
+}
+int test81(){
+    int x[3];
+    x[0]=3;
+    x[1]=10;
+    x[2]=4;
+    return x[1];
+}
+int test82(){
+    int a[2];
+    *a = 1;
+    *(a + 1) = 2;
+    int *p;
+    p = a;
+    return *p + *(p + 1);
+}
+int test83(){
+    int x[3];
+    0[x]=3;
+    x[1]=10;
+    2[x]=4;
+    return x[1];
+}
+int x;
+int test84(){
+    x=5;
+    return x;
+}
+int *y;
+int test85(){
+    x=5;
+    y=&x;
+    return *y;
+}
+int test86(){
+    char x[3];
+    x[0] = -1;
+    x[1] = 2;
+    int y;
+    y = 4;
+    return x[0] + y;
+}
+char a[3];
+void asrt(int x){
+    a[0]=x;
+}
+int test87(){
+    asrt(4);
+    return a[0];
+}
+int test88(){
+    char *x="ahoaho";
+    return x[0];
+}
+int test89(){
+    char *x="ahoaho";
+    return x[1]-x[0];
+}
+int test90(){
+    int x;
+    x=6;
+    //x=9;
+    return x;
+}
+int test91(){
+    int x;
+    x=6;
+    /*x=9;
+    x++;
+    */
+    return x;
+}
+
+int* ahoaho(char *x){
+    print(x);
+    return 3;
+}
+int test92(){
+    int *x=ahoaho("aho");
+    return x;
+}
 
 
 
@@ -347,6 +489,30 @@ int Test(){
     assert(3,test65());
     assert(3,test66());
     assert(7,test67());
+    assert(1,test68());
+    assert(4,test69());
+    assert(8,test70());
+    assert(4,test71());
+    assert(8,test72());
+    assert(4,test73());
+    assert(8,test74());
+    assert(5,test75());
+    assert(3,test76());
+    assert(5,test77());
+    assert(10,test78());
+    assert(3,test79());
+    assert(5,test80());
+    assert(10,test81());
+    assert(3,test82());
+    assert(10,test83());
+    assert(5,test84());
+    assert(5,test85());
+    assert(3,test86());
+    assert(4,test87());
+    assert(97,test88());
+    assert(7,test89());
+    assert(6,test90());
+    assert(6,test91());
 }
 //////////////////////////////////////// 
 int count;

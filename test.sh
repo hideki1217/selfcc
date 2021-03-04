@@ -271,7 +271,7 @@ int main(){
     return *y;
 }
 "
-MOVED
+
 assert 1 "
 extern void alloc4(int **,int,int,int,int);
 int main(){
@@ -424,6 +424,7 @@ int main(){
     return *y;
 }
 "
+
 assert 3 "
 int main(){
     char x[3];
@@ -468,6 +469,7 @@ int main(){
     return x;
 }
 "
+
 assert 6 "
 int main(){
     int x;
@@ -480,3 +482,4 @@ int main(){
 "
 
 echo OK
+MOVED

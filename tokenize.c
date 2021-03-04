@@ -224,7 +224,7 @@ Token *tokenize(char *p) {
         //演算子
         keyword(p, "sizeof");
         //修飾子
-        keyword(p, "extern");    // TODO
+        keyword(p, "extern");    
         keyword(p, "register");  // TODO
         keyword(p, "auto");      // TODO
         keyword(p, "static");    // TODO

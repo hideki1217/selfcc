@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     locals = cc_map_for_var_new();
     globals = cc_avltree_new();
     tkstream = tokenize(user_input);
-    nowToken=NULL;
+    nowToken=tkstream;
     constants = cc_vector_new();
 
     code=NULL;

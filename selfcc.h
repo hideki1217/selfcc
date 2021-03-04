@@ -15,6 +15,9 @@ typedef struct CStr CStr;
 typedef struct LVar LVar;
 typedef struct GVar GVar;
 
+typedef struct Param Param;
+typedef struct Params Params;
+
 typedef struct Rootine Rootine;
 
 typedef struct Node Node;
@@ -29,7 +32,7 @@ typedef struct ConstNode ConstNode;
 typedef struct CastNode CastNode;
 typedef struct CondNode CondNode;
 typedef struct ForNode ForNode;
-typedef struct FuncNode FuncNode;
+typedef struct CallNode CallNode;
 typedef struct VarNode VarNode;
 typedef struct RootineNode RootineNode;
 typedef struct VarInitNode VarInitNode;
@@ -162,7 +165,7 @@ typedef enum {
     ND_SWITCH, // TODO
     ND_BLOCK,  //ブロック
     ND_CAST,   // TODO
-    ND_FUNCTION,
+    ND_CALL,
     ND_ROOTINE,
     ND_ADDR,    //'&'
     ND_DEREF,   //'*'
@@ -194,6 +197,7 @@ struct Node {
     NodeKind kind;
     Node *next;
     Type *type;
+    char *pos;
 };
 Node *new_Node(NodeKind kind);
 void set_Node(Node *nd, NodeKind kind);
@@ -265,14 +269,14 @@ struct ForNode {
 };
 ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *A);
 void set_ForNode(ForNode *nd, Node *init, Node *cond, Node *update, Node *A);
-struct FuncNode {
+struct CallNode {
     Node base;
     char *funcname;
     int namelen;
     Node *arg;
 };
-FuncNode *new_FuncNode(Var *var);
-void set_FuncNode(FuncNode *nd,Var *var);
+CallNode *new_CallNode(Var *var);
+void set_CallNode(CallNode *nd,Var *var);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
@@ -381,7 +385,7 @@ typedef enum {
 struct Type {
     TypeKind kind;
     Type *ptr_to;
-    Type *next;
+    Params *params;
     char *name;
     int len;
     int size;
@@ -392,7 +396,7 @@ struct Type {
 
 Type *new_PrimType(TypeKind kind, char *name, int len, int size);
 Type *new_Pointer(Type *base);
-Type *new_Function(Type *base,Type *arg);
+Type *new_Function(Type *base,Params *arg);
 Type *new_Array(Type *base, int length);
 Type *new_Struct(Type *bases);
 Type *clone_Type(Type *tp);
@@ -413,6 +417,27 @@ char *type2str(Type *tp);
 int make_memorysize(Type *type);
 
 void Initialize_type_tree();
+
+//パラメータ
+typedef enum{ PA_ARG, PA_VAARG} ParamKind;
+struct Param{
+    ParamKind kind;
+    Type *type;
+    Param *next;
+};
+struct Params{
+    Param *root;
+    Param *front;
+};
+Params *new_Params();
+void set_Params(Params *p);
+void set_Param(Param *p,Type* tp);
+void set_VaArg(Param *p);
+void params_addParam(Params *p,Type *tp);
+void params_addVaArg(Params *p);
+int params_compare(const Params *base,const Params *act);
+
+
 
 //変数を管理
 typedef enum { LOCAL, GLOBAL } Var_kind;

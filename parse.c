@@ -35,12 +35,11 @@ Node *rootine() {
     if (consume("(")) {  // 関数定義
         RootineNode *node = new_RootineNode(name->str, name->len,
                                             base_type->name, base_type->len);
-        Type arg_type;
+        Params *params=new_Params();
         Node anker;
-        arg_type.next = NULL;
         anker.next = NULL;
         Node *top = &anker;
-        Type *type_top = &arg_type, *now_type;
+        Type *now_type;
         while (!consume(")")) {
             consume(",");
 
@@ -48,13 +47,12 @@ Node *rootine() {
             LVar *var = add_lvar(expect_var(), now_type, flag);
             cc_map_for_var_add(locals, var->base.name, var->base.len, var);
 
-            type_top->next = now_type;
-            type_top = type_top->next;
+            params_addParam(params,now_type);
             top->next = (Node *)new_VarNode((Var *)var);
             top = top->next;
         }
         node->arg = (VarNode *)(anker.next);
-        Type *func = new_Function(base_type, arg_type.next);
+        Type *func = new_Function(base_type, params);
         // 関数も定義されたら、グローバル変数として扱う。
         add_gvar(name, func, flag);
 
@@ -82,22 +80,21 @@ Node *extern_declaration(flag_n flag) {
     Token *name = expect_ident();
     Node *node = new_Node(ND_NULL);
     if (consume("(")) {  // 関数定義
-        Type arg_type;
-        arg_type.next = NULL;
-        Type *type_top = &arg_type, *now_type;
+        Params *params= new_Params();
+        Type *now_type;
         Token *tk;
         while (!consume(")")) {
             consume(",");
             if (consume("...")) {
+                params_addVaArg(params);
                 expect(')');
                 break;
             }
             now_type = type_name();
             consume_ident(&tk);
-            type_top->next = now_type;
-            type_top = type_top->next;
+            params_addParam(params,now_type);
         }
-        Type *func = new_Function(base_type, arg_type.next);
+        Type *func = new_Function(base_type, params);
         add_gvar(name, func, flag);
     } else {  //グローバル変数
         if (consume("[")) {
@@ -314,7 +311,7 @@ Node *primary() {
                     if (var->type->kind != TY_FUNCTION)
                         error_at(tk->str,
                                  "関数のように呼び出すことはできません。");
-                    FuncNode *node = new_FuncNode(var);
+                    CallNode *node = new_CallNode(var);
                     Node *args = NULL;
                     while (!consume(")")) {
                         consume(",");

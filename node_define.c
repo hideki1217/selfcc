@@ -2,92 +2,96 @@
 
 #include<stdlib.h>
 
-void set_Node(Node *node, NodeKind kind) { node->kind = kind; }
+void set_Node(Node *node, NodeKind kind) { node->kind = kind; node->pos = nowToken->str;}
 void set_BinaryNode(BinaryNode *node, NodeKind kind, Node *lhs, Node *rhs) {
-    node->base.kind = kind;
+    set_Node((Node*)node,kind);
     node->lhs = lhs;
     node->rhs = rhs;
 }
 void set_UnaryNode(UnaryNode *node, NodeKind kind, Node *target) {
-    node->base.kind = kind;
+    set_Node((Node*)node,kind);
     node->target = target;
 }
 void set_NumNode(NumNode *node, int val) {
-    node->base.kind = ND_INT;
+    set_Node((Node*)node,ND_INT);
     node->val = val;
     node->base.type = find_type_from_name("int");
 }
 void set_FloatNode(FloatNode *node, float val) {
+    set_Node((Node*)node,ND_FLOAT);
     node->val = val;
-    node->base.kind = ND_FLOAT;
     node->base.type = find_type_from_name("float");
 }
 void set_CharNode(CharNode *node, char val) {
+    set_Node((Node*)node,ND_CHAR);
     node->base.type = find_type_from_name("char");
-    node->base.kind = ND_CHAR;
     node->val = val;
 }
 void set_EnumNode(EnumNode *node, char *name, int len) {
+    set_Node((Node*)node,ND_ENUM);
     node->name = name;
     node->len = len;
-    node->base.kind = ND_ENUM;
     node->base.type->kind = TY_ENUM;
 }
 void set_ConstNode(ConstNode *nd, CVar *var) {
+    set_Node((Node*)nd,ND_STR);
     nd->const_id = var->LC_id;
-    nd->base.kind = ND_STR;
     nd->base.type = var->base.type;
 }
 void set_CastNode(CastNode *node, Type *cast, Node *target) {
+    set_Node((Node*)node,ND_CAST);
     node->cast = cast;
     node->target = target;
-    node->base.kind = ND_CAST;
 }
 void set_CondNode(CondNode *node, NodeKind kind, Node *cond, Node *T, Node *F) {
-    node->base.kind = kind;
+    set_Node((Node*)node,kind);
     node->cond = cond;
     node->T = T;
     node->F = F;
 }
 void set_ForNode(ForNode *node, Node *init, Node *cond, Node *update, Node *T) {
-    node->base.kind = ND_FOR;
+    set_Node((Node*)node,ND_FOR);
     node->init = init;
     node->cond = cond;
     node->update = update;
     node->T = T;
 }
-void set_FuncNode(FuncNode *node,Var *var) {
-    node->base.kind = ND_FUNCTION;
+void set_CallNode(CallNode *node,Var *var) {
+    set_Node((Node*)node,ND_CALL);
     node->base.type = var->type;
     node->funcname = var->name;
     node->namelen = var->len;
 }
 void set_VarNode(VarNode *node, Var *var) {
+    NodeKind kind;
     if (var->kind == LOCAL)
-        node->base.kind = ND_LVAR;
+        kind = ND_LVAR;
     else
-        node->base.kind = ND_GVAR;
+        kind = ND_GVAR;
+    set_Node((Node*)node,kind);
     node->var = var;
 }
 void set_RootineNode(RootineNode *node, char *name, int len, char *moldname,
                      int moldlen) {
-    node->base.kind = ND_ROOTINE;
+    set_Node((Node*)node,ND_ROOTINE);
     node->name = name;
     node->namelen = len;
     node->moldname = moldname;
     node->moldlen = moldlen;
 }
-void set_BlockNode(BlockNode *node, NodeKind kind) { node->base.kind = kind; }
+void set_BlockNode(BlockNode *node, NodeKind kind) { set_Node((Node*)node,kind); }
 void set_VarInitNode(VarInitNode *node, Var *var, Node *value) {
+    NodeKind kind;
     if (var->kind == LOCAL)
-        node->base.kind = ND_LVARINIT;
+        kind = ND_LVARINIT;
     else
-        node->base.kind = ND_GVARINIT;
+        kind = ND_GVARINIT;
+    set_Node((Node*)node,kind);
     node->var = var;
     node->value = value;
 }
 void set_LabelNode(LabelNode *node, NodeKind kind, char *label, int len) {
-    node->base.kind = kind;
+    set_Node((Node*)node,kind);
     node->label = label;
     node->len = len;
 }
@@ -147,9 +151,9 @@ ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *T) {
     set_ForNode(node, init, cond, update, T);
     return node;
 }
-FuncNode *new_FuncNode(Var *var) {
-    FuncNode *node = calloc(1, sizeof(FuncNode));
-    set_FuncNode(node, var);
+CallNode *new_CallNode(Var *var) {
+    CallNode *node = calloc(1, sizeof(CallNode));
+    set_CallNode(node, var);
     return node;
 }
 VarNode *new_VarNode(Var *var) {
