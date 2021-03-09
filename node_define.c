@@ -58,7 +58,7 @@ void set_ForNode(ForNode *node, Node *init, Node *cond, Node *update, Node *T) {
 }
 void set_CallNode(CallNode *node,Node *ident){
     set_Node((Node*)node,ND_CALL);
-    node->ident = ident;
+    node->func = ident;
 }
 void set_VarNode(VarNode *node, Var *var) {
     NodeKind kind;
@@ -148,9 +148,9 @@ ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *T) {
     set_ForNode(node, init, cond, update, T);
     return node;
 }
-CallNode *new_CallNode(Node *ident) {
+CallNode *new_CallNode(Node *func) {
     CallNode *node = calloc(1, sizeof(CallNode));
-    set_CallNode(node, ident);
+    set_CallNode(node, func);
     return node;
 }
 VarNode *new_VarNode(Var *var) {

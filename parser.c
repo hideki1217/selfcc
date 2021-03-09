@@ -409,26 +409,33 @@ Token *direct_declarator(Type **base) {
 
     return identName;
 }
-Type *type_name() {
-    Type *tp = NULL, *tmp;
-    flag_n qflag = 0;
+bool specifier_qualifier(Type **tp,bool errorExpected){
+    Type *tmp=NULL;
+    flag_n flag=0;
     bool updated = true;
+    int count = 0;
     while (updated) {
         if ((tmp = type_specifier()) != NULL) {
             if (tp != NULL)
                 error_here(false, "宣言において型は一意である必要があります。");
-            tp = tmp;
             updated = true;
         }
-        if ((qflag |= type_qualifier()) != 0) {
+        if ((flag |= type_qualifier()) != 0) {
             updated = true;
         }
         updated = false;
+        count ++;
     }
-    if (tp == NULL) error_here(false, "ベースの型が宣言されていません");
-    tp->isConst = qflag & ISCONST;
-    tp->isVolatile = qflag & ISVOLATILE;
-
+    if(!errorExpected & count <= 1)return false;
+    if (tmp == NULL) error_here(false, "ベースの型が宣言されていません");
+    *tp = tmp;
+    (*tp)->isConst = flag & ISCONST;
+    (*tp)->isVolatile = flag & ISVOLATILE;
+    return count <= 1;
+}
+Type *type_name(bool isCheck) {
+    Type *tp = NULL;
+    if(isCheck & !specifier_qualifier(&tp,!isCheck))return NULL;
     abstract_declarator(&tp);
     return tp;
 }
@@ -464,7 +471,7 @@ void abstract_declarator(Type **base) {
                 expect(')');
                 break;
             }
-            now_type = type_name();
+            now_type = type_name(false);
             tk=consume_ident();
             params_addParam(params, now_type);
         }
@@ -850,7 +857,11 @@ Node *mul_expr() {
 }
 Node *cast_expr() {
     if (consume("(")) {
-        Type *tp = type_name();
+        Type *tp;
+        if(!(tp = type_name(true))){
+            unconsume();
+            return unary_expr();
+        }
         expect(')');
         return (Node *)new_CastNode(tp, cast_expr());
     }
@@ -869,7 +880,7 @@ Node *unary_expr() {
 
     if (consume("sizeof"))
         return (Node *)new_NumNode(
-            check_Type() ? type_name()->size : type_assign(unary_expr())->size);
+            check_Type() ? type_name(false)->size : type_assign(unary_expr())->size);
     if (consume("++"))
         return (Node *)new_BinaryNode(ND_ADD, unary_expr(),
                                       (Node *)new_NumNode(1));
@@ -884,7 +895,7 @@ Node *postfix_expr() {
     while (1) {
         // 配列要素への参照
         if (consume("[")) {
-            Node *index = expression();
+            Node *index = expression(); // TODO: 配列
             expect(']');
             // x[a] -> *(x+a)
             return (Node *)new_UnaryNode(

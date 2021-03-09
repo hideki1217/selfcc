@@ -35,6 +35,10 @@ Token *forward() {
     return tk;
 }
 
+void unconsume(){
+    tkstream = nowToken;
+}
+
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 Token *consume(char *op) {
     if (tkstream->kind != TK_RESERVED ||

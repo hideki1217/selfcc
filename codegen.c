@@ -414,7 +414,7 @@ void gen(Node *node, bool push) {
         }
         case ND_CALL: {
             CallNode *fnode = ((CallNode *)node);
-            VarNode *vnode=(VarNode *)fnode->ident;
+            VarNode *vnode=(VarNode *)fnode->func;
             int argcount = 0;
             for (Node *elem = fnode->arg; elem; elem = elem->next, argcount++)
                 ;

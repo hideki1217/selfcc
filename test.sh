@@ -18,7 +18,7 @@ assert() {
 }
 
 
-<< MOVED
+
 assert 0 "int main(){0;}"
 assert 42 "int main(){42;}"
 

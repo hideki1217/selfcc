@@ -93,7 +93,12 @@ Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
 void error(char *msg, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_here(bool flag, char *fmt, ...);
-
+/**
+ * @brief  消費したtokenを一つ戻す。
+ * @note   もどせるtokenはただ一つだけ
+ * @retval None
+ */
+void unconsume();
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 Token *consume(char *op);
 Token *check(char *op);
@@ -279,11 +284,11 @@ ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *A);
 void set_ForNode(ForNode *nd, Node *init, Node *cond, Node *update, Node *A);
 struct CallNode {
     Node base;
-    Node *ident;
+    Node *func;
     Node *arg;
 };
-CallNode *new_CallNode(Node *ident);
-void set_CallNode(CallNode *nd,Node *ident);
+CallNode *new_CallNode(Node *func);
+void set_CallNode(CallNode *nd,Node *func);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
@@ -356,8 +361,22 @@ StorageMode storage_specifier();
 存在しなければNULL
 */
 Type *type_specifier();
+/**
+ * @brief ベースの型を期待する構文
+ * @note   
+ * @param  **tp: ベースの型
+ * @param  errorExpected: エラーを期待するか
+ * @retval false=>tokenを消費していない
+ */
+bool specifier_qualifier(Type **tp,bool errorExpected);
 
-Type *type_name();
+/**
+ * @brief  抽象な型名を読む
+ * @note   
+ * @param  isCheck: マッチしなければNULLを返すか？
+ * @retval 読んだ型(もし何もなければvoid)
+ */
+Type *type_name(bool isCheck);
 /*識別子を含まない宣言*/
 void abstract_declarator(Type **base);// 保留
 Type *declarator(Type *base,Token **tk);

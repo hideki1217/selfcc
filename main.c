@@ -40,7 +40,6 @@ int main(int argc, char **argv) {
 
     nullNode = (Node *)new_NumNode(1);
     /////////////////////////////////////////////
-
     //program();
     code = translation_unit();
 
