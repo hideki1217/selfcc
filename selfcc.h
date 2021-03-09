@@ -95,19 +95,19 @@ void error_at(char *loc, char *fmt, ...);
 void error_here(bool flag, char *fmt, ...);
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
-bool consume(char *op);
-bool check(char *op);
+Token *consume(char *op);
+Token *check(char *op);
 //一個先を見る
-bool check_ahead(char *s);
+Token *check_ahead(char *s);
 
 Token *consume_hard();
 //変数値があるか確認
 Token *expect_var_not_proceed();
 
-bool consume_string(Token **tk);
+Token *consume_string();
 
 // identを一つ返し一つ進める
-bool consume_ident(Token **tk);
+Token *consume_ident();
 Token *expect_ident();
 Token *expect_var();
 //変数値があるか確認し、進めない
@@ -119,14 +119,14 @@ void expect_str(char* s);
 
 //型名がなければエラーを吐く
 Type *expect_type();
-bool consume_Type(Type **tp);
+Token *consume_Type(Type **tp);
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_integer();
-bool consume_integer(Token **tk);
-bool consume_float(Token **tk);
-bool consume_char(Token **tk);
-bool consume_enum(Token **tk);
+Token *consume_integer();
+Token *consume_float();
+Token *consume_char();
+Token *consume_enum();
 
 bool token_ismutch(Token *token, char *str, int len);
 
@@ -205,7 +205,7 @@ struct Node {
     NodeKind kind;
     Node *next;
     Type *type;
-    char *pos;
+    Token *pos;
 };
 Node *new_Node(NodeKind kind);
 void set_Node(Node *nd, NodeKind kind);
@@ -321,6 +321,7 @@ LabelNode *new_LabelNode(NodeKind kind,char *label,int len);
 void set_LabelNode(LabelNode* node,NodeKind kind,char *label,int len);
 
 //文法部
+/*
 void program();
 Node *rootine();
 Node *extern_declaration();
@@ -333,7 +334,7 @@ Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
-
+*/
 Node *translation_unit();
 Node *external_declaration();
 /**
@@ -514,8 +515,7 @@ struct Param{
     ParamKind kind;
     Type *type;
     Param *next;
-    char *name;
-    int len;
+    Token *token;
 };
 struct Params{
     Param *root;
@@ -526,7 +526,7 @@ void set_Params(Params *p);
 void set_Param(Param *p,Type* tp);
 void set_VaArg(Param *p);
 /*変数名をセット*/
-void params_setIdent(Params *params,char *name,int len);
+void params_setIdent(Params *params,Token *tk);
 /*可変長引数出ない引数を足す*/
 void params_addParam(Params *p,Type *tp);
 /*可変長引数を足す*/

@@ -36,29 +36,27 @@ Token *forward() {
 }
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
-bool consume(char *op) {
+Token *consume(char *op) {
     if (tkstream->kind != TK_RESERVED ||
         !token_ismutch(tkstream, op, strlen(op))) {
-        return false;
+        return NULL;
     }
-    forward();
-    return true;
+    return forward();
 }
 //　強制的に一つトークンを進める(不用意に使うべきではない)
 Token *consume_hard() { return forward(); }
 
 //次の文字がopかどうかを判定、文字は進めない
-bool check(char *op) { return token_ismutch(tkstream, op, strlen(op)); }
+Token *check(char *op) {return token_ismutch(tkstream, op, strlen(op))? tkstream:NULL; }
 
-bool check_ahead(char *s) {
-    return token_ismutch(tkstream->next, s, strlen(s));
+Token *check_ahead(char *s) {
+    return token_ismutch(tkstream->next, s, strlen(s))? tkstream->next:NULL;
 }
 
 //変数ならばそれを返して一つ進める
-bool consume_ident(Token **tk) {
-    if (tkstream->kind != TK_IDENT) return false;
-    *tk = forward();
-    return true;
+Token *consume_ident() {
+    if (tkstream->kind != TK_IDENT) return NULL;
+    return forward();
 }
 
 Token *expect_ident() {
@@ -67,10 +65,9 @@ Token *expect_ident() {
     return forward();
 }
 
-bool consume_string(Token **tk) {
-    if (tkstream->kind != TK_STRING) return false;
-    *tk = forward();
-    return true;
+Token *consume_string() {
+    if (tkstream->kind != TK_STRING) return NULL;
+    return forward();
 }
 
 Token *expect_var() {
@@ -119,13 +116,12 @@ bool check_Type() {
     return true;
 }
 // checkした後に実行すべき
-bool consume_Type(Type **tp) {
-    if (tkstream->kind != TK_IDENT) return false;
+Token *consume_Type(Type **tp) {
+    if (tkstream->kind != TK_IDENT) return NULL;
     Type *type = find_type(tkstream);
-    if (!type) return false;
+    if (!type) return NULL;
     *tp = type;
-    forward();
-    return true;
+    return forward();
 }
 
 //トークンが数であればそれを出力し、トークンを一つ進める。
@@ -137,25 +133,21 @@ int expect_integer() {
     forward();
     return val;
 }
-bool consume_integer(Token **tk) {
-    if (tkstream->kind != TK_NUM) return false;
-    *tk = forward();
-    return true;
+Token *consume_integer() {
+    if (tkstream->kind != TK_NUM) return NULL;
+    return forward();
 }
-bool consume_float(Token **tk) {
-    if (tkstream->kind != TK_FLOAT) return false;
-    *tk = forward();
-    return true;
+Token *consume_float() {
+    if (tkstream->kind != TK_FLOAT) return NULL;
+    return forward();
 }
-bool consume_char(Token **tk) {
-    if (tkstream->kind != TK_CHAR) return false;
-    *tk = forward();
-    return true;
+Token *consume_char() {
+   if (tkstream->kind != TK_CHAR) return NULL;
+    return forward();
 }
-bool consume_enum(Token **tk) {
-    if (tkstream->kind != TK_ENUM) return false;
-    *tk = forward();
-    return true;
+Token *consume_enum() {
+    if (tkstream->kind != TK_ENUM) return NULL;
+    return forward();
 }
 
 bool at_eof() { return tkstream->kind == TK_EOF; }

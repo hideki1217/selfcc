@@ -2,7 +2,7 @@
 
 #include<stdlib.h>
 
-void set_Node(Node *node, NodeKind kind) { node->kind = kind; node->pos = nowToken->str;}
+void set_Node(Node *node, NodeKind kind) { node->kind = kind; node->pos = nowToken;}
 void set_BinaryNode(BinaryNode *node, NodeKind kind, Node *lhs, Node *rhs) {
     set_Node((Node*)node,kind);
     node->lhs = lhs;

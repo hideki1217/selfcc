@@ -39,7 +39,7 @@ Type *type_assign(Node *node) {
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
             if (!isAssignable(ltp, rtp))
-                error_at(node->pos,"右辺値の型が左辺値に代入できない型です。");
+                error_at(node->pos->str,"右辺値の型が左辺値に代入できない型です。");
             tp = ltp;
             break;
         }
@@ -108,11 +108,11 @@ Type *type_assign(Node *node) {
             int res = params_compare(func->params, &act_par);
             switch (res) {
                 case 1:
-                    error_at(node->pos,"引数の型が違います。");
+                    error_at(node->pos->str,"引数の型が違います。");
                 case 2:
-                    error_at(node->pos,"引数が少なすぎます。");
+                    error_at(node->pos->str,"引数が少なすぎます。");
                 case 3:
-                    error_at(node->pos,"引数が多すぎます。");
+                    error_at(node->pos->str,"引数が多すぎます。");
             }
 
             tp = node->type->ptr_to;  // 関数の返り値の型
@@ -126,7 +126,7 @@ Type *type_assign(Node *node) {
         case ND_DEREF: {
             tp = type_assign(((UnaryNode *)node)->target);
             if (!isArrayorPtr(tp))
-                error_at(node->pos,"ポインタ型Likeでない変数を参照できません。");
+                error_at(node->pos->str,"ポインタ型Likeでない変数を参照できません。");
             tp = tp->ptr_to;
             break;
         }
@@ -149,7 +149,7 @@ Type *type_assign(Node *node) {
         case ND_DECRE: {
             tp = type_assign(((BinaryNode *)node)->lhs);
             if (!isLeftsidevalue(tp))
-                error_at(node->pos,"変更可能な左辺値でなければいけません");
+                error_at(node->pos->str,"変更可能な左辺値でなければいけません");
             break;
         }
         case ND_ADDASS:
@@ -157,10 +157,10 @@ Type *type_assign(Node *node) {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
             if (!isAddSubable(ltp, rtp))
-                error_at(node->pos,"%s と %s は足したり引いたりできません。", type2str(ltp),
+                error_at(node->pos->str,"%s と %s は足したり引いたりできません。", type2str(ltp),
                       type2str(rtp));
             if (!isLeftsidevalue(ltp))
-                error_at(node->pos,"変更可能な左辺値でなければいけません");
+                error_at(node->pos->str,"変更可能な左辺値でなければいけません");
             tp = ltp;
             break;
         }
@@ -169,10 +169,10 @@ Type *type_assign(Node *node) {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
             if (!isMulDivable(ltp, rtp))
-                error_at(node->pos,"%s と %s はかけたり、割ったりできません。",
+                error_at(node->pos->str,"%s と %s はかけたり、割ったりできません。",
                       type2str(ltp), type2str(rtp));
             if (!isLeftsidevalue(ltp))
-                error_at(node->pos,"変更可能な左辺値でなければいけません");
+                error_at(node->pos->str,"変更可能な左辺値でなければいけません");
             tp = ltp;
             break;
         }
@@ -193,7 +193,7 @@ Type *type_assign(Node *node) {
             switch (node->kind) {
                 case ND_ADD:
                     if (isArrayorPtr(ltp) && isArrayorPtr(rtp))
-                        error_at(node->pos,"ポインタ型同士の足し算は定義されていません");
+                        error_at(node->pos->str,"ポインタ型同士の足し算は定義されていません");
                     if (equal(ltp, type_int) && isArrayorPtr(rtp)) tp = rtp;
                     if (isArrayorPtr(ltp) && equal(rtp, type_int)) tp = ltp;
                     break;
@@ -204,27 +204,27 @@ Type *type_assign(Node *node) {
                     break;
                 case ND_MUL:
                     if (!isNum(ltp) || !isNum(rtp))
-                        error_at(node->pos,"数値型同士以外の掛け算は定義されていません");
+                        error_at(node->pos->str,"数値型同士以外の掛け算は定義されていません");
                     break;
                 case ND_DIV:
                     if (!isNum(ltp) || !isNum(rtp))
-                        error_at(node->pos,"数値型同士以外の割り算は定義されていません");
+                        error_at(node->pos->str,"数値型同士以外の割り算は定義されていません");
                     break;
                 case ND_GRT:
                     if (!equal(ltp, rtp))
-                        error_at(node->pos,"型が違うものを比較することはできません");
+                        error_at(node->pos->str,"型が違うものを比較することはできません");
                     break;
                 case ND_GOE:
                     if (!equal(ltp, rtp))
-                        error_at(node->pos,"型が違うものを比較することはできません");
+                        error_at(node->pos->str,"型が違うものを比較することはできません");
                     break;
                 case ND_EQU:
                     if (!equal(ltp, rtp))
-                        error_at(node->pos,"型が違うもの同士を比較することはできません");
+                        error_at(node->pos->str,"型が違うもの同士を比較することはできません");
                     break;
                 case ND_NEQ:
                     if (!equal(ltp, rtp))
-                        error_at(node->pos,"型が違うもの同士を比較することはできません");
+                        error_at(node->pos->str,"型が違うもの同士を比較することはできません");
                     break;
                 default:
                     error("未定義のタグが使用されています。");
@@ -261,7 +261,7 @@ void gen_lval(Node *node, bool push) {
         gen(node, push);
         return;
     }
-    error_at(node->pos,"左辺値になれない値に代入や参照をしようとしました。");
+    error_at(node->pos->str,"左辺値になれない値に代入や参照をしようとしました。");
 }
 
 void gen(Node *node, bool push) {
@@ -271,8 +271,8 @@ void gen(Node *node, bool push) {
             return;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
-            char name[rootine->namelen + 1];
-            string_limitedcopy(name, rootine->name, rootine->namelen);
+            char name[rootine->func->len + 1];
+            string_limitedcopy(name, rootine->func->name, rootine->func->len);
             printf("%s:\n", name);
             // プロローグ
             // local変数分の領域を確保　

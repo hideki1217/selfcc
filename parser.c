@@ -5,6 +5,9 @@
 #define ISCONST 1
 #define ISVOLATILE 2
 
+#define ISNULL(a) (a)==NULL
+#define ISNNULL(a) (a)==NULL
+
 //文法部
 static int structId = 0;
 static int unionId = 0;
@@ -12,6 +15,7 @@ static int enumId = 0;
 int LCcount = 0;
 Node *nullNode;
 
+/*
 void program() {
     Node head;
     head.next = NULL;
@@ -341,15 +345,15 @@ Node *primary() {
     }
 
     return nd;
-}
+}*/
 
 Type *declarator(Type *base, Token **ident) {
     *ident = NULL;
     Type *tp = base;
     while (consume("*")) {
         tp = new_Pointer(tp);
-        tp->isConst |= consume("const");
-        tp->isVolatile |= consume("volatile");
+        tp->isConst |= ISNULL(consume("const"));
+        tp->isVolatile |= ISNULL(consume("volatile"));
         // error_here(true, "型を修飾する語でなければなりません。");
     }
     *ident = direct_declarator(&tp);
@@ -360,10 +364,10 @@ Token *direct_declarator(Type **base) {
     type.ptr_to = NULL;
     Token *identName = NULL;
     if (consume("(")) {
-        identName = direct_declarator(&ptr);
+        ptr = declarator(ptr,&identName);
         expect(')');
     } else
-        consume_ident(&identName);
+        identName=consume_ident();
     // if (tk == NULL) error_here(false, "宣言すべき識別子が存在しません。");
     if (consume("[")) {
         int size = expect_integer();  // TODO:　定数式ならおっけ
@@ -381,13 +385,16 @@ Token *direct_declarator(Type **base) {
                 expect(')');
                 break;
             }
-            now_type = type_name();
+            // 引数の型名を読む
+            StorageMode mode;
+            if(!declaration_specifier(&mode,&now_type))
+                error_here(true,"型名が存在しません");
+            now_type=declarator(now_type,&name);
+
             params_addParam(params, now_type);
-            if (consume_ident(&name))
-                params_setIdent(params, name->str, name->len);
+            params_setIdent(params, name);                
         }
         *base = new_Function(*base, params);
-        expect(')');
     }
     Type *res = ptr;
     while (1) {
@@ -433,8 +440,8 @@ void abstract_declarator(Type **base) {
     Token *tk = NULL;
     while (consume("*")) {
         *base = new_Pointer(*base);
-        (*base)->isConst |= consume("const");
-        (*base)->isVolatile |= consume("volatile");
+        (*base)->isConst |= ISNNULL(consume("const"));
+        (*base)->isVolatile |= ISNNULL(consume("volatile"));
     }
     if (consume("(")) {
         abstract_declarator(&ptr);
@@ -458,7 +465,7 @@ void abstract_declarator(Type **base) {
                 break;
             }
             now_type = type_name();
-            consume_ident(&tk);
+            tk=consume_ident();
             params_addParam(params, now_type);
         }
         *base = new_Function(*base, params);
@@ -592,14 +599,15 @@ Node *local_declaration() {
         }
     }
 }
-Node *CreateArgs(Params *params){
+VarNode *CreateArgs(Params *params){
     Node anker;
     anker.next=NULL;
     Node *top=&anker;
     for(Param *par=params->root;par;par=par->next){
-        if(par->name==NULL)
+        if(par->token==NULL)
             error("引数の識別子が存在しません。");
     }
+    return (VarNode*)anker.next;
 }
 Node *global_declaration() {
     StorageMode mode = SM_NONE;
@@ -630,9 +638,9 @@ Node *global_declaration() {
                     return new_Node(ND_NULL);
                 }
                 GVar *var = add_gvar(ident,tp,false);
-                Node *args = CreateArgs(tp->params);
+                VarNode *args = CreateArgs(tp->params);
                 Node *block = compound_stmt();
-                return (Node *)new_RootineNode(var,args,block);
+                return (Node *)new_RootineNode((Var*)var,args,block);
             }
         }
     } else {
@@ -677,7 +685,7 @@ Node *global_declaration() {
 bool CanbeFuncDef(Type *tp) {
     if (tp->kind != TY_FUNCTION) return false;
     for (Param *par = tp->params->root; par; par = par->next) {
-        if (par->name == NULL) return false;
+        if (par->token == NULL) return false;
     }
     return true;
 }
@@ -767,7 +775,7 @@ Node *or_expr() {
 }
 Node *xor_expr() {
     Node *nd = and_expression();
-    while ("^") {
+    while (consume("^")) {
         nd = (Node *)new_BinaryNode(ND_XOR, nd, and_expression());
     }
     return nd;
@@ -911,18 +919,18 @@ Node *postfix_expr() {
 }
 Node *primary_expr() {
     if (consume("(")) {  // ( expr)の場合
-        Node *node = expr();
+        Node *node = expression();
         expect(')');
         return node;
     }
     Token *tk;
-    if (consume_string(&tk)) {
+    if (tk=consume_string()) {
         CVar *var = add_CStr(tk->str, tk->len);
         Node *nd = (Node *)new_ConstNode(var);
         return nd;
     }
     // 関数や変数
-    if (consume_ident(&tk)) {
+    if (tk=consume_ident()) {
         Var *var = get_Var(tk);
         VarNode *vnd = new_VarNode(var);
         return (Node *)vnd;
@@ -931,10 +939,10 @@ Node *primary_expr() {
 }
 Node *constant() {
     Token *tk;
-    if (consume_integer(&tk)) return (Node *)new_NumNode(tk->val);
-    if (consume_float(&tk)) return (Node *)new_FloatNode(tk->val);
-    if (consume_char(&tk)) return (Node *)new_CharNode(*(tk->str));
-    if (consume_enum(&tk)) return (Node *)new_EnumNode(tk->str, tk->len);
+    if (tk=consume_integer()) return (Node *)new_NumNode(tk->val);
+    if (tk=consume_float()) return (Node *)new_FloatNode(tk->val);
+    if (tk=consume_char()) return (Node *)new_CharNode(*(tk->str));
+    if (tk=consume_enum()) return (Node *)new_EnumNode(tk->str, tk->len);
 
     error_here(true, "不明なトークンです。");
 }
@@ -1003,7 +1011,7 @@ Node *compound_stmt() {
     anker.next = NULL;
     Node *top = &anker,*node;
     if (!consume("{")) return NULL;
-    while (consume("}")) {
+    while (!consume("}")) {
         node = local_declaration();
         if(node == NULL)
             node = statement();

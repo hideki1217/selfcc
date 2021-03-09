@@ -41,15 +41,13 @@ Params *new_Params() {
 void set_Param(Param *p,Type *tp){
     p->kind = PA_ARG;
     p->type = tp;
-    p->name=NULL;
-    p->len = -1;
+    p->token = NULL;
 }
 void set_VaArg(Param *p){
     p->kind = PA_VAARG;
 }
-void params_setIdent(Params *params,char *name,int len){
-    params->front->name = name;
-    params->front->len = len;
+void params_setIdent(Params *params,Token *tk){
+    params->front->token=tk;
 }
 
 void params_addParam(Params *p, Type *tp) {
@@ -69,12 +67,3 @@ void params_addVaArg(Params *p) {
     if(p->root==NULL)p->root=par;
 }
 
-Node *CreateArgs(Params *params){
-    Node anker;
-    anker.next=NULL;
-    Node *top=&anker;
-    for(Param *par=params->root;par;par=par->next){
-        if(par->name==NULL)
-            error("引数の識別子が存在しません。");
-    }
-}

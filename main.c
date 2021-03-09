@@ -4,6 +4,11 @@
 #include "selfcc.h"
 #include "utility.h"
 
+#define BUFFERSIZE 256
+
+// 便宜用のbuffer
+char buffer[BUFFERSIZE];
+
 int main(int argc, char **argv) {
     bool fromfile=true;
     char *filepath;
@@ -23,6 +28,8 @@ int main(int argc, char **argv) {
         :"";
     locals = cc_map_for_var_new();
     globals = cc_avltree_new();
+    global_list = cc_vector_new();
+    externs = cc_avltree_new();
     tkstream = tokenize(user_input);
     nowToken=tkstream;
     constants = cc_vector_new();
@@ -38,7 +45,15 @@ int main(int argc, char **argv) {
     code = translation_unit();
 
     printf(".Intel_syntax noprefix\n");
-    printf(".globl main\n");  
+
+    // globalな変数を宣言
+    printf(".globl ");
+    for(CC_VecNode *nd= global_list->first;nd;nd=nd->next){
+        Var *var = (Var*)nd->item;
+        string_limitedcopy(buffer,var->name,var->len);
+        printf("%s ",buffer);
+    } 
+    printf("\n");
 
 
     // データセクション
@@ -48,10 +63,9 @@ int main(int argc, char **argv) {
         nd=nd->next)
     {
         CStr *var=(CStr*) nd->item;
-        char s[var->len+1];
-        string_limitedcopy(s,var->text,var->len);
+        string_limitedcopy(buffer,var->text,var->len);
         printf(".LC%d:\n",var->base.LC_id); 
-        printf("    .string \"%s\"\n",s);
+        printf("    .string \"%s\"\n",buffer);
     }
 
     // テキストセクション
