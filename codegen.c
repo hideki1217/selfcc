@@ -8,6 +8,9 @@
 
 #define ARG_MAX 30
 
+Node *code;
+int Lcount = 0;
+
 Type *type_assign(Node *node) {
     Type *tp;
     switch (node->kind) {
@@ -101,7 +104,8 @@ Type *type_assign(Node *node) {
             }
 
             // 関数の引数チェック
-            int res = params_compare(node->type->params, &act_par);
+            Type *func=node->type->ptr_to; // 関数変数には関数ポインタが入っているとみなす。
+            int res = params_compare(func->params, &act_par);
             switch (res) {
                 case 1:
                     error_at(node->pos,"引数の型が違います。");
@@ -410,6 +414,7 @@ void gen(Node *node, bool push) {
         }
         case ND_CALL: {
             CallNode *fnode = ((CallNode *)node);
+            VarNode *vnode=(VarNode *)fnode->ident;
             int argcount = 0;
             for (Node *elem = fnode->arg; elem; elem = elem->next, argcount++)
                 ;
@@ -429,8 +434,8 @@ void gen(Node *node, bool push) {
             // 0
             printf("    mov rax, 0\n");
 
-            char str[fnode->namelen + 1];
-            string_limitedcopy(str, fnode->funcname, fnode->namelen);
+            char str[vnode->var->len + 1];
+            string_limitedcopy(str, vnode->var->name, vnode->var->len);
             printf("    call %s\n", str);
             if (push) printf("    push rax\n");
             return;

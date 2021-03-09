@@ -13,7 +13,9 @@ typedef struct CVar CVar;
 typedef struct CStr CStr;
 
 typedef struct LVar LVar;
+typedef struct SVar SVar;
 typedef struct GVar GVar;
+typedef struct ExVar ExVar;
 
 typedef struct Param Param;
 typedef struct Params Params;
@@ -42,6 +44,8 @@ typedef struct CC_Map_for_LVar CC_Map_for_LVar;
 
 typedef int flag_n;
 
+typedef enum StorageMode StorageMode;
+
 //////////////////////////// グローバル変数
 extern Token *tkstream;
 extern Token *nowToken;
@@ -57,6 +61,8 @@ extern Node *nullNode;
 
 extern CC_Map_for_LVar *locals;
 extern CC_AVLTree *globals;
+extern CC_Vector *global_list;
+extern CC_AVLTree *externs;
 
 extern CC_Vector *constants;
 
@@ -193,6 +199,8 @@ typedef enum {
     ND_NULL // 何もしないノード
 } NodeKind;
 
+bool IsVarNode(Node *nd);
+
 struct Node {
     NodeKind kind;
     Node *next;
@@ -271,12 +279,11 @@ ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *A);
 void set_ForNode(ForNode *nd, Node *init, Node *cond, Node *update, Node *A);
 struct CallNode {
     Node base;
-    char *funcname;
-    int namelen;
+    Node *ident;
     Node *arg;
 };
-CallNode *new_CallNode(Var *var);
-void set_CallNode(CallNode *nd,Var *var);
+CallNode *new_CallNode(Node *ident);
+void set_CallNode(CallNode *nd,Node *ident);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
@@ -287,15 +294,11 @@ struct RootineNode {
     Node base;
     Node *block;
     VarNode *arg;
-    char *name;
-    int namelen;
+    Var *func;
     int total_offset;
-    char *moldname;
-    int moldlen;
 };
-RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen);
-void set_RootineNode(RootineNode *nd, char *name, int len, char *moldname,
-                     int moldlen);
+RootineNode *new_RootineNode(Var *var,VarNode *args,Node *block);
+void set_RootineNode(RootineNode *nd,Var *var,VarNode *args,Node *block);
 struct BlockNode {
     Node base;
     Node *block;
@@ -330,10 +333,49 @@ Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
+
+Node *translation_unit();
+Node *external_declaration();
+/**
+ * @brief  グローバルでの宣言
+ * @note   
+ * @retval 宣言によるNode
+ */
+Node *global_declaration();
+/*
+param: mode = typedef等のフラグ
+param: base = ベースの型
+RET: false => 一回も更新されなかった
+*/
+bool declaration_specifier(StorageMode *mode, Type **base);
+/*なければSM_NONE*/
+StorageMode storage_specifier();
+/*
+定義済みの型の名前。
+存在しなければNULL
+*/
+Type *type_specifier();
+
 Type *type_name();
+/*識別子を含まない宣言*/
 void abstract_declarator(Type **base);// 保留
-/*flag_nを返す。typedef なら-1を返す*/
-flag_n storage_specifier();
+Type *declarator(Type *base,Token **tk);
+/*識別子を含む宣言。識別子を返す。なければNULL*/
+Token *direct_declarator(Type **base);
+
+
+/*RET: 2進数表示でabとすると
+a=1 => const
+b=1 => volatile */
+flag_n type_qualifier();
+/**
+ * @brief  ローカルでの宣言
+ * @note   
+ * @retval 宣言によるNode
+ */
+Node *local_declaration();
+
+Node *initilizer();
 
 Node *constant_expr();
 Node *condition_expr();
@@ -355,15 +397,54 @@ Node *constant();
 Node *expression();
 Node *assignment_expr();
 Node *statement();
+Node *compound_stmt();
 Node *labeled_stmt();
 Node *expression_stmt();
 Node *selection_stmt();
 Node *iteration_stmt();
 Node *jump_stmt();
 
+/**
+ * @brief  関数定義になりえるか確認
+ * @note   
+ * @param  *tp: 対象の型
+ * @retval 関数定義になれればtrue
+ */
+bool CanbeFuncDef(Type *tp);
+
+enum StorageMode{
+    SM_NONE,
+    SM_AUTO,
+    SM_REGISTER,
+    SM_STATIC,
+    SM_EXTERN,
+    SM_TYPEDEF
+};
+
+
+/**
+ * @brief  型を割り当てる
+ * @note   
+ * @param  *node: 対象のnode
+ * @retval 割り当てられた型
+ */
 Type *type_assign(Node *node);
 
+/**
+ * @brief  nodeから左辺値をraxに残すコードを生成する
+ * @note   
+ * @param  *node: 対象のnode
+ * @param  push: 最後にpushしておいてほしいか
+ * @retval None
+ */
 void gen_lval(Node *node, bool push);
+/**
+ * @brief  nodeからコードを生成する
+ * @note   
+ * @param  *node: 対象のnode
+ * @param  push: 最後にpushしてほしいか否か
+ * @retval None
+ */
 void gen(Node *node, bool push);
 
 //型を管理
@@ -385,20 +466,29 @@ typedef enum {
 struct Type {
     TypeKind kind;
     Type *ptr_to;
+    int size;
+    bool isConst;
+    bool isVolatile;
+
     Params *params;
     char *name;
     int len;
-    int size;
     int array_len;
-    bool isConst;
-    bool isVolatile;
 };
+/**
+ * @brief  type_treeに新たな型名を登録
+ * @note   
+ * @param  *tp: 登録する型(name,lenを埋めておく必要あり)
+ * @retval None
+ */
+void regist_type(Type *tp);
 
 Type *new_PrimType(TypeKind kind, char *name, int len, int size);
 Type *new_Pointer(Type *base);
 Type *new_Function(Type *base,Params *arg);
 Type *new_Array(Type *base, int length);
 Type *new_Struct(Type *bases);
+Type *new_Alias(Type *base,char *name,int len);
 Type *clone_Type(Type *tp);
 Type *find_type(Token *token);
 Type *find_type_from_name(char *name);
@@ -424,6 +514,8 @@ struct Param{
     ParamKind kind;
     Type *type;
     Param *next;
+    char *name;
+    int len;
 };
 struct Params{
     Param *root;
@@ -433,7 +525,11 @@ Params *new_Params();
 void set_Params(Params *p);
 void set_Param(Param *p,Type* tp);
 void set_VaArg(Param *p);
+/*変数名をセット*/
+void params_setIdent(Params *params,char *name,int len);
+/*可変長引数出ない引数を足す*/
 void params_addParam(Params *p,Type *tp);
+/*可変長引数を足す*/
 void params_addVaArg(Params *p);
 int params_compare(const Params *base,const Params *act);
 
@@ -446,7 +542,6 @@ struct Var {
     char *name;
     int len;
     Type *type;
-    flag_n flag;
 };
 /* 
 tokenの文字列をつかい、
@@ -471,7 +566,7 @@ flag_n setExtern(flag_n flag,bool tof);
 flag_n setStatic(flag_n flag,bool tof);
 flag_n setAuto(flag_n flag,bool tof);
 flag_n setRegister(flag_n flag,bool tof);
-flag_n makeFlag(bool isExtern,bool isStatic,bool isAuto,bool isRegister);
+flag_n makeFlag(bool isTypedef,bool isExtern,bool isStatic,bool isAuto,bool isRegister);
 
 
 // 定数を管理
@@ -491,7 +586,7 @@ struct LVar {
     Var base;
     int offset;  // RBPからのoffset、による型のサイズ
 };
-LVar *add_lvar(Token *token, Type *type,int flag);
+LVar *add_lvar(Token *token, Type *type);
 
 struct CC_Map_for_LVar {
     CC_AVLTree base;
@@ -509,7 +604,13 @@ bool cc_map_for_var_empty(CC_Map_for_LVar *map);
 struct GVar {
     Var base;
 };
-GVar *add_gvar(Token *token, Type *type,int flag);
+GVar *add_gvar(Token *token, Type *type,bool isStatic);
+
+// 外部変数
+struct ExVar{
+    Var base;
+};
+ExVar *add_exvar(Token *token,Type *type);
 
 //関数を管理
 struct Rootine {

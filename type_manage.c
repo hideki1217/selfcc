@@ -19,9 +19,9 @@ void Initialize_type_tree() {
     _void = new_PrimType(TY_VOID, "void", 4, 8);
     _int = new_PrimType(TY_INT, "int", 3, 4);
     _char = new_PrimType(TY_CHAR, "char", 4, 1);
-    _float = new_PrimType(TY_FLOAT, "float", 4, 1);
+    _float = new_PrimType(TY_FLOAT, "float", 5, 1);
     _long = new_PrimType(TY_LONG, "long", 4, 1);
-    _double = new_PrimType(TY_DOUBLE, "double", 4, 1);
+    _double = new_PrimType(TY_DOUBLE, "double", 6, 1);
 
     type_tree = cc_avltree_new();
 
@@ -31,6 +31,10 @@ void Initialize_type_tree() {
     cc_avltree_Add(type_tree, _float->name, _float->len, _float);
     cc_avltree_Add(type_tree, _double->name, _double->len, _double);
     cc_avltree_Add(type_tree, _long->name, _long->len, _long);
+}
+
+void regist_type(Type *tp){
+    cc_avltree_Add(type_tree, tp->name, tp->len, tp);
 }
 
 ///////////////////////型
@@ -97,9 +101,20 @@ Type *new_Array(Type *base, int length) {
     type->size = base->size * length;
     return type;
 }
-Type *new_Struct(Type *bases) {
+Type *new_Struct(Type *base) {
     return NULL;  // TODO: struct を作ったらここに加筆
 }
+Type *new_Alias(Type *base,char *name,int len){
+    Type *type = calloc(1, sizeof(Type));
+    InitType(type);
+    type->kind = TY_ALIAS;
+    type->ptr_to = base;
+    type->name = name;
+    type->len = len;
+    type->size = base->size;
+    return type;
+}
+
 Type *clone_Type(Type *tp) {
     Type *type = calloc(1, sizeof(Type));
     memcpy(type, tp, sizeof(Type));

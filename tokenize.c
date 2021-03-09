@@ -11,7 +11,9 @@ Token *nowToken;
 char *user_input;
 char *filename;
 CC_Map_for_LVar *locals;
+CC_Vector *global_list;
 CC_AVLTree *globals;
+CC_AVLTree *externs;
 CC_Vector *constants;
 
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {

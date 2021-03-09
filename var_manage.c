@@ -20,13 +20,12 @@ CVar *add_CStr(char *text, int len) {
 }
 
 ////////////////ローカル変数
-LVar *new_LVar(Token *token, Type *type, flag_n flag) {
+LVar *new_LVar(Token *token, Type *type) {
     LVar *var = calloc(1, sizeof(LVar));
     var->base.kind = LOCAL;
     var->base.name = token->str;
     var->base.len = token->len;
     var->base.type = type;
-    var->base.flag = flag;
 
     var->offset = cc_map_for_var_empty(locals)
                       ? make_memorysize(type)
@@ -38,10 +37,10 @@ LVar *find_lvar(Token *token) {
     return (LVar *)cc_map_for_var_search(locals, token->str, token->len);
 }
 //なければ作る。あれば二重に定義したことをエラー
-LVar *add_lvar(Token *token, Type *type, flag_n flag) {
+LVar *add_lvar(Token *token, Type *type) {
     LVar *res = find_lvar(token);
     if (res == NULL) {
-        res = new_LVar(token, type, flag);
+        res = new_LVar(token, type);
         cc_map_for_var_add(locals, res->base.name, res->base.len, res);
         locals->offset = max(res->offset, locals->offset);
         return res;
@@ -50,29 +49,39 @@ LVar *add_lvar(Token *token, Type *type, flag_n flag) {
 }
 
 ///////////////////////グローバル変数
-GVar *new_GVar(Token *token, Type *type, flag_n flag) {
+GVar *new_GVar(Token *token, Type *type) {
     GVar *var = calloc(1, sizeof(GVar));
     var->base.kind = GLOBAL;
     var->base.name = token->str;
     var->base.len = token->len;
     var->base.type = type;
-    var->base.flag = flag;
     return var;
 }
 GVar *find_gvar(Token *token) {
     return (GVar *)cc_avltree_Search(globals, token->str, token->len);
 }
-GVar *add_gvar(Token *token, Type *type, flag_n flag) {
+GVar *add_gvar(Token *token, Type *type,bool isStatic) {
     GVar *res = find_gvar(token);
     if (res == NULL) {
-        res = new_GVar(token, type, flag);
+        res = new_GVar(token, type);
         cc_avltree_Add(globals, res->base.name, res->base.len, (void *)res);
+        if(! isStatic) cc_vector_add(global_list,(void*)res);
         return res;
     } else
-        IsExtern(res->base.flag)
-            ? res->base.flag = flag
-            : error_at(token->str,
-                       "同名のグローバル変数or関数が既に定義されています");
+        error_at(token->str,
+                    "同名のグローバル変数or関数が既に定義されています");
+}
+////////////////外部宣言済み変数や関数
+ExVar *find_exvar(Token *token) {
+    return (ExVar *)cc_avltree_Search(externs, token->str, token->len);
+}
+ExVar *add_exvar(Token *token,Type *type){
+    ExVar *res = find_exvar(token);
+    if (res == NULL) {
+        res = (ExVar*)new_GVar(token, type);
+        cc_avltree_Add(externs, res->base.name, res->base.len, (void *)res);
+    }
+    return res;
 }
 
 ////////////////変数全般
@@ -84,6 +93,9 @@ Var *find_Var(Token *token) {
     res = (Var *)find_gvar(token);
     if (res) return res;
 
+    res = (Var *)find_exvar(token);
+    if(res) return res;
+
     return NULL;
 }
 Var *get_Var(Token *token) {
@@ -92,6 +104,7 @@ Var *get_Var(Token *token) {
 
     error_at(token->str, "宣言されていない変数または関数です。");
 }
+bool IsVarNode(Node *nd) { return nd->kind == ND_LVAR || nd->kind == ND_GVAR; }
 
 bool IsExtern(flag_n flag) { return flag & 1; }
 bool IsStatic(flag_n flag) { return flag & 2; }
@@ -125,11 +138,13 @@ flag_n setRegister(flag_n flag, bool tof) {
         flag -= 8;
     return flag;
 }
-flag_n makeFlag(bool isExtern, bool isStatic, bool isAuto, bool isRegister) {
+flag_n makeFlag(bool isTypedef, bool isExtern, bool isStatic, bool isAuto,
+                bool isRegister) {
     int res = 0;
-    if (isExtern) res += 1;
-    if (isStatic) res += 2;
-    if (isAuto) res += 4;
-    if (isRegister) res += 8;
+    if (isTypedef) res += 1;
+    if (isExtern) res += 2;
+    if (isStatic) res += 4;
+    if (isAuto) res += 8;
+    if (isRegister) res += 16;
     return (flag_n)res;
 }

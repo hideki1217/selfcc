@@ -56,11 +56,9 @@ void set_ForNode(ForNode *node, Node *init, Node *cond, Node *update, Node *T) {
     node->update = update;
     node->T = T;
 }
-void set_CallNode(CallNode *node,Var *var) {
+void set_CallNode(CallNode *node,Node *ident){
     set_Node((Node*)node,ND_CALL);
-    node->base.type = var->type;
-    node->funcname = var->name;
-    node->namelen = var->len;
+    node->ident = ident;
 }
 void set_VarNode(VarNode *node, Var *var) {
     NodeKind kind;
@@ -71,13 +69,12 @@ void set_VarNode(VarNode *node, Var *var) {
     set_Node((Node*)node,kind);
     node->var = var;
 }
-void set_RootineNode(RootineNode *node, char *name, int len, char *moldname,
-                     int moldlen) {
+void set_RootineNode(RootineNode *node,Var *var,VarNode *args,Node *block) {
     set_Node((Node*)node,ND_ROOTINE);
-    node->name = name;
-    node->namelen = len;
-    node->moldname = moldname;
-    node->moldlen = moldlen;
+    node->base.type = var->type;
+    node->func = var;
+    node->block = block;
+    node->arg =args;
 }
 void set_BlockNode(BlockNode *node, NodeKind kind) { set_Node((Node*)node,kind); }
 void set_VarInitNode(VarInitNode *node, Var *var, Node *value) {
@@ -151,9 +148,9 @@ ForNode *new_ForNode(Node *init, Node *cond, Node *update, Node *T) {
     set_ForNode(node, init, cond, update, T);
     return node;
 }
-CallNode *new_CallNode(Var *var) {
+CallNode *new_CallNode(Node *ident) {
     CallNode *node = calloc(1, sizeof(CallNode));
-    set_CallNode(node, var);
+    set_CallNode(node, ident);
     return node;
 }
 VarNode *new_VarNode(Var *var) {
@@ -161,9 +158,9 @@ VarNode *new_VarNode(Var *var) {
     set_VarNode(node, var);
     return node;
 }
-RootineNode *new_RootineNode(char *name, int len, char *moldname, int moldlen) {
+RootineNode *new_RootineNode(Var *var,VarNode *args,Node *block) {
     RootineNode *node = calloc(1, sizeof(RootineNode));
-    set_RootineNode(node, name, len, moldname, moldlen);
+    set_RootineNode(node, var,args,block);
     return node;
 }
 BlockNode *new_BlockNode(NodeKind kind) {

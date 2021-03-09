@@ -14,6 +14,6 @@ test: selfcc
 
 
 clean: 
-		rm -f selfcc *.o *~ tmp*
+		rm -f selfcc *.o *~ tmp* a.out
 
 .PHONY: test clean 

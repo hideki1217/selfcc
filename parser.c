@@ -2,13 +2,15 @@
 
 #include "selfcc.h"
 
+#define ISCONST 1
+#define ISVOLATILE 2
+
 //文法部
-Node *code;
-int Lcount = 0;
+static int structId = 0;
+static int unionId = 0;
+static int enumId = 0;
 int LCcount = 0;
 Node *nullNode;
-
-extern int aho(int x);
 
 void program() {
     Node head;
@@ -28,14 +30,16 @@ Node *rootine() {
 
     flag_n flag = storage_specifier();
 
+    if (flag == -1)
+        error("未対応");  // TODO: typedef に対応 エイリアスをつければいい
     if (IsExtern(flag)) return extern_declaration(flag);
 
-    Type *base_type = type_name();
-    Token *name = expect_ident();
+    Token *name;
+    Type *base_type = type_name(&name);
     if (consume("(")) {  // 関数定義
         RootineNode *node = new_RootineNode(name->str, name->len,
                                             base_type->name, base_type->len);
-        Params *params=new_Params();
+        Params *params = new_Params();
         Node anker;
         anker.next = NULL;
         Node *top = &anker;
@@ -44,17 +48,17 @@ Node *rootine() {
             consume(",");
 
             now_type = expect_type();
-            LVar *var = add_lvar(expect_var(), now_type, flag);
+            LVar *var = add_lvar(expect_var(), now_type);
             cc_map_for_var_add(locals, var->base.name, var->base.len, var);
 
-            params_addParam(params,now_type);
+            params_addParam(params, now_type);
             top->next = (Node *)new_VarNode((Var *)var);
             top = top->next;
         }
         node->arg = (VarNode *)(anker.next);
         Type *func = new_Function(base_type, params);
         // 関数も定義されたら、グローバル変数として扱う。
-        add_gvar(name, func, flag);
+        add_gvar(name, new_Pointer(func),false);
 
         node->block = stmt();
         node->total_offset = locals->offset;
@@ -66,7 +70,7 @@ Node *rootine() {
             expect(']');
             base_type = new_Array(base_type, size);
         }
-        GVar *var = add_gvar(name, base_type, flag);
+        GVar *var = add_gvar(name, base_type,false);
         Node *value = NULL;
         if (consume("=")) {  // TODO: グローバル変数の初期化未対応
             error_at(name->str, "グローバル変数の初期化は未対応です");
@@ -80,7 +84,7 @@ Node *extern_declaration(flag_n flag) {
     Token *name = expect_ident();
     Node *node = new_Node(ND_NULL);
     if (consume("(")) {  // 関数定義
-        Params *params= new_Params();
+        Params *params = new_Params();
         Type *now_type;
         Token *tk;
         while (!consume(")")) {
@@ -92,17 +96,17 @@ Node *extern_declaration(flag_n flag) {
             }
             now_type = type_name();
             consume_ident(&tk);
-            params_addParam(params,now_type);
+            params_addParam(params, now_type);
         }
         Type *func = new_Function(base_type, params);
-        add_gvar(name, func, flag);
+        add_gvar(name, func,false);
     } else {  //グローバル変数
         if (consume("[")) {
             int size = expect_integer();
             expect(']');
             base_type = new_Array(base_type, size);
         }
-        add_gvar(name, base_type, flag);
+        add_gvar(name, base_type,false);
     }
     expect(';');
     return node;
@@ -172,12 +176,12 @@ Node *stmt() {
     return node;
 }
 Node *expr() {
-    flag_n flag =
-        storage_specifier();  // TODO: エラーになる場合がるからそれを実装
+    // TODO: エラーになる場合がるからそれを実装
+    flag_n flag = storage_specifier();
     if (check_Type()) {
-        Type *type = type_name();
+        Token *tk;
+        Type *type = type_name(&tk);
 
-        Token *tk = expect_var_not_proceed();
         if (token_ismutch(tk->next, "[", 1)) {  //配列の場合
             consume_ident(&tk);
             consume("[");
@@ -185,13 +189,13 @@ Node *expr() {
                                           // 定数値を実装し次第それも入れるべし
             expect(']');
             type = new_Array(type, size);
-            LVar *var = add_lvar(tk, type, flag);
+            LVar *var = add_lvar(tk, type);
 
             return (Node *)new_VarInitNode(
                 (Var *)var,
                 NULL);  // TODO: 配列初期化じの初期値を受けるならNULLを解除
         } else {  //配列でない場合
-            LVar *var = add_lvar(tk, type, flag);
+            LVar *var = add_lvar(tk, type);
             return assign();
         }
     }
@@ -307,11 +311,12 @@ Node *primary() {
             }
             case TK_IDENT: {
                 Var *var = get_Var(tk);
+                VarNode *vnd = new_VarNode(var);
                 if (consume("(")) {  // 関数呼び出しの場合
-                    if (var->type->kind != TY_FUNCTION)
+                    if (var->type->ptr_to->kind != TY_FUNCTION)
                         error_at(tk->str,
                                  "関数のように呼び出すことはできません。");
-                    CallNode *node = new_CallNode(var);
+                    CallNode *node = new_CallNode((Node *)vnd);
                     Node *args = NULL;
                     while (!consume(")")) {
                         consume(",");
@@ -337,56 +342,395 @@ Node *primary() {
 
     return nd;
 }
-Type *type_name() {
-    bool flag_const = false;
-    bool flag_volatile = false;
-    Type *tp = NULL;
-    while (!consume_Type(&tp)) {
-        if (consume("const"))
-            flag_const = true;
-        else if (consume("volatile"))
-            flag_volatile = true;
-        else
-            error_here(true, "型を修飾する語でなければなりません。");
+
+Type *declarator(Type *base, Token **ident) {
+    *ident = NULL;
+    Type *tp = base;
+    while (consume("*")) {
+        tp = new_Pointer(tp);
+        tp->isConst |= consume("const");
+        tp->isVolatile |= consume("volatile");
+        // error_here(true, "型を修飾する語でなければなりません。");
     }
+    *ident = direct_declarator(&tp);
+    return tp;
+}
+Token *direct_declarator(Type **base) {
+    Type type, *ptr = &type;
+    type.ptr_to = NULL;
+    Token *identName = NULL;
+    if (consume("(")) {
+        identName = direct_declarator(&ptr);
+        expect(')');
+    } else
+        consume_ident(&identName);
+    // if (tk == NULL) error_here(false, "宣言すべき識別子が存在しません。");
+    if (consume("[")) {
+        int size = expect_integer();  // TODO:　定数式ならおっけ
+        *base = new_Array(*base, size);
+        expect(']');
+    }
+    if (consume("(")) {
+        Params *params = new_Params();
+        Type *now_type;
+        Token *name = NULL;
+        while (!consume(")")) {
+            consume(",");
+            if (consume("...")) {
+                params_addVaArg(params);
+                expect(')');
+                break;
+            }
+            now_type = type_name();
+            params_addParam(params, now_type);
+            if (consume_ident(&name))
+                params_setIdent(params, name->str, name->len);
+        }
+        *base = new_Function(*base, params);
+        expect(')');
+    }
+    Type *res = ptr;
+    while (1) {
+        if (res == &type) break;
+        if (res->ptr_to == &type) {
+            res->ptr_to = *base;
+            *base = ptr;
+            break;
+        }
+        res = res->ptr_to;
+    }
+
+    return identName;
+}
+Type *type_name() {
+    Type *tp = NULL, *tmp;
+    flag_n qflag = 0;
+    bool updated = true;
+    while (updated) {
+        if ((tmp = type_specifier()) != NULL) {
+            if (tp != NULL)
+                error_here(false, "宣言において型は一意である必要があります。");
+            tp = tmp;
+            updated = true;
+        }
+        if ((qflag |= type_qualifier()) != 0) {
+            updated = true;
+        }
+        updated = false;
+    }
+    if (tp == NULL) error_here(false, "ベースの型が宣言されていません");
+    tp->isConst = qflag & ISCONST;
+    tp->isVolatile = qflag & ISVOLATILE;
+
     abstract_declarator(&tp);
     return tp;
 }
-void abstract_declarator(Type **base) {  // TODO: 型の解析機を作らねばならない
+void abstract_declarator(Type **base) {
+    bool isConst = false;
+    bool isVolatile = false;
+    Type type, *ptr = &type;
+    type.ptr_to = NULL;
+    Token *tk = NULL;
     while (consume("*")) {
         *base = new_Pointer(*base);
-        consume("const");
-        consume("volatile");
+        (*base)->isConst |= consume("const");
+        (*base)->isVolatile |= consume("volatile");
     }
     if (consume("(")) {
-        abstract_declarator(base);  // TODO: ネストした型を解析をすべし
+        abstract_declarator(&ptr);
+        expect(')');
+    }
+    if (tk == NULL) error_here(false, "ここに識別子は存在してはいけません");
+    if (consume("[")) {
+        int size = expect_integer();  // TODO:　定数式ならおっけ
+        *base = new_Array(*base, size);
+        expect(']');
+    }
+    if (consume("(")) {
+        Params *params = new_Params();
+        Type *now_type;
+        Token *tk;
+        while (!consume(")")) {
+            consume(",");
+            if (consume("...")) {
+                params_addVaArg(params);
+                expect(')');
+                break;
+            }
+            now_type = type_name();
+            consume_ident(&tk);
+            params_addParam(params, now_type);
+        }
+        *base = new_Function(*base, params);
+        expect(')');
+    }
+    Type *res = ptr;
+    while (1) {
+        if (res == &type) break;
+        if (res->ptr_to == &type) {
+            res->ptr_to = *base;
+            *base = ptr;
+            break;
+        }
+        res = res->ptr_to;
     }
 }
-flag_n storage_specifier() {
-    ////////定義フラグ
-    bool isExtern = false;
-    bool isStatic = false;
-    bool isAuto = false;
-    bool isRegister = false;
-    /////////////////
-    if (consume("typedef")) {
-        return -1;
+
+StorageMode storage_specifier() {
+    if (consume("typedef")) return SM_TYPEDEF;
+    if (consume("extern")) return SM_EXTERN;
+    if (consume("static")) return SM_STATIC;
+    if (consume("auto")) return SM_AUTO;
+    if (consume("register")) return SM_REGISTER;
+    return SM_NONE;
+}
+Type *type_specifier() { // TODO: 未実装
+    Type *tp = NULL;
+    // struct宣言
+    if (consume("struct")) {
+        return tp;
     }
-    while (1) {
-        if (consume("extern"))
-            isExtern = true;
-        else if (consume("static"))
-            !isAuto ? isStatic = true
-                    : error_here(false, "autoな変数をstaticにはできません。");
-        else if (consume("auto"))
-            !isStatic ? isAuto = true
-                      : error_here(false, "staticな変数をautoにはできません。");
-        else if (consume("register"))
-            isRegister = true;
-        else
-            break;
+    // union宣言
+    if (consume("union")) {
+        return tp;
     }
-    return makeFlag(isExtern, isStatic, isAuto, isRegister);
+    // enum宣言
+    if (consume("enum")) {
+        return tp;
+    }
+    // 符号付き
+    if (consume("signed")) {
+        if (consume("char")) {
+        }
+        if (consume("short")) {
+        }
+        if (consume("int")) {
+        }
+        if (consume("long")) {
+        }
+        return tp;
+    }
+    // 符号なし
+    if (consume("unsigned")) {
+        if (consume("char")) {
+        }
+        if (consume("short")) {
+        }
+        if (consume("int")) {
+        }
+        if (consume("long")) {
+        }
+        return tp;
+    }
+    if (consume_Type(&tp)) return tp;
+    return NULL;
+}
+flag_n type_qualifier() {
+    bool isConst = false, isVolatile = false;
+    flag_n flag = 0;
+    if (!isConst && consume("const")) isConst = true, flag += ISCONST;
+    if (!isVolatile && consume("volatile"))
+        isVolatile = true, flag += ISVOLATILE;
+    return flag;
+}
+Node *local_declaration() {
+    StorageMode mode = SM_NONE;
+    Type *tp = NULL;
+    Token *ident;
+    if(! declaration_specifier(&mode, &tp))return NULL;
+    tp = declarator(tp, &ident);
+
+    if (CanbeFuncDef(tp)) {
+        switch (mode) {
+            case SM_AUTO:
+            case SM_REGISTER:
+            case SM_TYPEDEF:
+                error_at(ident->str, "関数に対して無効なストレージ クラスです");
+            case SM_EXTERN: 
+            case SM_NONE: {
+                expect(';');
+                ExVar *var = add_exvar(ident,tp);
+                return new_Node(ND_NULL);
+            }
+            case SM_STATIC: 
+                error_at(ident->str,"blockscopeではextern修飾子のみが許可されています。");
+        }
+    } else {
+        switch (mode) {
+            case SM_TYPEDEF: {
+                Type *alias=new_Alias(tp,ident->str,ident->len);
+                regist_type(alias);
+                return new_Node(ND_NULL);
+            }
+            case SM_EXTERN: {
+                expect(';');
+                ExVar *var = add_exvar(ident,tp);
+                return new_Node(ND_NULL);
+            }
+            case SM_AUTO:
+            case SM_REGISTER: 
+            case SM_NONE: {
+                LVar *var = add_lvar(ident,tp);
+                Node *value = NULL;
+                if (consume("=")) {  // 初期化
+                    value = initilizer();
+                }
+                expect(';');
+                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
+                return (Node*)vnode;
+            }
+            case SM_STATIC: {
+                GVar *var = add_gvar(ident,tp,true);
+                Node *value = NULL;
+                if (consume("=")) {  // 初期化
+                    value = initilizer();
+                }
+                expect(';');
+                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
+                return (Node*)vnode;
+            }
+        }
+    }
+}
+Node *CreateArgs(Params *params){
+    Node anker;
+    anker.next=NULL;
+    Node *top=&anker;
+    for(Param *par=params->root;par;par=par->next){
+        if(par->name==NULL)
+            error("引数の識別子が存在しません。");
+    }
+}
+Node *global_declaration() {
+    StorageMode mode = SM_NONE;
+    Type *tp = NULL;
+    Token *ident;
+
+    if(! declaration_specifier(&mode, &tp))return NULL;
+    tp = declarator(tp, &ident);
+
+    if (CanbeFuncDef(tp)) {
+        switch (mode) {
+            case SM_AUTO:
+            case SM_REGISTER:
+            case SM_TYPEDEF:
+                error_at(ident->str, "関数定義が不正な修飾子を宣言しています。");
+            case SM_EXTERN: {
+                expect(';');
+                ExVar *var = add_exvar(ident,tp);
+                return new_Node(ND_NULL);
+            }
+            case SM_STATIC: {
+                Node *block = compound_stmt();
+            }
+            case SM_NONE: {
+                // extern宣言 version
+                if(consume(";")){
+                    ExVar *var = add_exvar(ident,tp);
+                    return new_Node(ND_NULL);
+                }
+                GVar *var = add_gvar(ident,tp,false);
+                Node *args = CreateArgs(tp->params);
+                Node *block = compound_stmt();
+                return (Node *)new_RootineNode(var,args,block);
+            }
+        }
+    } else {
+        switch (mode) {
+            case SM_TYPEDEF: {
+                Type *alias=new_Alias(tp,ident->str,ident->len);
+                regist_type(alias);
+                return new_Node(ND_NULL);
+            }
+            case SM_EXTERN: {
+                expect(';');
+                ExVar *var = add_exvar(ident,tp);
+                return new_Node(ND_NULL);
+            }
+            case SM_AUTO:
+            case SM_REGISTER: {
+                error_at(ident->str,"globalセクションでローカルな宣言はできません。");
+            }
+            case SM_STATIC: {
+                GVar *var = add_gvar(ident,tp,true);
+                Node *value = NULL;
+                if (consume("=")) {  // 初期化
+                    value = initilizer();
+                }
+                expect(';');
+                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
+                return (Node*)vnode;
+            }
+            case SM_NONE: {
+                GVar *var = add_gvar(ident,tp,false);
+                Node *value = NULL;
+                if (consume("=")) {  // 初期化
+                    value = initilizer();
+                }
+                expect(';');
+                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
+                return (Node*)vnode;
+            }
+        }
+    }
+}
+bool CanbeFuncDef(Type *tp) {
+    if (tp->kind != TY_FUNCTION) return false;
+    for (Param *par = tp->params->root; par; par = par->next) {
+        if (par->name == NULL) return false;
+    }
+    return true;
+}
+
+bool declaration_specifier(StorageMode *mode, Type **base) {
+    flag_n qualify_flag = 0;
+    StorageMode sm;
+    Type *type_specify;
+    //初期化
+    *mode = SM_NONE;
+    *base = NULL;
+    bool updated = true;
+    int count =0;
+    while (updated) {
+        updated = false;
+        if ((sm = storage_specifier()) != SM_NONE) {
+            if (*mode != SM_NONE && *mode != sm)
+                error_here(false, "宣言修飾子は二つ以上宣言できません。");
+            *mode = sm;
+            updated = true;
+        }
+        if ((type_specify = type_specifier()) != NULL) {
+            if (*base != NULL)
+                error_here(false, "宣言において型は一意である必要があります。");
+            *base = type_specify;
+            updated = true;
+        }
+        if ((qualify_flag |= type_qualifier()) != 0) {
+            updated = true;
+        }
+        count++;
+    }
+    if(count <= 1) return false;
+
+    if (*base == NULL) error_here(false, "ベースの型が宣言されていません");
+    (*base)->isConst = qualify_flag & ISCONST;
+    (*base)->isVolatile = qualify_flag & ISVOLATILE;
+    return true;
+}
+Node *initilizer() {
+    if (consume("{")) {
+        Node anker;
+        anker.next = NULL;
+        Node *top = &anker;
+        while (!consume("}")) {
+            top->next = assignment_expr();
+            top = top->next;
+            consume(",");
+        }
+        top->next = NULL;
+        return anker.next;
+    }
+    return assignment_expr();
 }
 
 Node *constant_expr() { return condition_expr(); }
@@ -534,10 +878,21 @@ Node *postfix_expr() {
         if (consume("[")) {
             Node *index = expression();
             expect(']');
+            // x[a] -> *(x+a)
             return (Node *)new_UnaryNode(
                 ND_DEREF, (Node *)new_BinaryNode(ND_ADD, nd, index));
-        }  // TODO: 関数呼び出し
-        else if (consume("(")) {
+        } else if (consume("(")) {
+            CallNode *cnd = new_CallNode(nd);
+            Node *args = NULL;
+            //　引数を***逆順***で格納
+            while (!consume(")")) {
+                consume(",");
+                Node *arg = assignment_expr();
+                arg->next = args;
+                args = arg;
+            }
+            cnd->arg = args;
+            return (Node *)cnd;
         }  // TODO: struct(値)のメンバへの参照
         else if (consume(".")) {
             Token *tk = expect_ident();
@@ -566,10 +921,11 @@ Node *primary_expr() {
         Node *nd = (Node *)new_ConstNode(var);
         return nd;
     }
+    // 関数や変数
     if (consume_ident(&tk)) {
-        // TODO:
-        // 変数呼び出しか関数呼び出しかは引数を伴うかでのみ判別できる。ここでは同一視すべき
-        return NULL;
+        Var *var = get_Var(tk);
+        VarNode *vnd = new_VarNode(var);
+        return (Node *)vnd;
     }
     return constant();
 }
@@ -624,6 +980,41 @@ Node *assignment_expr() {
     return nd;
 }
 
+Node *translation_unit(){
+    Node anker;
+    anker.next = NULL;
+    Node *top=&anker;
+    while(!at_eof()){
+        top->next = external_declaration();
+        top = top ->next;
+    }
+    top ->next =NULL;
+
+    return anker.next;
+}
+Node *external_declaration(){
+    return global_declaration();
+}
+
+Node *compound_stmt() {
+    BlockNode *bnode = new_BlockNode(ND_BLOCK);// TODO:　あやしい
+
+    Node anker;
+    anker.next = NULL;
+    Node *top = &anker,*node;
+    if (!consume("{")) return NULL;
+    while (consume("}")) {
+        node = local_declaration();
+        if(node == NULL)
+            node = statement();
+        top->next = node;
+        top = top ->next;
+    }
+    top->next =NULL;
+
+    bnode->block = anker.next;
+    return (Node*)bnode;
+}
 Node *statement() {
     Node *res;
     res = selection_stmt();
@@ -633,6 +1024,8 @@ Node *statement() {
     res = jump_stmt();
     if (res) return res;
     res = labeled_stmt();
+    if (res) return res;
+    res = compound_stmt();
     if (res) return res;
     return expression_stmt();
 }
