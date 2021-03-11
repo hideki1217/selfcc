@@ -44,17 +44,15 @@ int main(int argc, char **argv) {
     printf(".Intel_syntax noprefix\n");
 
     // globalな変数を宣言
-    printf(".globl ");
     for(CC_VecNode *nd= global_list->first;nd;nd=nd->next){
         Var *var = (Var*)nd->item;
         string_limitedcopy(buffer,var->name,var->len);
-        printf("%s ",buffer);
+        printf(".globl %s \n",buffer);
     } 
-    printf("\n");
 
 
     // データセクション
-    printf("    .section .data\n");
+    printf("    .data\n");
     for(CC_VecNode *nd=constants->first;
         nd!=NULL;
         nd=nd->next)
@@ -66,7 +64,7 @@ int main(int argc, char **argv) {
     }
 
     // テキストセクション
-    printf("    .section .text\n");
+    printf("    .text\n");
     for (Node *now = code; now; now = now->next) {
         type_assign(now);
         gen(now,false);

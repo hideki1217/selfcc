@@ -397,9 +397,10 @@ flag_n type_qualifier();
 /**
  * @brief  ローカルでの宣言
  * @note   
+ * @param asExpr: 式と並列に扱うか?
  * @retval 宣言によるNode
  */
-Node *local_declaration();
+Node *local_declaration(bool asExpr);
 
 Node *initilizer();
 
@@ -638,7 +639,7 @@ int lvar_manager_GetOffset(LVar_Manager *manager);
 void lvar_manager_SetOffset(LVar_Manager *manager,int offset);
 void lvar_manager_Clear(LVar_Manager *manager);
 int lvar_manager_GetTotalOffset(LVar_Manager *manager);
-LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len);
+LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len,bool nowScope);
 
 struct Map_for_LVar {
     CC_AVLTree base;

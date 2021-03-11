@@ -221,7 +221,7 @@ void lvar_manager_PushScope(LVar_Manager *manager){
 void lvar_manager_PopScope(LVar_Manager *manager){
     int offset = manager->top->offset;
     if(manager->queue->size)cc_queue_pop(manager->queue);
-    cc_queue_top(manager->queue,&(manager->top));
+    cc_queue_top(manager->queue,(void**)&(manager->top));
     manager->max_offset = max(manager->max_offset,offset);
 }
 int lvar_manager_Add(LVar_Manager *manager,char *key,int len,LVar *var){
@@ -244,7 +244,7 @@ void lvar_manager_Clear(LVar_Manager *manager){
 int lvar_manager_GetTotalOffset(LVar_Manager *manager){
     return manager->max_offset;
 }
-LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len){
+LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len,bool nowScope){
     void * res;
     for(CC_QueueNode *nd = manager->queue->top;
         nd;
@@ -253,6 +253,7 @@ LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len){
         Map_for_LVar *map = nd->item;
         if(res=map_for_var_search(map,key,len))
             return (LVar*)res;
+        if(nowScope)break;
     }
     return NULL;
 }

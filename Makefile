@@ -9,7 +9,7 @@ selfcc: $(OBJS)
 $(OBJS): selfcc.h
 
 test: selfcc 
-		./test.sh
+		#./test.sh
 		./ctest.sh
 
 

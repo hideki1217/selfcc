@@ -416,6 +416,27 @@ int test92(){
     int *x=ahoaho("aho");
     return x;
 }
+int test93(){
+    int x=10;
+    {
+        int x=5;
+        x+= 4;
+    }
+    return x;
+}
+int sum(int a,int b){
+    return a+b;
+}
+int test94(){
+    int (*s)(int,int);
+    s = sum;
+    return (*s)(1,2);
+}
+int test95(){
+    int (*s)(int,int);
+    s = sum;
+    return s(1,2);
+}
 
 
 
@@ -513,6 +534,10 @@ int Test(){
     assert(7,test89());
     assert(6,test90());
     assert(6,test91());
+    assert(3,test92());
+    assert(10,test93());
+    assert(3,test94());
+    assert(3,test95());
 }
 //////////////////////////////////////// 
 int count;

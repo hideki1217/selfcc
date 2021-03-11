@@ -37,6 +37,7 @@ Type *type_assign(Node *node) {
         case ND_ASSIGN: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
+            if (rtp->kind == TY_FUNCTION) rtp = new_Pointer(rtp);
             if (!isLeftsidevalue(ltp))
                 error_at(node->pos->str,
                          "変更可能な左辺値でなければいけません");
@@ -47,7 +48,7 @@ Type *type_assign(Node *node) {
             break;
         }
         case ND_RETURN: {
-            tp = type_assign(((BinaryNode *)node)->lhs);
+            tp = type_assign(((UnaryNode *)node)->target);
             break;
         }
         case ND_IF: {
@@ -96,7 +97,8 @@ Type *type_assign(Node *node) {
             Node *fptr = fnode->func;  // 呼び出す関数
 
             Type *ftype = type_assign(fptr);
-            if (!isCallable(ftype))
+            Callability call = isCallable(ftype);
+            if (!call)
                 error_at(fptr->pos->str,
                          "関数のように呼び出すことはできません。");
 
@@ -113,7 +115,9 @@ Type *type_assign(Node *node) {
             }
 
             // 関数の引数チェック
-            int res = params_compare(ftype->params, &act_par);
+            Params *exact =
+                (call == AsFUNCTION) ? ftype->params : ftype->ptr_to->params;
+            int res = params_compare(exact, &act_par);
             switch (res) {
                 case 1:
                     error_at(node->pos->str, "引数の型が違います。");
@@ -151,17 +155,17 @@ Type *type_assign(Node *node) {
         case ND_LVARINIT:
         case ND_GVARINIT: {
             VarInitNode *inode = (VarInitNode *)node;
-            if(inode->value){
+            if (inode->value) {
                 if (node->kind == ND_SET) {
                     // TODO: 中括弧を使った初期化の型チェック
                 } else {
                     Type *rtp = type_assign(inode->value);
                     if (!isAssignable(inode->var->type, rtp))
                         error_at(inode->var->name,
-                                "不正な初期化です。型が違います。");
-                    tp = inode->var->type;
+                                 "不正な初期化です。型が違います。");
                 }
             }
+            tp = inode->var->type;
             break;
         }
         case ND_INCRE:
@@ -284,7 +288,7 @@ void gen_lval(Node *node, bool push) {
         return;
     }
     if (node->kind == ND_DEREF) {
-        gen(((BinaryNode *)node)->lhs, push);
+        gen(((UnaryNode *)node)->target, push);
         return;
     }
     if (isArrayorPtr(node->type)) {
@@ -342,9 +346,8 @@ void gen(Node *node, bool push) {
             if (inode->value) {
                 // グローバル変数の初期化についてはここに書くべし
             } else {
-                char s[var->len + 1];
-                string_limitedcopy(s, var->name, var->len);
-                printf("    .comm %s,%d\n", s, var->type->size);
+                string_limitedcopy(buffer, var->name, var->len);
+                printf("    .comm %s,%d\n", buffer, var->type->size);
             }
             return;
         }
@@ -362,10 +365,11 @@ void gen(Node *node, bool push) {
         case ND_LVAR:
         case ND_GVAR: {
             VarNode *vnode = (VarNode *)node;
-            gen_lval(node, false);
+            gen_lval(node, push);
             if (vnode->var->type->kind == TY_ARRAY ||
                 vnode->var->type->kind == TY_FUNCTION)
                 return;  // 配列型と関数型はPOINTERみたいにしてあげる
+            if (push) printf("    pop rax\n");
             printf("    %s, %s [rax]\n",
                    movsx2rax(node->type),  //符号拡張ありになっている
                    sizeoption(node->type));
@@ -384,8 +388,8 @@ void gen(Node *node, bool push) {
             return;
         }
         case ND_RETURN: {
-            BinaryNode *bi = (BinaryNode *)node;
-            gen(bi->lhs, false);
+            UnaryNode *un = (UnaryNode *)node;
+            gen(un->target, false);
             //エピローグ
             printf("    mov rsp, rbp\n");
             printf("    pop rbp\n");
@@ -445,7 +449,7 @@ void gen(Node *node, bool push) {
         }
         case ND_CALL: {
             CallNode *fnode = ((CallNode *)node);
-            VarNode *vnode = (VarNode *)fnode->func;
+            Node *function = fnode->func;
             int argcount = 0;
             for (Node *elem = fnode->arg; elem; elem = elem->next) argcount++;
             Type *mem[argcount];
@@ -463,10 +467,22 @@ void gen(Node *node, bool push) {
             // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は
             // 0
             printf("    mov rax, 0\n");
-
-            char str[vnode->var->len + 1];
-            string_limitedcopy(str, vnode->var->name, vnode->var->len);
-            printf("    call %s\n", str);
+            Callability call = isCallable(function->type);
+            if (function->kind == ND_GVAR && call == AsFUNCTION) {
+                VarNode *vfunc = (VarNode *)function;
+                string_limitedcopy(buffer, vfunc->var->name, vfunc->var->len);
+                printf("    call %s\n", buffer);
+            } else {
+                if (call == AsFUNCTION) {
+                    gen(function, false);
+                } else if (call == AsPTR2FUNC) {
+                    UnaryNode tmp;
+                    set_UnaryNode(&tmp, ND_DEREF, function);
+                    tmp.base.type = function->type->ptr_to;
+                    gen((Node *)&tmp, false);
+                }
+                printf("    call rax\n");
+            }
             if (push) printf("    push rax\n");
             return;
         }
@@ -477,11 +493,12 @@ void gen(Node *node, bool push) {
         case ND_DEREF: {
             UnaryNode *unode = (UnaryNode *)node;
             gen(unode->target, false);
-            printf(
-                "    %s, %s [rax]\n",
-                movsx2rax(
-                    unode->target->type->ptr_to),  // 符号拡張ありになっている
-                sizeoption(unode->target->type->ptr_to));
+            if (node->type->kind != TY_FUNCTION) {
+                printf("    %s, %s [rax]\n",
+                       movsx2rax(unode->target->type
+                                     ->ptr_to),  // 符号拡張ありになっている
+                       sizeoption(unode->target->type->ptr_to));
+            }
             if (push) printf("    push rax\n");
             return;
         }
@@ -497,26 +514,25 @@ void gen(Node *node, bool push) {
         }
         case ND_LVARINIT: {
             VarInitNode *inode = (VarInitNode *)node;
-            if(inode->value){
+            if (inode->value) {
                 LVar *var = (LVar *)inode->var;
                 if (var->base.type->kind == TY_ARRAY) {
                     if (inode->value) {
                         // TODO: 配列の宣言時初期化について書くならここ
                     }
-                }
-                else if(var->base.type->kind == TY_STRUCT){
+                } else if (var->base.type->kind == TY_STRUCT) {
                     if (inode->value) {
                         // TODO: structの宣言時初期化について書くならここ
                     }
-                } 
-                else {
+                } else {
                     // 仮の代入文を生成
                     VarNode vnode;
-                    set_VarNode(&vnode,inode->var);
+                    set_VarNode(&vnode, inode->var);
                     BinaryNode bnode;
-                    set_BinaryNode(&bnode,ND_ASSIGN,(Node*)&vnode,inode->value);
+                    set_BinaryNode(&bnode, ND_ASSIGN, (Node *)&vnode,
+                                   inode->value);
 
-                    gen((Node*)&bnode,false);
+                    gen((Node *)&bnode, false);
                 }
             }
             if (push) printf("    push rax\n");

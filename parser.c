@@ -547,13 +547,14 @@ flag_n type_qualifier() {
         isVolatile = true, flag += ISVOLATILE;
     return flag;
 }
-Node *local_declaration() {
+Node *local_declaration(bool asExpr) {
     StorageMode mode = SM_NONE;
     Type *tp = NULL;
     Token *ident;
     if (!declaration_specifier(&mode, &tp)) return NULL;
     tp = declarator(tp, &ident);
 
+    Node *res;
     if (CanbeFuncDef(tp)) {
         switch (mode) {
             case SM_AUTO:
@@ -562,9 +563,9 @@ Node *local_declaration() {
                 error_at(ident->str, "関数に対して無効なストレージ クラスです");
             case SM_EXTERN:
             case SM_NONE: {
-                expect(';');
                 ExVar *var = add_exvar(ident, tp);
-                return new_Node(ND_NULL);
+                res = new_Node(ND_NULL);
+                break;
             }
             case SM_STATIC:
                 error_at(ident->str,
@@ -575,12 +576,13 @@ Node *local_declaration() {
             case SM_TYPEDEF: {
                 Type *alias = new_Alias(tp, ident->str, ident->len);
                 regist_type(alias);
-                return new_Node(ND_NULL);
+                res = new_Node(ND_NULL);
+                break;
             }
             case SM_EXTERN: {
-                expect(';');
                 ExVar *var = add_exvar(ident, tp);
-                return new_Node(ND_NULL);
+                res = new_Node(ND_NULL);
+                break;
             }
             case SM_AUTO:
             case SM_REGISTER:
@@ -590,9 +592,8 @@ Node *local_declaration() {
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
-                expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
-                return (Node *)vnode;
+                res = (Node*)new_VarInitNode((Var *)var, value);
+                break;
             }
             case SM_STATIC: {
                 GVar *var = add_gvar(ident, tp, true);
@@ -600,21 +601,32 @@ Node *local_declaration() {
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
-                expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
-                return (Node *)vnode;
+                res = (Node*)new_VarInitNode((Var *)var, value);
+                break;
             }
         }
     }
+    if(!asExpr)expect(';');
+    return res;
 }
+/**
+ * @brief  宣言付きのParamsからVarNodeのlistを作成
+ * @note   
+ * @param  *params: 対象のParams
+ * @retval VarNodeのlistの先頭(Paramsと同順)
+ */
 VarNode *CreateArgs(Params *params) {
-    Node anker;
-    anker.next = NULL;
-    Node *top = &anker;
-    for (Param *par = params->root; par; par = par->next) {
+    VarNode anker;
+    anker.base.next = NULL;
+    VarNode *top = &anker,*tmp;
+    for (Param *par = params->root; par && par->kind != PA_VAARG; par = par->next) {
         if (par->token == NULL) error("引数の識別子が存在しません。");
+        Var *var = (Var*)add_lvar(par->token,par->type);
+        tmp = new_VarNode(var);
+        top->base.next = (Node*)tmp;
+        top = tmp; 
     }
-    return (VarNode *)anker.next;
+    return (VarNode*)anker.base.next;
 }
 Node *global_declaration() {
     StorageMode mode = SM_NONE;
@@ -637,26 +649,22 @@ Node *global_declaration() {
                 ExVar *var = add_exvar(ident, tp);
                 return new_Node(ND_NULL);
             }
-            case SM_STATIC: {
-                RootineNode *rnode;
-                GVar *var = add_gvar(ident, tp, true);
-                VarNode *args = CreateArgs(tp->params);
-                Node *block = compound_stmt();
-                rnode =new_RootineNode((Var*)var, args, block);
-                rnode->total_offset = lvar_manager_GetTotalOffset(locals);
-
-                return (Node *)rnode;
-            }
+            case SM_STATIC: 
             case SM_NONE: {
-                // extern宣言 version
-                if (consume(";")) {
+                if (consume(";")) {// extern宣言
                     ExVar *var = add_exvar(ident, tp);
                     return new_Node(ND_NULL);
                 }
                 RootineNode *rnode;
-                GVar *var = add_gvar(ident, tp, false);
-                VarNode *args = CreateArgs(tp->params);
-                Node *block = compound_stmt();
+                GVar *var = add_gvar(ident, tp, mode == SM_STATIC);
+                VarNode *args;
+                Node *block;
+                {
+                    lvar_manager_PushScope(locals);
+                    args = CreateArgs(tp->params);
+                    block = compound_stmt();
+                    lvar_manager_PopScope(locals);
+                }
                 rnode =new_RootineNode((Var*)var, args, block);
                 rnode->total_offset = lvar_manager_GetTotalOffset(locals);
 
@@ -681,6 +689,11 @@ Node *global_declaration() {
                          "globalセクションでローカルな宣言はできません。");
             }
             case SM_STATIC: {
+                if(tp->kind == TY_FUNCTION){
+                    expect(';');
+                    ExVar *var = add_exvar(ident, tp);
+                    return new_Node(ND_NULL);
+                }
                 GVar *var = add_gvar(ident, tp, true);
                 Node *value = NULL;
                 if (consume("=")) {  // 初期化
@@ -691,6 +704,11 @@ Node *global_declaration() {
                 return (Node *)vnode;
             }
             case SM_NONE: {
+                if(tp->kind == TY_FUNCTION){
+                    expect(';');
+                    ExVar *var = add_exvar(ident, tp);
+                    return new_Node(ND_NULL);
+                }
                 GVar *var = add_gvar(ident, tp, false);
                 Node *value = NULL;
                 if (consume("=")) {  // 初期化
@@ -712,7 +730,7 @@ bool CanbeFuncDef(Type *tp) {
 }
 
 bool declaration_specifier(StorageMode *mode, Type **base) {
-    flag_n qualify_flag = 0;
+    flag_n qualify_flag = 0,tmp;
     StorageMode sm;
     Type *type_specify;
     //初期化
@@ -734,7 +752,8 @@ bool declaration_specifier(StorageMode *mode, Type **base) {
             *base = type_specify;
             updated = true;
         }
-        if ((qualify_flag |= type_qualifier()) != 0) {
+        if ((tmp = type_qualifier()) != 0) {
+            qualify_flag |= tmp;
             updated = true;
         }
         count++;
@@ -762,6 +781,11 @@ Node *initilizer() {
         return (Node *)set;
     }
     return assignment_expr();
+}
+Node *declaration_or_expr(){
+    Node *nd = local_declaration(true);
+    if(nd==NULL)nd = expression();
+    return nd;
 }
 
 Node *constant_expr() { return condition_expr(); }
@@ -976,17 +1000,19 @@ Node *constant() {
 }
 
 Node *expression() {
-    BlockNode *bnd = new_BlockNode(ND_SET);
+    Node *node = assignment_expr();
+    if(consume(",")){
+        BlockNode *bnd = new_BlockNode(ND_SET);
 
-    Node anker;
-    anker.next = NULL;
-    Node *top = &anker;
-    do {
-        top->next = assignment_expr();
-        top = top->next;
-    } while (consume(","));
-    bnd->block = anker.next;
-    return (Node *)bnd;
+        Node *top = node;
+        do {
+            top->next = assignment_expr();
+            top = top->next;
+        } while (consume(","));
+        bnd->block = node;
+        return (Node *)bnd;
+    }
+    return node;
 }
 
 Node *assignment_expr() {
@@ -1042,7 +1068,7 @@ Node *compound_stmt() {
     lvar_manager_PushScope(locals);
 
     while (!consume("}")) {
-        node = local_declaration();
+        node = local_declaration(false);
         if (node == NULL) node = statement();
         top->next = node;
         top = top->next;
@@ -1133,14 +1159,17 @@ Node *iteration_stmt() {
         return (Node *)new_CondNode(ND_DOWHILE, cond, T, NULL);
     }
     if (consume("for")) {
+        lvar_manager_PushScope(locals);
         expect('(');
-        Node *init = check(";") ? nullNode : expression();
+        Node *init = check(";")? nullNode : declaration_or_expr();
         expect(';');
         Node *cond = check(";") ? nullNode : expression();
         expect(';');
         Node *update = check(")") ? nullNode : expression();
         expect(')');
-        return (Node *)new_ForNode(init, cond, update, statement());
+        Node *block = statement();
+        lvar_manager_PopScope(locals);
+        return (Node *)new_ForNode(init, cond, update, block);
     }
     return NULL;
 }

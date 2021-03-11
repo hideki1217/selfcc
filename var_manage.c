@@ -31,12 +31,12 @@ LVar *new_LVar(Token *token, Type *type) {
     return var;
 }
 //宣言済み変数一覧に存在するか確認
-LVar *find_lvar(Token *token) {
-    return lvar_manager_Find(locals, token->str, token->len);
+LVar *find_lvar(Token *token,bool nowScope) {
+    return lvar_manager_Find(locals, token->str, token->len,nowScope);
 }
 //なければ作る。あれば二重に定義したことをエラー
 LVar *add_lvar(Token *token, Type *type) {
-    LVar *res = find_lvar(token);
+    LVar *res = find_lvar(token,true);
     if (res == NULL) {
         res = new_LVar(token, type);
         lvar_manager_Add(locals, res->base.name, res->base.len, res);
@@ -85,20 +85,18 @@ ExVar *add_exvar(Token *token,Type *type){
 ////////////////変数全般
 
 Var *find_Var(Token *token) {
-    Var *res = (Var *)find_lvar(token);
-    if (res) return res;
-
-    res = (Var *)find_gvar(token);
-    if (res) return res;
-
-    res = (Var *)find_exvar(token);
-    if(res) return res;
+    Var *var = (Var *)find_lvar(token,false);// local
+    if (var) return var;
+    var = (Var *)find_gvar(token);// global 
+    if (var) return var;
+    var = (Var *)find_exvar(token);// extern
+    if(var) return var;
 
     return NULL;
 }
 Var *get_Var(Token *token) {
-    Var *var = find_Var(token);
-    if (var) return var;
+    Var *var =find_Var(token);
+    if(var) return var;
 
     error_at(token->str, "宣言されていない変数または関数です。");
 }

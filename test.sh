@@ -84,25 +84,36 @@ for(x=0;x<3;x=x+1){
 }
 return y_2;}"
 
-assert 3 "int main(){int i;int x;for(i=0;i<5;i=i+1)foo(); x=3;}"
+assert 3 "
+extern int foo();
+int main(){
+    int i;int x;for(i=0;i<5;i=i+1)foo(); x=3;
+}"
 
-assert 8 "int main(){int x;int y;int z;x=3;y=5;z=hoge(x,y);}"
-assert 13 "int main(){
-int x;
-int y;
-int z;
-x=1;
-y=1;
-int i;
-for(i=0;i<5;i=i+1){
-    z=hoge(x,y);
-    x=y;
-    y=z;
+assert 8 "extern int hoge(int,int);int main(){int x;int y;int z;x=3;y=5;z=hoge(x,y);}"
+assert 13 "
+int hoge(int,int);
+int main(){
+    int x;
+    int y;
+    int z;
+    x=1;
+    y=1;
+    int i;
+    for(i=0;i<5;i=i+1){
+        z=hoge(x,y);
+        x=y;
+        y=z;
+    }
+    return y;
 }
-return y;}
 "
-assert 6 "int main(){hogege(1,1,1,1,1,1);}"
-assert 7 "int main(){hogehoge(1,1,1,1,1,1,1);}"
+assert 6 "
+int hogege(int,int,int,int,int,int);
+int main(){hogege(1,1,1,1,1,1);}"
+assert 7 "
+int hogehoge(int,int,int,int,int,int,int);
+int main(){hogehoge(1,1,1,1,1,1,1);}"
 
 assert 3 "int main(){{3;}}"
 
@@ -123,6 +134,7 @@ int main(){
 "
 
 assert 144 "
+void print(char * fmt,...);
 int Fibonacci(int x,int y){
     int z;
     z=x+y;
@@ -171,6 +183,7 @@ int main(){
 }
 "
 assert 24 "
+int fact(int);
 int main(){
     return fact(4);
 }
@@ -211,14 +224,14 @@ int main(){
 }
 "
 
-#assert 7 "                     引数が7この場合は封印
-#sum(a,b,c,d,e,f,g){
-#    return a+b+c+d+e+f+g;
-#}
-#int main(){
-#   return sum(1,1,1,1,1,1,1);
-#}
-#"
+assert 7 "                     
+int sum(int a,int b,int c,int d,int e,int f,int g){
+    return a+b+c+d+e+f+g;
+}
+int main(){
+   return sum(1,1,1,1,1,1,1);
+}
+"
 
 assert 5 "
 int main(){
@@ -272,6 +285,7 @@ int main(){
 "
 
 assert 1 "
+void alloc4(int **,int,int,int,int);
 int main(){
     int *p;
     alloc4(&p, 1, 2, 4, 8);
@@ -280,6 +294,7 @@ int main(){
 "
 
 assert 4 "
+void alloc4(int **,int,int,int,int);
 int main(){
     int *p;
     alloc4(&p, 1, 2, 4, 8);
@@ -288,6 +303,7 @@ int main(){
 "
 
 assert 8 "
+void alloc4(int **,int,int,int,int);
 int main(){
     int *p;
     alloc4(&p, 1, 2, 4, 8);

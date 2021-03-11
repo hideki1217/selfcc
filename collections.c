@@ -116,9 +116,12 @@ bool cc_queue_push(CC_Queue *table, void *item) {
     table->size++;
     return true;
 }
-bool cc_queue_top(CC_Queue *table, void *value) {
-    if (table->size == 0) return false;
-    value = table->top;
+bool cc_queue_top(CC_Queue *table, void **value) {
+    if (table->size == 0){
+        *value = NULL;
+        return false;
+    }
+    *value = table->top->item;
     return true;
 }
 bool cc_queue_pop(CC_Queue *table) {
