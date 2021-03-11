@@ -40,12 +40,18 @@ typedef struct RootineNode RootineNode;
 typedef struct VarInitNode VarInitNode;
 typedef struct LabelNode LabelNode;
 
-typedef struct CC_Map_for_LVar CC_Map_for_LVar;
+typedef struct LVar_Manager LVar_Manager;
+typedef struct Map_for_LVar Map_for_LVar;
 
 typedef int flag_n;
 
 typedef enum StorageMode StorageMode;
 
+
+#define BUFFERSIZE 256
+
+// 便宜用のbuffer
+extern char buffer[BUFFERSIZE];
 //////////////////////////// グローバル変数
 extern Token *tkstream;
 extern Token *nowToken;
@@ -59,7 +65,7 @@ extern int
 extern Node *code;
 extern Node *nullNode;
 
-extern CC_Map_for_LVar *locals;
+extern LVar_Manager *locals;
 extern CC_AVLTree *globals;
 extern CC_Vector *global_list;
 extern CC_AVLTree *externs;
@@ -521,6 +527,18 @@ bool isAssignable(Type *l, Type *r);
 bool isLeftsidevalue(Type *tp);
 bool isAddSubable(Type *l, Type *r);
 bool isMulDivable(Type *l, Type *r);
+typedef enum {
+    CANNOT,
+    AsFUNCTION,
+    AsPTR2FUNC
+} Callability;
+/**
+ * @brief  Callできる変数かどうか
+ * @note   
+ * @param  *tp: 対象の変数の型
+ * @retval Callability
+ */
+Callability isCallable(Type *tp);
 
 char *type2str(Type *tp);
 
@@ -607,17 +625,32 @@ struct LVar {
 };
 LVar *add_lvar(Token *token, Type *type);
 
-struct CC_Map_for_LVar {
+struct LVar_Manager{
+    CC_Queue *queue;
+    Map_for_LVar *top;
+    int max_offset;
+};
+LVar_Manager *lvar_manager_new();
+void lvar_manager_PushScope(LVar_Manager *manager);
+void lvar_manager_PopScope(LVar_Manager *manager);
+int lvar_manager_Add(LVar_Manager *manager,char *key,int len,LVar *var);
+int lvar_manager_GetOffset(LVar_Manager *manager);
+void lvar_manager_SetOffset(LVar_Manager *manager,int offset);
+void lvar_manager_Clear(LVar_Manager *manager);
+int lvar_manager_GetTotalOffset(LVar_Manager *manager);
+LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len);
+
+struct Map_for_LVar {
     CC_AVLTree base;
     int offset;
 };
-CC_Map_for_LVar *cc_map_for_var_new();
-void cc_map_for_var_delete(CC_Map_for_LVar *map);
-void cc_map_for_var_clear(CC_Map_for_LVar *map);
-void cc_map_for_var_add(CC_Map_for_LVar *map, char *key, int key_len,
+Map_for_LVar *map_for_var_new();
+void map_for_var_delete(Map_for_LVar *map);
+void map_for_var_clear(Map_for_LVar *map);
+void map_for_var_add(Map_for_LVar *map, char *key, int key_len,
                         LVar *item);
-void *cc_map_for_var_search(CC_Map_for_LVar *map, char *key, int key_len);
-bool cc_map_for_var_empty(CC_Map_for_LVar *map);
+void *map_for_var_search(Map_for_LVar *map, char *key, int key_len);
+bool map_for_var_empty(Map_for_LVar *map);
 
 //グローバル変数
 struct GVar {

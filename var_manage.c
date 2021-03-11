@@ -27,22 +27,20 @@ LVar *new_LVar(Token *token, Type *type) {
     var->base.len = token->len;
     var->base.type = type;
 
-    var->offset = cc_map_for_var_empty(locals)
-                      ? make_memorysize(type)
-                      : locals->offset + make_memorysize(type);
+    var->offset = lvar_manager_GetOffset(locals) + make_memorysize(type);
     return var;
 }
 //宣言済み変数一覧に存在するか確認
 LVar *find_lvar(Token *token) {
-    return (LVar *)cc_map_for_var_search(locals, token->str, token->len);
+    return lvar_manager_Find(locals, token->str, token->len);
 }
 //なければ作る。あれば二重に定義したことをエラー
 LVar *add_lvar(Token *token, Type *type) {
     LVar *res = find_lvar(token);
     if (res == NULL) {
         res = new_LVar(token, type);
-        cc_map_for_var_add(locals, res->base.name, res->base.len, res);
-        locals->offset = max(res->offset, locals->offset);
+        lvar_manager_Add(locals, res->base.name, res->base.len, res);
+        lvar_manager_SetOffset(locals,max(res->offset, locals->top->offset));
         return res;
     } else
         error_at(token->str, "同名のローカル変数が既に定義されています");

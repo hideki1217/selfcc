@@ -5,8 +5,8 @@
 #define ISCONST 1
 #define ISVOLATILE 2
 
-#define ISNULL(a) (a)==NULL
-#define ISNNULL(a) (a)==NULL
+#define ISNULL(a) (a) == NULL
+#define ISNNULL(a) (a) == NULL
 
 //文法部
 static int structId = 0;
@@ -364,10 +364,10 @@ Token *direct_declarator(Type **base) {
     type.ptr_to = NULL;
     Token *identName = NULL;
     if (consume("(")) {
-        ptr = declarator(ptr,&identName);
+        ptr = declarator(ptr, &identName);
         expect(')');
     } else
-        identName=consume_ident();
+        identName = consume_ident();
     // if (tk == NULL) error_here(false, "宣言すべき識別子が存在しません。");
     if (consume("[")) {
         int size = expect_integer();  // TODO:　定数式ならおっけ
@@ -387,12 +387,12 @@ Token *direct_declarator(Type **base) {
             }
             // 引数の型名を読む
             StorageMode mode;
-            if(!declaration_specifier(&mode,&now_type))
-                error_here(true,"型名が存在しません");
-            now_type=declarator(now_type,&name);
+            if (!declaration_specifier(&mode, &now_type))
+                error_here(true, "型名が存在しません");
+            now_type = declarator(now_type, &name);
 
             params_addParam(params, now_type);
-            params_setIdent(params, name);                
+            params_setIdent(params, name);
         }
         *base = new_Function(*base, params);
     }
@@ -409,9 +409,9 @@ Token *direct_declarator(Type **base) {
 
     return identName;
 }
-bool specifier_qualifier(Type **tp,bool errorExpected){
-    Type *tmp=NULL;
-    flag_n flag=0;
+bool specifier_qualifier(Type **tp, bool errorExpected) {
+    Type *tmp = NULL;
+    flag_n flag = 0;
     bool updated = true;
     int count = 0;
     while (updated) {
@@ -424,9 +424,9 @@ bool specifier_qualifier(Type **tp,bool errorExpected){
             updated = true;
         }
         updated = false;
-        count ++;
+        count++;
     }
-    if(!errorExpected & count <= 1)return false;
+    if (!errorExpected & count <= 1) return false;
     if (tmp == NULL) error_here(false, "ベースの型が宣言されていません");
     *tp = tmp;
     (*tp)->isConst = flag & ISCONST;
@@ -435,7 +435,7 @@ bool specifier_qualifier(Type **tp,bool errorExpected){
 }
 Type *type_name(bool isCheck) {
     Type *tp = NULL;
-    if(isCheck & !specifier_qualifier(&tp,!isCheck))return NULL;
+    if (isCheck & !specifier_qualifier(&tp, !isCheck)) return NULL;
     abstract_declarator(&tp);
     return tp;
 }
@@ -472,7 +472,7 @@ void abstract_declarator(Type **base) {
                 break;
             }
             now_type = type_name(false);
-            tk=consume_ident();
+            tk = consume_ident();
             params_addParam(params, now_type);
         }
         *base = new_Function(*base, params);
@@ -498,7 +498,7 @@ StorageMode storage_specifier() {
     if (consume("register")) return SM_REGISTER;
     return SM_NONE;
 }
-Type *type_specifier() { // TODO: 未実装
+Type *type_specifier() {  // TODO: 未実装
     Type *tp = NULL;
     // struct宣言
     if (consume("struct")) {
@@ -551,7 +551,7 @@ Node *local_declaration() {
     StorageMode mode = SM_NONE;
     Type *tp = NULL;
     Token *ident;
-    if(! declaration_specifier(&mode, &tp))return NULL;
+    if (!declaration_specifier(&mode, &tp)) return NULL;
     tp = declarator(tp, &ident);
 
     if (CanbeFuncDef(tp)) {
@@ -560,131 +560,145 @@ Node *local_declaration() {
             case SM_REGISTER:
             case SM_TYPEDEF:
                 error_at(ident->str, "関数に対して無効なストレージ クラスです");
-            case SM_EXTERN: 
+            case SM_EXTERN:
             case SM_NONE: {
                 expect(';');
-                ExVar *var = add_exvar(ident,tp);
+                ExVar *var = add_exvar(ident, tp);
                 return new_Node(ND_NULL);
             }
-            case SM_STATIC: 
-                error_at(ident->str,"blockscopeではextern修飾子のみが許可されています。");
+            case SM_STATIC:
+                error_at(ident->str,
+                         "blockscopeではextern修飾子のみが許可されています。");
         }
     } else {
         switch (mode) {
             case SM_TYPEDEF: {
-                Type *alias=new_Alias(tp,ident->str,ident->len);
+                Type *alias = new_Alias(tp, ident->str, ident->len);
                 regist_type(alias);
                 return new_Node(ND_NULL);
             }
             case SM_EXTERN: {
                 expect(';');
-                ExVar *var = add_exvar(ident,tp);
+                ExVar *var = add_exvar(ident, tp);
                 return new_Node(ND_NULL);
             }
             case SM_AUTO:
-            case SM_REGISTER: 
+            case SM_REGISTER:
             case SM_NONE: {
-                LVar *var = add_lvar(ident,tp);
+                LVar *var = add_lvar(ident, tp);
                 Node *value = NULL;
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
                 expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
-                return (Node*)vnode;
+                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
+                return (Node *)vnode;
             }
             case SM_STATIC: {
-                GVar *var = add_gvar(ident,tp,true);
+                GVar *var = add_gvar(ident, tp, true);
                 Node *value = NULL;
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
                 expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
-                return (Node*)vnode;
+                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
+                return (Node *)vnode;
             }
         }
     }
 }
-VarNode *CreateArgs(Params *params){
+VarNode *CreateArgs(Params *params) {
     Node anker;
-    anker.next=NULL;
-    Node *top=&anker;
-    for(Param *par=params->root;par;par=par->next){
-        if(par->token==NULL)
-            error("引数の識別子が存在しません。");
+    anker.next = NULL;
+    Node *top = &anker;
+    for (Param *par = params->root; par; par = par->next) {
+        if (par->token == NULL) error("引数の識別子が存在しません。");
     }
-    return (VarNode*)anker.next;
+    return (VarNode *)anker.next;
 }
 Node *global_declaration() {
     StorageMode mode = SM_NONE;
     Type *tp = NULL;
     Token *ident;
 
-    if(! declaration_specifier(&mode, &tp))return NULL;
+    if (!declaration_specifier(&mode, &tp)) return NULL;
     tp = declarator(tp, &ident);
 
     if (CanbeFuncDef(tp)) {
+        lvar_manager_Clear(locals);
         switch (mode) {
             case SM_AUTO:
             case SM_REGISTER:
             case SM_TYPEDEF:
-                error_at(ident->str, "関数定義が不正な修飾子を宣言しています。");
+                error_at(ident->str,
+                         "関数定義が不正な修飾子を宣言しています。");
             case SM_EXTERN: {
                 expect(';');
-                ExVar *var = add_exvar(ident,tp);
+                ExVar *var = add_exvar(ident, tp);
                 return new_Node(ND_NULL);
             }
             case SM_STATIC: {
+                RootineNode *rnode;
+                GVar *var = add_gvar(ident, tp, true);
+                VarNode *args = CreateArgs(tp->params);
                 Node *block = compound_stmt();
+                rnode =new_RootineNode((Var*)var, args, block);
+                rnode->total_offset = lvar_manager_GetTotalOffset(locals);
+
+                return (Node *)rnode;
             }
             case SM_NONE: {
                 // extern宣言 version
-                if(consume(";")){
-                    ExVar *var = add_exvar(ident,tp);
+                if (consume(";")) {
+                    ExVar *var = add_exvar(ident, tp);
                     return new_Node(ND_NULL);
                 }
-                GVar *var = add_gvar(ident,tp,false);
+                RootineNode *rnode;
+                GVar *var = add_gvar(ident, tp, false);
                 VarNode *args = CreateArgs(tp->params);
                 Node *block = compound_stmt();
-                return (Node *)new_RootineNode((Var*)var,args,block);
+                rnode =new_RootineNode((Var*)var, args, block);
+                rnode->total_offset = lvar_manager_GetTotalOffset(locals);
+
+                return (Node *)rnode;
             }
         }
     } else {
         switch (mode) {
             case SM_TYPEDEF: {
-                Type *alias=new_Alias(tp,ident->str,ident->len);
+                Type *alias = new_Alias(tp, ident->str, ident->len);
                 regist_type(alias);
                 return new_Node(ND_NULL);
             }
             case SM_EXTERN: {
                 expect(';');
-                ExVar *var = add_exvar(ident,tp);
+                ExVar *var = add_exvar(ident, tp);
                 return new_Node(ND_NULL);
             }
             case SM_AUTO:
             case SM_REGISTER: {
-                error_at(ident->str,"globalセクションでローカルな宣言はできません。");
+                error_at(ident->str,
+                         "globalセクションでローカルな宣言はできません。");
             }
             case SM_STATIC: {
-                GVar *var = add_gvar(ident,tp,true);
+                GVar *var = add_gvar(ident, tp, true);
                 Node *value = NULL;
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
                 expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
-                return (Node*)vnode;
+                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
+                return (Node *)vnode;
             }
             case SM_NONE: {
-                GVar *var = add_gvar(ident,tp,false);
+                GVar *var = add_gvar(ident, tp, false);
                 Node *value = NULL;
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
                 expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var*)var,value);
-                return (Node*)vnode;
+                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
+                return (Node *)vnode;
             }
         }
     }
@@ -705,7 +719,7 @@ bool declaration_specifier(StorageMode *mode, Type **base) {
     *mode = SM_NONE;
     *base = NULL;
     bool updated = true;
-    int count =0;
+    int count = 0;
     while (updated) {
         updated = false;
         if ((sm = storage_specifier()) != SM_NONE) {
@@ -725,7 +739,7 @@ bool declaration_specifier(StorageMode *mode, Type **base) {
         }
         count++;
     }
-    if(count <= 1) return false;
+    if (count <= 1) return false;
 
     if (*base == NULL) error_here(false, "ベースの型が宣言されていません");
     (*base)->isConst = qualify_flag & ISCONST;
@@ -734,6 +748,7 @@ bool declaration_specifier(StorageMode *mode, Type **base) {
 }
 Node *initilizer() {
     if (consume("{")) {
+        BlockNode *set = new_BlockNode(ND_SET);
         Node anker;
         anker.next = NULL;
         Node *top = &anker;
@@ -743,7 +758,8 @@ Node *initilizer() {
             consume(",");
         }
         top->next = NULL;
-        return anker.next;
+        set->block = anker.next;
+        return (Node *)set;
     }
     return assignment_expr();
 }
@@ -858,7 +874,7 @@ Node *mul_expr() {
 Node *cast_expr() {
     if (consume("(")) {
         Type *tp;
-        if(!(tp = type_name(true))){
+        if (!(tp = type_name(true))) {
             unconsume();
             return unary_expr();
         }
@@ -879,8 +895,9 @@ Node *unary_expr() {
     if (consume("!")) return (Node *)new_UnaryNode(ND_LGCNOT, cast_expr());
 
     if (consume("sizeof"))
-        return (Node *)new_NumNode(
-            check_Type() ? type_name(false)->size : type_assign(unary_expr())->size);
+        return (Node *)new_NumNode(check_Type()
+                                       ? type_name(false)->size
+                                       : type_assign(unary_expr())->size);
     if (consume("++"))
         return (Node *)new_BinaryNode(ND_ADD, unary_expr(),
                                       (Node *)new_NumNode(1));
@@ -895,7 +912,7 @@ Node *postfix_expr() {
     while (1) {
         // 配列要素への参照
         if (consume("[")) {
-            Node *index = expression(); // TODO: 配列
+            Node *index = expression();  // TODO: 配列
             expect(']');
             // x[a] -> *(x+a)
             return (Node *)new_UnaryNode(
@@ -935,13 +952,13 @@ Node *primary_expr() {
         return node;
     }
     Token *tk;
-    if (tk=consume_string()) {
+    if (tk = consume_string()) {
         CVar *var = add_CStr(tk->str, tk->len);
         Node *nd = (Node *)new_ConstNode(var);
         return nd;
     }
     // 関数や変数
-    if (tk=consume_ident()) {
+    if (tk = consume_ident()) {
         Var *var = get_Var(tk);
         VarNode *vnd = new_VarNode(var);
         return (Node *)vnd;
@@ -950,10 +967,10 @@ Node *primary_expr() {
 }
 Node *constant() {
     Token *tk;
-    if (tk=consume_integer()) return (Node *)new_NumNode(tk->val);
-    if (tk=consume_float()) return (Node *)new_FloatNode(tk->val);
-    if (tk=consume_char()) return (Node *)new_CharNode(*(tk->str));
-    if (tk=consume_enum()) return (Node *)new_EnumNode(tk->str, tk->len);
+    if (tk = consume_integer()) return (Node *)new_NumNode(tk->val);
+    if (tk = consume_float()) return (Node *)new_FloatNode(tk->val);
+    if (tk = consume_char()) return (Node *)new_CharNode(*(tk->str));
+    if (tk = consume_enum()) return (Node *)new_EnumNode(tk->str, tk->len);
 
     error_here(true, "不明なトークンです。");
 }
@@ -999,40 +1016,45 @@ Node *assignment_expr() {
     return nd;
 }
 
-Node *translation_unit(){
+Node *translation_unit() {
     Node anker;
     anker.next = NULL;
-    Node *top=&anker;
-    while(!at_eof()){
+    Node *top = &anker;
+    while (!at_eof()) {
         top->next = external_declaration();
-        top = top ->next;
+        top = top->next;
     }
-    top ->next =NULL;
+    top->next = NULL;
 
     return anker.next;
 }
-Node *external_declaration(){
-    return global_declaration();
-}
+Node *external_declaration() { return global_declaration(); }
 
 Node *compound_stmt() {
-    BlockNode *bnode = new_BlockNode(ND_BLOCK);// TODO:　あやしい
+    BlockNode *bnode = new_BlockNode(ND_BLOCK);
+    BlockNode *set = new_BlockNode(ND_SET);
 
     Node anker;
     anker.next = NULL;
-    Node *top = &anker,*node;
+    Node *top = &anker, *node;
     if (!consume("{")) return NULL;
+    //新たなスコープ追加
+    lvar_manager_PushScope(locals);
+
     while (!consume("}")) {
         node = local_declaration();
-        if(node == NULL)
-            node = statement();
+        if (node == NULL) node = statement();
         top->next = node;
-        top = top ->next;
+        top = top->next;
     }
-    top->next =NULL;
+    top->next = NULL;
 
-    bnode->block = anker.next;
-    return (Node*)bnode;
+    set->block = anker.next;
+    bnode->block = (Node *)set;
+    //スコープ除去
+    lvar_manager_PopScope(locals);
+
+    return (Node *)bnode;
 }
 Node *statement() {
     Node *res;

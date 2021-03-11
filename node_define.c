@@ -68,6 +68,7 @@ void set_VarNode(VarNode *node, Var *var) {
         kind = ND_GVAR;
     set_Node((Node*)node,kind);
     node->var = var;
+    node->base.type = var->type;
 }
 void set_RootineNode(RootineNode *node,Var *var,VarNode *args,Node *block) {
     set_Node((Node*)node,ND_ROOTINE);

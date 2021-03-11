@@ -190,35 +190,94 @@ bool isAssignable(Type *l, Type *r) {
     return false;
 }
 bool isLeftsidevalue(Type *tp) {
-    return !(tp->kind == TY_ARRAY || tp->kind == TY_STRUCT);
+    return !(tp->kind == TY_ARRAY || tp->kind == TY_FUNCTION);
 }
 bool isAddSubable(Type *l, Type *r) {
     return isAssignable(l, r);  // TODO: ちゃんと考えるべし
 }
 bool isMulDivable(Type *l, Type *r) { return isNum(l) && isNum(r); }
 
+Callability isCallable(Type *tp){
+    if(tp->kind == TY_FUNCTION)return AsFUNCTION;
+    if(tp->kind == TY_PTR && tp->ptr_to->kind == TY_FUNCTION)
+        return AsPTR2FUNC;
+    return CANNOT;
+}
+
 /////////////////////データ構造
 
-CC_Map_for_LVar *cc_map_for_var_new() {
-    CC_Map_for_LVar *heap = calloc(1, sizeof(CC_Map_for_LVar));
+LVar_Manager *lvar_manager_new(){
+    LVar_Manager *manager = calloc(1,sizeof(LVar_Manager));
+    manager->queue = cc_queue_new();
+    manager->top = NULL;
+    manager->max_offset = 0;
+}
+void lvar_manager_PushScope(LVar_Manager *manager){
+    Map_for_LVar *map = map_for_var_new();
+    map->offset = manager->top ? manager->top->offset: 0;
+    cc_queue_push(manager->queue,map);
+    manager->top = map;
+}
+void lvar_manager_PopScope(LVar_Manager *manager){
+    int offset = manager->top->offset;
+    if(manager->queue->size)cc_queue_pop(manager->queue);
+    cc_queue_top(manager->queue,&(manager->top));
+    manager->max_offset = max(manager->max_offset,offset);
+}
+int lvar_manager_Add(LVar_Manager *manager,char *key,int len,LVar *var){
+    Map_for_LVar *map = manager->top;
+    map_for_var_add(map,key,len,var);
+}
+int lvar_manager_GetOffset(LVar_Manager *manager){
+    if(manager->top)return manager->top->offset;
+    return 0;
+}
+void lvar_manager_SetOffset(LVar_Manager *manager,int offset){
+    if(manager->top)manager->top->offset = offset;
+}
+void lvar_manager_Clear(LVar_Manager *manager){
+    if(manager==NULL)return;
+    cc_queue_clear(manager->queue);
+    manager->top = NULL;
+    manager->max_offset = 0;
+}
+int lvar_manager_GetTotalOffset(LVar_Manager *manager){
+    return manager->max_offset;
+}
+LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len){
+    void * res;
+    for(CC_QueueNode *nd = manager->queue->top;
+        nd;
+        nd = nd->back)
+    {
+        Map_for_LVar *map = nd->item;
+        if(res=map_for_var_search(map,key,len))
+            return (LVar*)res;
+    }
+    return NULL;
+}
+
+
+Map_for_LVar *map_for_var_new() {
+    Map_for_LVar *heap = calloc(1, sizeof(Map_for_LVar));
     heap->base.root = NULL;
     heap->offset = 0;
     return heap;
 }
-void cc_map_for_var_delete(CC_Map_for_LVar *map) {
+void map_for_var_delete(Map_for_LVar *map) {
     cc_avltree_Clear((CC_AVLTree *)map);
 }
-void cc_map_for_var_clear(CC_Map_for_LVar *map) {
+void map_for_var_clear(Map_for_LVar *map) {
     cc_avltree_Clear((CC_AVLTree *)map);
     map->offset = 0;
 }
-void cc_map_for_var_add(CC_Map_for_LVar *map, char *key, int key_len,
+void map_for_var_add(Map_for_LVar *map, char *key, int key_len,
                         LVar *item) {
     cc_avltree_Add((CC_AVLTree *)map, key, key_len, (void *)item);
 }
-void *cc_map_for_var_search(CC_Map_for_LVar *map, char *key, int key_len) {
+void *map_for_var_search(Map_for_LVar *map, char *key, int key_len) {
     return cc_avltree_Search((CC_AVLTree *)map, key, key_len);
 }
-bool cc_map_for_var_empty(CC_Map_for_LVar *map) {
+bool map_for_var_empty(Map_for_LVar *map) {
     return map->base.root == NULL;
 }

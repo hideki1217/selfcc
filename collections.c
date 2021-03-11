@@ -2,25 +2,22 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+
 #include "utility.h"
 
-
-CC_Vector *cc_vector_new(){
-    CC_Vector* vec=calloc(1,sizeof(CC_Vector));
-    vec->first=NULL;
+CC_Vector *cc_vector_new() {
+    CC_Vector *vec = calloc(1, sizeof(CC_Vector));
+    vec->first = NULL;
     return vec;
 }
-void cc_vector_add(CC_Vector* vec,void *item){
-    CC_VecNode *nd=calloc(1,sizeof(CC_VecNode));
-    nd->next= vec->first;
-    nd->item=item;
-    
+void cc_vector_add(CC_Vector *vec, void *item) {
+    CC_VecNode *nd = calloc(1, sizeof(CC_VecNode));
+    nd->next = vec->first;
+    nd->item = item;
+
     vec->first = nd;
 }
-bool cc_vector_empty(CC_Vector* vec){
-    return vec->first == NULL;
-}
-
+bool cc_vector_empty(CC_Vector *vec) { return vec->first == NULL; }
 
 CC_HeapNode *new_cc_heapnode(char *key, int key_len, void *item,
                              CC_HeapNode *lt, CC_HeapNode *rt, int s) {
@@ -42,7 +39,8 @@ void cc_heapnode_delete(CC_HeapNode *node) {
 CC_HeapNode *cc_heapnode_meld(CC_HeapNode *a, CC_HeapNode *b) {
     if (a == NULL) return b;
     if (b == NULL) return a;
-    if (compare_string(a->key, a->key_len, b->key, b->key_len) > 0) swap((void**)&a,(void**)&b);
+    if (compare_string(a->key, a->key_len, b->key, b->key_len) > 0)
+        swap((void **)&a, (void **)&b);
     if (a->l == NULL)
         a->l = b;
     else {
@@ -97,13 +95,11 @@ void cc_heap_pop(CC_Heap *heap) {
 }
 bool cc_heap_empty(CC_Heap *heap) { return heap->root == NULL; }
 
-
-
-bool cc_queue_new(CC_Queue *table) {
-    table = calloc(1, sizeof(CC_Queue));
+CC_Queue *cc_queue_new() {
+    CC_Queue *table = calloc(1, sizeof(CC_Queue));
     table->top = NULL;
     table->size = 0;
-    return true;
+    return table;
 }
 bool cc_queue_delete(CC_Queue *table) {
     if (table == NULL) false;
@@ -132,6 +128,12 @@ bool cc_queue_pop(CC_Queue *table) {
     table->size--;
     free(nd);
     return true;
+}
+void cc_queue_clear(CC_Queue *table){
+    if(table){
+        while (cc_queue_pop(table))
+        ;
+    }
 }
 
 bool cc_limitedqueue_new(CC_LimitedQueue *table, int max_size) {

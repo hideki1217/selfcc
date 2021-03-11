@@ -10,7 +10,7 @@ Token *tkstream;
 Token *nowToken;
 char *user_input;
 char *filename;
-CC_Map_for_LVar *locals;
+LVar_Manager *locals;
 CC_Vector *global_list;
 CC_AVLTree *globals;
 CC_AVLTree *externs;

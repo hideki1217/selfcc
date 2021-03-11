@@ -4,9 +4,7 @@
 #include "selfcc.h"
 #include "utility.h"
 
-#define BUFFERSIZE 256
 
-// 便宜用のbuffer
 char buffer[BUFFERSIZE];
 
 int main(int argc, char **argv) {
@@ -26,7 +24,7 @@ int main(int argc, char **argv) {
     filename = fromfile?
         path_filename(filepath)
         :"";
-    locals = cc_map_for_var_new();
+    locals = lvar_manager_new();
     globals = cc_avltree_new();
     global_list = cc_vector_new();
     externs = cc_avltree_new();

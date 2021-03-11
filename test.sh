@@ -61,7 +61,7 @@ assert 3 "int main(){int x;x=9; if(x!=9)return 5;return 3;}"
 assert 3 "int main(){int x;x=9; if(x!=9)return 5;else return 3;return 1;}"
 assert 36 "int main(){int x;x=9; if(x==5)x=x*3;else x=x*4;return x;}"
 assert 6 "int main(){int x;x=9; if(x==3) if(x==8)return 3; else return 5; else return 6;}"
-MOVED
+
 assert 5 "int main(){int x;x=0; while(x<5)x=x+1; return x;}"
 assert 8 "int main(){int x;x=0; while(x<5) if(x<4)x=x+1;else x=x+4; return x;}"
 

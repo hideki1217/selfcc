@@ -58,11 +58,12 @@ struct CC_Queue{
     CC_QueueNode *top;
     int size;
 };
-bool cc_queue_new(CC_Queue *table);
+CC_Queue *cc_queue_new();
 bool cc_queue_delete(CC_Queue *table);
 bool cc_queue_push(CC_Queue *table,void *item);
 bool cc_queue_top(CC_Queue *table, void *value);
 bool cc_queue_pop(CC_Queue *table);
+void cc_queue_clear(CC_Queue *table);
 
 struct CC_LimitedQueue{
     void* *list;
