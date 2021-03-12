@@ -96,7 +96,7 @@ void expect(char op) {
 }
 void expect_str(char *s) {
     if (tkstream->kind != TK_RESERVED || tkstream->len != strlen(s) ||
-        memcmp(s, tkstream->str, strlen(s)) == 0) {
+        memcmp(s, tkstream->str, strlen(s)) != 0) {
         error_at(tkstream->str, "\"%s\"ではありません", s);
     }
     forward();
@@ -219,6 +219,7 @@ Token *tokenize(char *p) {
         keyword(p, "case");
         keyword(p, "default");
         keyword(p, "goto");
+        keyword(p, "do");
         //演算子
         keyword(p, "sizeof");
         //修飾子

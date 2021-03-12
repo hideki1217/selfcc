@@ -161,11 +161,23 @@ void gen(Node *node, bool push) {
             printf(".Lbegin%d:\n", lcount);
             gen(((CondNode *)node)->cond, false);
             printf("    cmp rax, 0\n");
-            if (push) printf("    push rax\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T, push);
+            gen(((CondNode *)node)->T, false);
             printf("    jmp .Lbegin%d\n", lcount);
             printf(".Lend%d:\n", lcount);
+            if (push) printf("    push rax\n");
+            return;
+        }
+        case ND_DOWHILE:{
+            lcount = Lcount++;
+            printf(".Lbegin%d:\n", lcount);
+            gen(((CondNode *)node)->T, false);
+            gen(((CondNode *)node)->cond, false);
+            printf("    cmp rax, 0\n");
+            printf("    je .Lend%d\n", lcount);
+            printf("    jmp .Lbegin%d\n", lcount);
+            printf(".Lend%d:\n", lcount);
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_FOR: {
@@ -430,7 +442,7 @@ void gen(Node *node, bool push) {
         case ND_LABEL:
         case ND_CASE:
         case ND_DEFAULT:
-        case ND_DOWHILE:
+        
         case ND_SWITCH:
         case ND_CAST:
         case ND_MODASS:

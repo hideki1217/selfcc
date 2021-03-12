@@ -58,7 +58,8 @@ Type *type_assign(Node *node) {
             tp = ttp;  // TODO: ここの型管理は未完成
             break;
         }
-        case ND_WHILE: {
+        case ND_WHILE: 
+        case ND_DOWHILE:{
             tp = type_assign(((CondNode *)node)->cond);
 
             tp = type_assign(((CondNode *)node)->T);
@@ -296,7 +297,7 @@ Type *type_assign(Node *node) {
                 case ND_LABEL:
                 case ND_CASE:
                 case ND_DEFAULT:
-                case ND_DOWHILE:
+                
                 case ND_SWITCH:
                 case ND_CAST:
                 

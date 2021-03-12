@@ -505,6 +505,17 @@ int test107(){
     x %= y;
     return x;
 }
+int test108(){
+    int x=9;
+    while(x==8){
+        print("while!\n");
+    }
+    do{
+        print("do while!\n");
+        x++;
+    }while(x==8);
+    return x;
+}
 
 
 
@@ -619,6 +630,7 @@ int Test(){
     assert(0,test105());
     assert(0,test106());
     assert(1,test107());
+    assert(10,test108());
 }
 //////////////////////////////////////// 
 int count;

@@ -818,7 +818,7 @@ Node *iteration_stmt() {
         return (Node *)new_CondNode(ND_WHILE, cond, T, NULL);
     }
     if (consume("do")) {
-        Node *T = statement();
+        Node *T = compound_stmt();
         expect_str("while");
         expect('(');
         Node *cond = expression();
