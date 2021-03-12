@@ -529,6 +529,7 @@ typedef enum {
  * @retval Callability
  */
 Callability isCallable(Type *tp);
+Type *commonType(Type *l, Type *r) ;
 
 char *type2str(Type *tp);
 

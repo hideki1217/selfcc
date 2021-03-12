@@ -9,6 +9,8 @@
 Node *code;
 int Lcount = 0;
 
+void uniformSizedOper(char *oper,Type *ltp,char* (*lReg)(Type*),Type *rtp,char* (*rReg)(Type*));
+
 void gen_lval(Node *node, bool push) {
     if (node->kind == ND_LVAR) {
         LVar *var = (LVar *)((VarNode *)node)->var;
@@ -433,10 +435,16 @@ void gen(Node *node, bool push) {
             printf("    sal %s, cl\n",rax(ltp));
             break;
         case ND_OR:
+            uniformSizedOper("or",ltp,rax,rtp,rdi);
+            //printf("    or %s, %s",rax(ltp),rdi(rtp));
+            break;
         case ND_XOR:
+            uniformSizedOper("xor",ltp,rax,rtp,rdi);
+            //printf("    xor %s, %s",rax(ltp),rdi(rtp));
+            break;
         case ND_AND:
-            if(!isInteger(ltp) || !isInteger(rtp))
-                error_at(node->pos->str,"式には整数型が必要です。");
+            uniformSizedOper("and",ltp,rax,rtp,rdi);
+            //printf("    and %s, %s",rax(ltp),rdi(rtp));
             break;
         case ND_MOD:
             if(!isInteger(ltp) || !isInteger(rtp))
@@ -473,4 +481,17 @@ void gen(Node *node, bool push) {
 
     if (push) printf("    push rax\n");
     return;
+}
+
+void uniformSizedOper(char *oper,Type *ltp,char* (*lReg)(Type* type),Type *rtp,char* (*rReg)(Type* type)){
+    if(ltp->size==rtp->size)
+        printf("    %s %s, %s\n",oper,lReg(ltp),rReg(rtp));
+    else if(ltp->size > rtp->size){
+        printf("    movsx %s, %s\n",rReg(ltp),rReg(rtp));
+        printf("    %s %s, %s\n",oper,lReg(ltp),rReg(ltp));
+    }
+    else{
+        printf("    movsx %s, %s\n",lReg(rtp),lReg(ltp));
+        printf("    %s %s, %s\n",oper,lReg(rtp),rReg(rtp));
+    }
 }

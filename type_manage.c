@@ -33,9 +33,7 @@ void Initialize_type_tree() {
     cc_avltree_Add(type_tree, _long->name, _long->len, _long);
 }
 
-void regist_type(Type *tp){
-    cc_avltree_Add(type_tree, tp->name, tp->len, tp);
-}
+void regist_type(Type *tp) { cc_avltree_Add(type_tree, tp->name, tp->len, tp); }
 
 ///////////////////////型
 char *type2str(Type *tp) {
@@ -104,7 +102,7 @@ Type *new_Array(Type *base, int length) {
 Type *new_Struct(Type *base) {
     return NULL;  // TODO: struct を作ったらここに加筆
 }
-Type *new_Alias(Type *base,char *name,int len){
+Type *new_Alias(Type *base, char *name, int len) {
     Type *type = calloc(1, sizeof(Type));
     InitType(type);
     type->kind = TY_ALIAS;
@@ -171,14 +169,12 @@ bool isInteger(Type *type) {
     return type->kind == TY_CHAR || type->kind == TY_INT ||
            type->kind == TY_LONG;
 }
-bool isFloat(Type *type){
-    return isNum(type) && ! isInteger(type);
-}
+bool isFloat(Type *type) { return isNum(type) && !isInteger(type); }
 bool isAssignable(Type *l, Type *r) {
     if (equal(l, r)) return true;
     if (l->kind == TY_PTR && l->ptr_to->kind == TY_VOID && r->kind == TY_PTR)
         return true;
-    if (l->kind == TY_PTR && isArrayorPtr(r))return true;
+    if (l->kind == TY_PTR && isArrayorPtr(r)) return true;
     switch (l->kind) {
         case TY_DOUBLE:
             return isNum(r);
@@ -200,67 +196,84 @@ bool isAddSubable(Type *l, Type *r) {
 }
 bool isMulDivable(Type *l, Type *r) { return isNum(l) && isNum(r); }
 
-Callability isCallable(Type *tp){
-    if(tp->kind == TY_FUNCTION)return AsFUNCTION;
-    if(tp->kind == TY_PTR && tp->ptr_to->kind == TY_FUNCTION)
+Callability isCallable(Type *tp) {
+    if (tp->kind == TY_FUNCTION) return AsFUNCTION;
+    if (tp->kind == TY_PTR && tp->ptr_to->kind == TY_FUNCTION)
         return AsPTR2FUNC;
     return CANNOT;
 }
 
+Type *commonType(Type *l, Type *r) {
+    switch (l->kind) {
+        case TY_DOUBLE:
+            return (isNum(r)) ? l : NULL;
+        case TY_FLOAT:
+            if (!isNum(r)) return NULL;
+            return (r->kind == TY_DOUBLE) ? r : l;
+        case TY_LONG:
+            if (!isNum(r)) return NULL;
+            return isInteger(r) ? l : r;
+        case TY_INT:
+            if (!isNum(r)) return NULL;
+            if (!isInteger(r)) return r;
+            return (r->kind == TY_LONG) ? r : l;
+        case TY_CHAR:
+            return ( ! isNum(r) )? NULL: r;
+        default:
+            error("その型の共通部分は未対応だよう");  
+    }
+}
+
 /////////////////////データ構造
 
-LVar_Manager *lvar_manager_new(){
-    LVar_Manager *manager = calloc(1,sizeof(LVar_Manager));
+LVar_Manager *lvar_manager_new() {
+    LVar_Manager *manager = calloc(1, sizeof(LVar_Manager));
     manager->queue = cc_queue_new();
     manager->top = NULL;
     manager->max_offset = 0;
 }
-void lvar_manager_PushScope(LVar_Manager *manager){
+void lvar_manager_PushScope(LVar_Manager *manager) {
     Map_for_LVar *map = map_for_var_new();
-    map->offset = manager->top ? manager->top->offset: 0;
-    cc_queue_push(manager->queue,map);
+    map->offset = manager->top ? manager->top->offset : 0;
+    cc_queue_push(manager->queue, map);
     manager->top = map;
 }
-void lvar_manager_PopScope(LVar_Manager *manager){
+void lvar_manager_PopScope(LVar_Manager *manager) {
     int offset = manager->top->offset;
-    if(manager->queue->size)cc_queue_pop(manager->queue);
-    cc_queue_top(manager->queue,(void**)&(manager->top));
-    manager->max_offset = max(manager->max_offset,offset);
+    if (manager->queue->size) cc_queue_pop(manager->queue);
+    cc_queue_top(manager->queue, (void **)&(manager->top));
+    manager->max_offset = max(manager->max_offset, offset);
 }
-int lvar_manager_Add(LVar_Manager *manager,char *key,int len,LVar *var){
+int lvar_manager_Add(LVar_Manager *manager, char *key, int len, LVar *var) {
     Map_for_LVar *map = manager->top;
-    map_for_var_add(map,key,len,var);
+    map_for_var_add(map, key, len, var);
 }
-int lvar_manager_GetOffset(LVar_Manager *manager){
-    if(manager->top)return manager->top->offset;
+int lvar_manager_GetOffset(LVar_Manager *manager) {
+    if (manager->top) return manager->top->offset;
     return 0;
 }
-void lvar_manager_SetOffset(LVar_Manager *manager,int offset){
-    if(manager->top)manager->top->offset = offset;
+void lvar_manager_SetOffset(LVar_Manager *manager, int offset) {
+    if (manager->top) manager->top->offset = offset;
 }
-void lvar_manager_Clear(LVar_Manager *manager){
-    if(manager==NULL)return;
+void lvar_manager_Clear(LVar_Manager *manager) {
+    if (manager == NULL) return;
     cc_queue_clear(manager->queue);
     manager->top = NULL;
     manager->max_offset = 0;
 }
-int lvar_manager_GetTotalOffset(LVar_Manager *manager){
+int lvar_manager_GetTotalOffset(LVar_Manager *manager) {
     return manager->max_offset;
 }
-LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len,bool nowScope){
-    void * res;
-    for(CC_QueueNode *nd = manager->queue->top;
-        nd;
-        nd = nd->back)
-    {
+LVar *lvar_manager_Find(LVar_Manager *manager, char *key, int len,
+                        bool nowScope) {
+    void *res;
+    for (CC_QueueNode *nd = manager->queue->top; nd; nd = nd->back) {
         Map_for_LVar *map = nd->item;
-        if(res=map_for_var_search(map,key,len))
-            return (LVar*)res;
-        if(nowScope)break;
+        if (res = map_for_var_search(map, key, len)) return (LVar *)res;
+        if (nowScope) break;
     }
     return NULL;
 }
-
 
 Map_for_LVar *map_for_var_new() {
     Map_for_LVar *heap = calloc(1, sizeof(Map_for_LVar));
@@ -275,13 +288,10 @@ void map_for_var_clear(Map_for_LVar *map) {
     cc_avltree_Clear((CC_AVLTree *)map);
     map->offset = 0;
 }
-void map_for_var_add(Map_for_LVar *map, char *key, int key_len,
-                        LVar *item) {
+void map_for_var_add(Map_for_LVar *map, char *key, int key_len, LVar *item) {
     cc_avltree_Add((CC_AVLTree *)map, key, key_len, (void *)item);
 }
 void *map_for_var_search(Map_for_LVar *map, char *key, int key_len) {
     return cc_avltree_Search((CC_AVLTree *)map, key, key_len);
 }
-bool map_for_var_empty(Map_for_LVar *map) {
-    return map->base.root == NULL;
-}
+bool map_for_var_empty(Map_for_LVar *map) { return map->base.root == NULL; }

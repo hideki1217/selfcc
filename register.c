@@ -22,6 +22,8 @@ char *registry_for_arg(Type *tp, int i) {
             exit(1);
     }
 }
+
+
 // 符号拡張しない
 char *movzx2rax(Type *tp){
     switch(tp->size){

@@ -266,6 +266,7 @@ Type *type_assign(Node *node) {
                 case ND_AND:
                     if(!isInteger(ltp) || !isInteger(rtp))
                         error_at(node->pos->str,"式には整数型が必要です。");
+                    tp = commonType(ltp,rtp);
                     break;
                 case ND_MOD:
                     if(!isInteger(ltp) || !isInteger(rtp))

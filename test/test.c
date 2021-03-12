@@ -447,6 +447,24 @@ int test97(){
     x = x>>1;
     return x;
 }
+int test98(){
+    int x=4;
+    int y=2;
+    x = x | y;
+    return x;
+}
+int test99(){
+    int x=4;
+    int y=2;
+    x = x & y;
+    return x;
+}
+int test100(){
+    int x=4;
+    int y=4;
+    x = x ^ y;
+    return x;
+}
 
 
 
@@ -550,6 +568,9 @@ int Test(){
     assert(3,test95());
     assert(8,test96());
     assert(2,test97());
+    assert(6,test98());
+    assert(0,test99());
+    assert(0,test100());
 }
 //////////////////////////////////////// 
 int count;
