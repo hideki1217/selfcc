@@ -308,54 +308,21 @@ void gen(Node *node, bool push) {
             if (push) printf("   push rax\n");
             return;
         }
-        case ND_ADDASS: {
+        case ND_ADDASS: 
+        case ND_SUBASS: 
+        case ND_MULASS:
+        case ND_DIVASS: 
+        case ND_RSHASS:
+        case ND_LSHASS:
+        case ND_ORASS:
+        case ND_ANDASS:
+        case ND_XORASS:
+        case ND_MODASS:{ 
             BinaryNode *bnode = (BinaryNode *)node;
 
             gen_lval(bnode->lhs, true);
             BinaryNode tmp;
-            set_BinaryNode(&tmp, ND_ADD, bnode->lhs, bnode->rhs);
-            type_assign((Node *)&tmp);
-            gen((Node *)&tmp, false);
-            printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n", rax(node->type));
-            printf("    pop rax\n");
-            if (push) printf("   push rax\n");
-            return;
-        }
-        case ND_SUBASS: {
-            BinaryNode *bnode = (BinaryNode *)node;
-
-            gen_lval(bnode->lhs, true);
-            BinaryNode tmp;
-            set_BinaryNode(&tmp, ND_SUB, bnode->lhs, bnode->rhs);
-            type_assign((Node *)&tmp);
-            gen((Node *)&tmp, false);
-            printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n", rax(node->type));
-            printf("    pop rax\n");
-            if (push) printf("   push rax\n");
-            return;
-        }
-        case ND_MULASS: {
-            BinaryNode *bnode = (BinaryNode *)node;
-
-            gen_lval(bnode->lhs, true);
-            BinaryNode tmp;
-            set_BinaryNode(&tmp, ND_MUL, bnode->lhs, bnode->rhs);
-            type_assign((Node *)&tmp);
-            gen((Node *)&tmp, false);
-            printf("    pop rdi\n");
-            printf("    mov [rdi], %s\n", rax(node->type));
-            printf("    pop rax\n");
-            if (push) printf("   push rax\n");
-            return;
-        }
-        case ND_DIVASS: {
-            BinaryNode *bnode = (BinaryNode *)node;
-
-            gen_lval(bnode->lhs, true);
-            BinaryNode tmp;
-            set_BinaryNode(&tmp, ND_DIV, bnode->lhs, bnode->rhs);
+            set_BinaryNode(&tmp, pairOf(node->kind), bnode->lhs, bnode->rhs);
             type_assign((Node *)&tmp);
             gen((Node *)&tmp, false);
             printf("    pop rdi\n");

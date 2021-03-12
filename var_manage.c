@@ -100,6 +100,34 @@ Var *get_Var(Token *token) {
 
     error_at(token->str, "宣言されていない変数または関数です。");
 }
+
+NodeKind pairOf(NodeKind kind){
+    switch(kind){
+        case ND_ADDASS:
+            return ND_ADD;
+        case ND_SUBASS:
+            return ND_SUB;
+        case ND_DIVASS:
+            return ND_DIV;
+        case ND_MULASS:
+            return ND_MUL;
+        case ND_ORASS:
+            return ND_OR;
+        case ND_ANDASS:
+            return ND_AND;
+        case ND_XORASS:
+            return ND_XOR;
+        case ND_MODASS:
+            return ND_MOD;
+        case ND_LSHASS:
+            return ND_LSHFT;
+        case ND_RSHASS:
+            return ND_RSHFT;
+        default:
+            error("未実装だよう");
+    }
+}
+
 bool IsVarNode(Node *nd) { return nd->kind == ND_LVAR || nd->kind == ND_GVAR; }
 
 bool IsExtern(flag_n flag) { return flag & 1; }

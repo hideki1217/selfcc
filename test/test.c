@@ -471,6 +471,41 @@ int test101(){
     x = x%y;
     return x;
 }
+int test102(){
+    int x=4;
+    x <<= 1;
+    return x;
+}
+int test103(){
+    int x=4;
+    x >>= 1;
+    return x;
+}
+int test104(){
+    int x=4;
+    int y=2;
+    x |= y;
+    return x;
+}
+int test105(){
+    int x=4;
+    int y=2;
+    x &= y;
+    return x;
+}
+int test106(){
+    int x=4;
+    int y=4;
+    x ^= y;
+    return x;
+}
+int test107(){
+    int x=100;
+    int y=3;
+    x %= y;
+    return x;
+}
+
 
 
 
@@ -578,6 +613,12 @@ int Test(){
     assert(0,test99());
     assert(0,test100());
     assert(1,test101());
+    assert(8,test102());
+    assert(2,test103());
+    assert(6,test104());
+    assert(0,test105());
+    assert(0,test106());
+    assert(1,test107());
 }
 //////////////////////////////////////// 
 int count;

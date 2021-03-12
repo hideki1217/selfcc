@@ -181,7 +181,8 @@ Type *type_assign(Node *node) {
             break;
         }
         case ND_MULASS:
-        case ND_DIVASS: {
+        case ND_DIVASS: 
+        {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
             if (!isMulDivable(ltp, rtp))
@@ -192,6 +193,19 @@ Type *type_assign(Node *node) {
                 error_at(node->pos->str,
                          "変更可能な左辺値でなければいけません");
             tp = ltp;
+            break;
+        }
+        case ND_MODASS:
+        case ND_LSHASS:
+        case ND_RSHASS:
+        case ND_ANDASS:
+        case ND_ORASS:
+        case ND_XORASS:{
+            Type *ltp = type_assign(((BinaryNode *)node)->lhs);
+            Type *rtp = type_assign(((BinaryNode *)node)->rhs);
+            if(!isInteger(ltp) || !isInteger(rtp))
+                error_at(node->pos->str,"式には整数型が必要です。");
+            tp = commonType(ltp,rtp);
             break;
         }
         case ND_INT:
@@ -285,12 +299,7 @@ Type *type_assign(Node *node) {
                 case ND_DOWHILE:
                 case ND_SWITCH:
                 case ND_CAST:
-                case ND_MODASS:
-                case ND_LSHASS:
-                case ND_RSHASS:
-                case ND_ANDASS:
-                case ND_ORASS:
-                case ND_XORASS:
+                
                 default:
                     error("未定義のタグが使用されています。");
                     break;

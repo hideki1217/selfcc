@@ -211,6 +211,8 @@ typedef enum {
     ND_NULL // 何もしないノード
 } NodeKind;
 
+NodeKind pairOf(NodeKind kind);
+
 bool IsVarNode(Node *nd);
 
 struct Node {

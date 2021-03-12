@@ -35,9 +35,7 @@ Token *forward() {
     return tk;
 }
 
-void unconsume(){
-    tkstream = nowToken;
-}
+void unconsume() { tkstream = nowToken; }
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 Token *consume(char *op) {
@@ -51,10 +49,12 @@ Token *consume(char *op) {
 Token *consume_hard() { return forward(); }
 
 //次の文字がopかどうかを判定、文字は進めない
-Token *check(char *op) {return token_ismutch(tkstream, op, strlen(op))? tkstream:NULL; }
+Token *check(char *op) {
+    return token_ismutch(tkstream, op, strlen(op)) ? tkstream : NULL;
+}
 
 Token *check_ahead(char *s) {
-    return token_ismutch(tkstream->next, s, strlen(s))? tkstream->next:NULL;
+    return token_ismutch(tkstream->next, s, strlen(s)) ? tkstream->next : NULL;
 }
 
 //変数ならばそれを返して一つ進める
@@ -146,7 +146,7 @@ Token *consume_float() {
     return forward();
 }
 Token *consume_char() {
-   if (tkstream->kind != TK_CHAR) return NULL;
+    if (tkstream->kind != TK_CHAR) return NULL;
     return forward();
 }
 Token *consume_enum() {
@@ -222,7 +222,7 @@ Token *tokenize(char *p) {
         //演算子
         keyword(p, "sizeof");
         //修飾子
-        keyword(p, "extern");    
+        keyword(p, "extern");
         keyword(p, "register");  // TODO
         keyword(p, "auto");      // TODO
         keyword(p, "static");    // TODO
@@ -236,11 +236,17 @@ Token *tokenize(char *p) {
         keyword(p, "continue");  // TODO
         keyword(p, "break");     // TODO
         //変数修飾子
-        keyword(p,"const");
-        keyword(p,"volatile");
+        keyword(p, "const");
+        keyword(p, "volatile");
 
         //確実に非変数名なもの
         if (match(p, "...")) {
+            cur = new_Token(TK_RESERVED, cur, p, 3);
+            p += 3;
+            continue;
+        }
+
+        if (match(p, "<<=") || match(p, ">>=")) {
             cur = new_Token(TK_RESERVED, cur, p, 3);
             p += 3;
             continue;
@@ -250,7 +256,9 @@ Token *tokenize(char *p) {
             match(p, ">=") || match(p, "++") || match(p, "--") ||
             match(p, "+=") || match(p, "-=") || match(p, "*=") ||
             match(p, "/=") || match(p, "||") || match(p, "&&") ||
-            match(p, "->") || match(p, "<<") || match(p, ">>")) {
+            match(p, "->") || match(p, "<<") || match(p, ">>") ||
+            match(p, "|=") || match(p, "&=") || match(p, "^=") ||
+            match(p, "%=")) {
             cur = new_Token(TK_RESERVED, cur, p, 2);
             p += 2;
             continue;
@@ -260,7 +268,7 @@ Token *tokenize(char *p) {
             *p == ')' || *p == '>' || *p == '<' || *p == '=' || *p == ';' ||
             *p == '{' || *p == '}' || *p == ',' || *p == '*' || *p == '&' ||
             *p == '[' || *p == ']' || *p == '?' || *p == ':' || *p == '|' ||
-            *p == '?' || *p == '%' || *p == '.' || *p == '~' || *p == '^' ) {
+            *p == '?' || *p == '%' || *p == '.' || *p == '~' || *p == '^') {
             cur = new_Token(TK_RESERVED, cur, p++, 1);
             continue;
         }
