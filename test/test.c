@@ -465,6 +465,12 @@ int test100(){
     x = x ^ y;
     return x;
 }
+int test101(){
+    int x=100;
+    int y=3;
+    x = x%y;
+    return x;
+}
 
 
 
@@ -571,6 +577,7 @@ int Test(){
     assert(6,test98());
     assert(0,test99());
     assert(0,test100());
+    assert(1,test101());
 }
 //////////////////////////////////////// 
 int count;

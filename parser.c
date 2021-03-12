@@ -557,7 +557,7 @@ Node *mul_expr() {
             nd = (Node *)new_BinaryNode(ND_MUL, nd, cast_expr());
         else if (consume("/"))
             nd = (Node *)new_BinaryNode(ND_DIV, nd, cast_expr());
-        else if (consume("%%"))
+        else if (consume("%"))
             nd = (Node *)new_BinaryNode(ND_MOD, nd, cast_expr());
         else
             return nd;
@@ -695,7 +695,7 @@ Node *assignment_expr() {
         return (Node *)new_BinaryNode(ND_MULASS, nd, assignment_expr());
     if (consume("/="))
         return (Node *)new_BinaryNode(ND_DIVASS, nd, assignment_expr());
-    if (consume("%%="))
+    if (consume("%="))
         return (Node *)new_BinaryNode(ND_MODASS, nd, assignment_expr());
     if (consume("<<="))
         return (Node *)new_BinaryNode(ND_LSHASS, nd, assignment_expr());

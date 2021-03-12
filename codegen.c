@@ -447,8 +447,9 @@ void gen(Node *node, bool push) {
             //printf("    and %s, %s",rax(ltp),rdi(rtp));
             break;
         case ND_MOD:
-            if(!isInteger(ltp) || !isInteger(rtp))
-                error_at(node->pos->str,"式には整数型が必要です。");
+            printf("    cqo\n");
+            printf("    idiv rdi\n");
+            printf("    %s, %s\n",movsx2rax(ltp),rdx(ltp));
             break;
         
         case ND_NOT:
