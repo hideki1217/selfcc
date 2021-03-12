@@ -49,6 +49,7 @@ typedef enum StorageMode StorageMode;
 
 
 #define BUFFERSIZE 256
+#define ARG_MAX 30
 
 // 便宜用のbuffer
 extern char buffer[BUFFERSIZE];
@@ -332,20 +333,7 @@ LabelNode *new_LabelNode(NodeKind kind,char *label,int len);
 void set_LabelNode(LabelNode* node,NodeKind kind,char *label,int len);
 
 //文法部
-/*
-void program();
-Node *rootine();
-Node *extern_declaration();
-Node *stmt();
-Node *expr();
-Node *assign();
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *unary();
-Node *primary();
-*/
+
 Node *translation_unit();
 Node *external_declaration();
 /**
@@ -524,6 +512,7 @@ bool check_Type();
 bool isArrayorPtr(Type *type);
 bool isNum(Type *type);
 bool isInteger(Type *type);
+bool isFloat(Type *type);
 bool isAssignable(Type *l, Type *r);
 bool isLeftsidevalue(Type *tp);
 bool isAddSubable(Type *l, Type *r);

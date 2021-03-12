@@ -437,6 +437,16 @@ int test95(){
     s = sum;
     return s(1,2);
 }
+int test96(){
+    int x=4;
+    x = x<<1;
+    return x;
+}
+int test97(){
+    int x=4;
+    x = x>>1;
+    return x;
+}
 
 
 
@@ -538,6 +548,8 @@ int Test(){
     assert(10,test93());
     assert(3,test94());
     assert(3,test95());
+    assert(8,test96());
+    assert(2,test97());
 }
 //////////////////////////////////////// 
 int count;

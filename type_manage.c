@@ -171,6 +171,9 @@ bool isInteger(Type *type) {
     return type->kind == TY_CHAR || type->kind == TY_INT ||
            type->kind == TY_LONG;
 }
+bool isFloat(Type *type){
+    return isNum(type) && ! isInteger(type);
+}
 bool isAssignable(Type *l, Type *r) {
     if (equal(l, r)) return true;
     if (l->kind == TY_PTR && l->ptr_to->kind == TY_VOID && r->kind == TY_PTR)
