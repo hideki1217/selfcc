@@ -516,7 +516,50 @@ int test108(){
     }while(x==8);
     return x;
 }
-
+int test109(){
+    int x=0;
+    while(1){
+        if(x>8)break;
+        x++;
+    }
+    return x;
+}
+int test110(){
+    int x=0;
+    for(;x<10;x++){
+        if(x>8)break;
+    }
+    return x;
+}
+int test111(){
+    int x=0;
+    while(1){
+        if(x<=8){
+            x++;
+            continue;
+        }
+        break;
+    }
+    return x;
+}
+int test112(){
+    int x=0;
+    for(;;x++){
+        if(x<=8)continue;
+        break;
+    }
+    return x;
+}
+int test113(){
+    for(int x=8;x<20;x++){
+        while(x>7){
+            x+=3;
+            if(x<=15)continue;
+            break;
+        }
+        return x;
+    }
+}
 
 
 
@@ -631,6 +674,11 @@ int Test(){
     assert(0,test106());
     assert(1,test107());
     assert(10,test108());
+    assert(9,test109());
+    assert(9,test110());
+    assert(9,test111());
+    assert(9,test112());
+    assert(17,test113());
 }
 //////////////////////////////////////// 
 int count;

@@ -88,10 +88,9 @@ void set_VarInitNode(VarInitNode *node, Var *var, Node *value) {
     node->var = var;
     node->value = value;
 }
-void set_LabelNode(LabelNode *node, NodeKind kind, char *label, int len) {
+void set_LabelNode(LabelNode *node, NodeKind kind,int index) {
     set_Node((Node*)node,kind);
-    node->label = label;
-    node->len = len;
+    node->jumpTo = index;
 }
 
 Node *new_Node(NodeKind kind) {
@@ -174,8 +173,8 @@ VarInitNode *new_VarInitNode(Var *var, Node *value) {
     set_VarInitNode(node, var, value);
     return node;
 }
-LabelNode *new_LabelNode(NodeKind kind, char *label, int len) {
+LabelNode *new_LabelNode(NodeKind kind,int index) {
     LabelNode *node = calloc(1, sizeof(LabelNode));
-    set_LabelNode(node, kind, label, len);
+    set_LabelNode(node, kind, index);
     return node;
 }

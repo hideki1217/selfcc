@@ -5,6 +5,8 @@
 #define ISCONST 1
 #define ISVOLATILE 2
 
+#define NOITEM -1
+
 #define ISNULL(a) (a) == NULL
 #define ISNNULL(a) (a) == NULL
 
@@ -13,7 +15,32 @@ static int structId = 0;
 static int unionId = 0;
 static int enumId = 0;
 int LCcount = 0;
+static CC_IntQueue *continue_index;
+static CC_IntQueue *break_index;
+int Lcount = 0;
 Node *nullNode;
+
+void initialize_parser() {
+    continue_index = cc_intqueue_new();
+    break_index = cc_intqueue_new();
+}
+
+void continue_push(int index);
+void continue_pop();
+/**
+ * @brief  continueで飛べる最短のindexを返す。otherwise NOITEM
+ * @note
+ * @retval 最短のindex or NOITEM
+ */
+int continue_top();
+void break_push(int index);
+void break_pop();
+/**
+ * @brief  breakで飛べる最短のindexを返す。otherwise NOITEM
+ * @note
+ * * @retval 最短のindex or NOITEM
+ */
+int break_top();
 
 Type *declarator(Type *base, Token **ident) {
     *ident = NULL;
@@ -260,7 +287,7 @@ Node *local_declaration(bool asExpr) {
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
-                res = (Node*)new_VarInitNode((Var *)var, value);
+                res = (Node *)new_VarInitNode((Var *)var, value);
                 break;
             }
             case SM_STATIC: {
@@ -269,32 +296,33 @@ Node *local_declaration(bool asExpr) {
                 if (consume("=")) {  // 初期化
                     value = initilizer();
                 }
-                res = (Node*)new_VarInitNode((Var *)var, value);
+                res = (Node *)new_VarInitNode((Var *)var, value);
                 break;
             }
         }
     }
-    if(!asExpr)expect(';');
+    if (!asExpr) expect(';');
     return res;
 }
 /**
  * @brief  宣言付きのParamsからVarNodeのlistを作成
- * @note   
+ * @note
  * @param  *params: 対象のParams
  * @retval VarNodeのlistの先頭(Paramsと同順)
  */
 VarNode *CreateArgs(Params *params) {
     VarNode anker;
     anker.base.next = NULL;
-    VarNode *top = &anker,*tmp;
-    for (Param *par = params->root; par && par->kind != PA_VAARG; par = par->next) {
+    VarNode *top = &anker, *tmp;
+    for (Param *par = params->root; par && par->kind != PA_VAARG;
+         par = par->next) {
         if (par->token == NULL) error("引数の識別子が存在しません。");
-        Var *var = (Var*)add_lvar(par->token,par->type);
+        Var *var = (Var *)add_lvar(par->token, par->type);
         tmp = new_VarNode(var);
-        top->base.next = (Node*)tmp;
-        top = tmp; 
+        top->base.next = (Node *)tmp;
+        top = tmp;
     }
-    return (VarNode*)anker.base.next;
+    return (VarNode *)anker.base.next;
 }
 Node *global_declaration() {
     StorageMode mode = SM_NONE;
@@ -317,9 +345,9 @@ Node *global_declaration() {
                 ExVar *var = add_exvar(ident, tp);
                 return new_Node(ND_NULL);
             }
-            case SM_STATIC: 
+            case SM_STATIC:
             case SM_NONE: {
-                if (consume(";")) {// extern宣言
+                if (consume(";")) {  // extern宣言
                     ExVar *var = add_exvar(ident, tp);
                     return new_Node(ND_NULL);
                 }
@@ -333,7 +361,7 @@ Node *global_declaration() {
                     block = compound_stmt();
                     lvar_manager_PopScope(locals);
                 }
-                rnode =new_RootineNode((Var*)var, args, block);
+                rnode = new_RootineNode((Var *)var, args, block);
                 rnode->total_offset = lvar_manager_GetTotalOffset(locals);
 
                 return (Node *)rnode;
@@ -357,7 +385,7 @@ Node *global_declaration() {
                          "globalセクションでローカルな宣言はできません。");
             }
             case SM_STATIC: {
-                if(tp->kind == TY_FUNCTION){
+                if (tp->kind == TY_FUNCTION) {
                     expect(';');
                     ExVar *var = add_exvar(ident, tp);
                     return new_Node(ND_NULL);
@@ -372,7 +400,7 @@ Node *global_declaration() {
                 return (Node *)vnode;
             }
             case SM_NONE: {
-                if(tp->kind == TY_FUNCTION){
+                if (tp->kind == TY_FUNCTION) {
                     expect(';');
                     ExVar *var = add_exvar(ident, tp);
                     return new_Node(ND_NULL);
@@ -398,7 +426,7 @@ bool CanbeFuncDef(Type *tp) {
 }
 
 bool declaration_specifier(StorageMode *mode, Type **base) {
-    flag_n qualify_flag = 0,tmp;
+    flag_n qualify_flag = 0, tmp;
     StorageMode sm;
     Type *type_specify;
     //初期化
@@ -450,9 +478,9 @@ Node *initilizer() {
     }
     return assignment_expr();
 }
-Node *declaration_or_expr(){
+Node *declaration_or_expr() {
     Node *nd = local_declaration(true);
-    if(nd==NULL)nd = expression();
+    if (nd == NULL) nd = expression();
     return nd;
 }
 
@@ -669,7 +697,7 @@ Node *constant() {
 
 Node *expression() {
     Node *node = assignment_expr();
-    if(consume(",")){
+    if (consume(",")) {
         BlockNode *bnd = new_BlockNode(ND_SET);
 
         Node *top = node;
@@ -779,7 +807,8 @@ Node *labeled_stmt() {
     if (check_ahead(":")) {
         Token *tk = expect_ident();
         expect(':');
-        return (Node *)new_LabelNode(ND_LABEL, tk->str, tk->len);
+        //return (Node *)new_LabelNode(ND_LABEL, tk->str, tk->len);
+        error("まだlabelを作る機構は未完成だよう");    
     }
     return NULL;
 }
@@ -790,71 +819,127 @@ Node *expression_stmt() {
     return nd;
 }
 Node *selection_stmt() {
+    int lcount;  // 識別番号
     if (consume("if")) {
-        expect('(');
-        Node *cond = expression();
-        expect(')');
-        Node *T = statement();
-        if (consume("else")) {
-            Node *F = statement();
-            return (Node *)new_CondNode(ND_IFEL, cond, T, F);
+        CondNode *res;
+        lcount = Lcount++;
+        {
+            expect('(');
+            Node *cond = expression();
+            expect(')');
+            Node *T = statement();
+            if (consume("else")) {
+                Node *F = statement();
+                res = new_CondNode(ND_IFEL, cond, T, F);
+            } else
+                res = new_CondNode(ND_IF, cond, T, NULL);
         }
-        return (Node *)new_CondNode(ND_IF, cond, T, NULL);
+        res->index = lcount;
+        return (Node *)res;
     }
     if (consume("switch")) {  // TODO: switch文の実装
-        expect('(');
-        Node *cond = expression();
-        expect(')');
-        return (Node *)new_CondNode(ND_SWITCH, cond, statement(), NULL);
+        CondNode *res;
+        lcount = Lcount++;
+        break_push(lcount);
+        {
+            expect('(');
+            Node *cond = expression();
+            expect(')');
+            res = new_CondNode(ND_SWITCH, cond, statement(), NULL);
+        }
+        break_pop();
+        res->index = lcount;
+        return (Node *)res;
     }
     return NULL;
 }
 Node *iteration_stmt() {
+    int lcount;  // 識別番号
     if (consume("while")) {
-        expect('(');
-        Node *cond = expression();
-        expect(')');
-        Node *T = statement();
-        return (Node *)new_CondNode(ND_WHILE, cond, T, NULL);
+        CondNode *res;
+        lcount = Lcount++;
+        continue_push(lcount);
+        break_push(lcount);
+        {
+            expect('(');
+            Node *cond = expression();
+            expect(')');
+            Node *T = statement();
+            res = new_CondNode(ND_WHILE, cond, T, NULL);
+        }
+        continue_pop();
+        break_pop();
+        res->index = lcount;
+        return (Node *)res;
     }
     if (consume("do")) {
-        Node *T = compound_stmt();
-        expect_str("while");
-        expect('(');
-        Node *cond = expression();
-        expect(')');
-        expect(';');
-        return (Node *)new_CondNode(ND_DOWHILE, cond, T, NULL);
+        CondNode *res;
+        lcount = Lcount++;
+        continue_push(lcount);
+        break_push(lcount);
+        {
+            Node *T = compound_stmt();
+            expect_str("while");
+            expect('(');
+            Node *cond = expression();
+            expect(')');
+            expect(';');
+            res = new_CondNode(ND_DOWHILE, cond, T, NULL);
+        }
+        continue_pop();
+        break_pop();
+        res->index = lcount;
+        return (Node *)res;
     }
     if (consume("for")) {
+        ForNode *res;
+        lcount = Lcount++;
+        continue_push(lcount);
+        break_push(lcount);
         lvar_manager_PushScope(locals);
-        expect('(');
-        Node *init = check(";")? nullNode : declaration_or_expr();
-        expect(';');
-        Node *cond = check(";") ? nullNode : expression();
-        expect(';');
-        Node *update = check(")") ? nullNode : expression();
-        expect(')');
-        Node *block = statement();
+        {
+            expect('(');
+            Node *init = check(";") ? nullNode : declaration_or_expr();
+            expect(';');
+            Node *cond = check(";") ? nullNode : expression();
+            expect(';');
+            Node *update = check(")") ? nullNode : expression();
+            expect(')');
+            Node *block = statement();
+            res = new_ForNode(init, cond, update, block);
+        }
+        continue_pop();
+        break_pop();
         lvar_manager_PopScope(locals);
-        return (Node *)new_ForNode(init, cond, update, block);
+        res->index = lcount;
+        return (Node *)res;
     }
     return NULL;
 }
 Node *jump_stmt() {
-    if (consume("goto")) {
+    int jumpTo;
+    Token *token;
+    if (consume("goto")) {  // TODO: gotoを実装
         Token *tk = expect_ident();
         expect(';');
-        return (Node *)new_LabelNode(ND_GOTO, tk->str, tk->len);
+        // return (Node *)new_LabelNode(ND_GOTO, tk->str, tk->len);
+        error("gotoは未対応だよう");
     }
-    if (consume("continue")) {
-        expect(';');  // TODO: continue
-                      // でジャンプルする先を指定しないといけない
-        return (Node *)new_LabelNode(ND_CONTINUE, NULL, 0);
+    if (token = consume("continue")) {
+        expect(';');
+        if ((jumpTo = continue_top()) != NOITEM)
+            return (Node *)new_LabelNode(ND_CONTINUE, jumpTo);
+        else
+            error_at(token->str,
+                     "continueはfor,while,do-while文の中でだけ使えます");
     }
     if (consume("break")) {
-        expect(';');  // TODO: break でジャンプルする先を指定しないといけない
-        return (Node *)new_LabelNode(ND_BREAK, NULL, 0);
+        expect(';');
+        if ((jumpTo = break_top()) != NOITEM)
+            return (Node *)new_LabelNode(ND_BREAK, jumpTo);
+        else
+            error_at(token->str,
+                     "breakはfor,while,do-while文の中でだけ使えます");
     }
     if (consume("return")) {
         if (consume(";")) return (Node *)new_UnaryNode(ND_RETURN, NULL);
@@ -863,4 +948,20 @@ Node *jump_stmt() {
         return (Node *)new_UnaryNode(ND_RETURN, nd);
     }
     return NULL;
+}
+
+//////////////ヘルパー関数
+void continue_push(int index) { cc_intqueue_push(continue_index, index); }
+void continue_pop() { cc_intqueue_pop(continue_index); }
+int continue_top() {
+    int x;
+    if (cc_intqueue_top(continue_index, &x)) return x;
+    return NOITEM;
+}
+void break_push(int index) { cc_intqueue_push(break_index, index); }
+void break_pop() { cc_intqueue_pop(break_index); }
+int break_top() {
+    int x;
+    if (cc_intqueue_top(break_index, &x)) return x;
+    return NOITEM;
 }

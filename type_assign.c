@@ -221,6 +221,12 @@ Type *type_assign(Node *node) {
             tp = type_assign(((UnaryNode*)node)->target);
             if(isNum(tp) && !isInteger(tp))
                 error_at(node->pos->str,"浮動小数点を反転することはできません。");
+            break;
+        }
+        case ND_BREAK:
+        case ND_CONTINUE:{
+            tp = find_type_from_name("void");
+            break;
         }
         default: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
@@ -292,8 +298,6 @@ Type *type_assign(Node *node) {
                 case ND_LGCAND:
                 case ND_LGCNOT:
                 case ND_GOTO:
-                case ND_BREAK:
-                case ND_CONTINUE:
                 case ND_LABEL:
                 case ND_CASE:
                 case ND_DEFAULT:

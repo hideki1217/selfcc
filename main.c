@@ -31,14 +31,13 @@ int main(int argc, char **argv) {
     tkstream = tokenize(user_input);
     nowToken=tkstream;
     constants = cc_vector_new();
-
-    code=NULL;
     
     Initialize_type_tree();
+    initialize_parser();
 
     nullNode = (Node *)new_NumNode(1);
     /////////////////////////////////////////////
-    //program();
+    
     code = translation_unit();
 
     printf(".Intel_syntax noprefix\n");

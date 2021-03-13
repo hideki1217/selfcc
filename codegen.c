@@ -7,9 +7,9 @@
 #include "utility.h"
 
 Node *code;
-int Lcount = 0;
 
 void uniformSizedOper(char *oper,Type *ltp,char* (*lReg)(Type*),Type *rtp,char* (*rReg)(Type*));
+void genArgs(Node *arg_top);
 
 void gen_lval(Node *node, bool push) {
     if (node->kind == ND_LVAR) {
@@ -135,44 +135,48 @@ void gen(Node *node, bool push) {
             return;
         }
         case ND_IF: {
-            lcount = Lcount++;
-            gen(((CondNode *)node)->cond, false);
+            CondNode *cnode = (CondNode *)node;
+            lcount = cnode->index;
+            gen(cnode->cond, false);
             printf("    cmp rax, 0\n");
             if (push) printf("    push rax\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T, push);
+            gen(cnode->T, push);
             printf(".Lend%d:\n", lcount);
             return;
         }
         case ND_IFEL: {
-            lcount = Lcount++;
-            gen(((CondNode *)node)->cond, false);
+            CondNode *cnode = (CondNode *)node;
+            lcount = cnode->index;
+            gen(cnode->cond, false);
             printf("    cmp rax, 0\n");
             printf("    je .Lelse%d\n", lcount);
-            gen(((CondNode *)node)->T, push);
+            gen(cnode->T, push);
             printf("    jmp .Lend%d\n", lcount);
             printf(".Lelse%d:\n", lcount);
-            gen(((CondNode *)node)->F, push);
+            gen(cnode->F, push);
             printf(".Lend%d:\n", lcount);
             return;
         }
         case ND_WHILE: {
-            lcount = Lcount++;
+            CondNode *cnode = (CondNode *)node;
+            lcount = cnode->index;
             printf(".Lbegin%d:\n", lcount);
-            gen(((CondNode *)node)->cond, false);
+            gen(cnode->cond, false);
             printf("    cmp rax, 0\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((CondNode *)node)->T, false);
+            gen(cnode->T, false);
             printf("    jmp .Lbegin%d\n", lcount);
             printf(".Lend%d:\n", lcount);
             if (push) printf("    push rax\n");
             return;
         }
         case ND_DOWHILE:{
-            lcount = Lcount++;
+            CondNode *cnode = (CondNode *)node;
+            lcount = cnode->index;
             printf(".Lbegin%d:\n", lcount);
-            gen(((CondNode *)node)->T, false);
-            gen(((CondNode *)node)->cond, false);
+            gen(cnode->T, false);
+            gen(cnode->cond, false);
             printf("    cmp rax, 0\n");
             printf("    je .Lend%d\n", lcount);
             printf("    jmp .Lbegin%d\n", lcount);
@@ -181,16 +185,19 @@ void gen(Node *node, bool push) {
             return;
         }
         case ND_FOR: {
-            lcount = Lcount++;
-            gen(((ForNode *)node)->init, false);
-            printf(".Lbegin%d:\n", lcount);
-            gen(((ForNode *)node)->cond, false);
+            ForNode *fnode = (ForNode *)node;
+            lcount = fnode->index;
+            gen(fnode->init, false);
+            printf(".Ltop%d:\n", lcount);
+            gen(fnode->cond, false);
             printf("    cmp rax, 0\n");
             printf("    je .Lend%d\n", lcount);
-            gen(((ForNode *)node)->T, push);
-            gen(((ForNode *)node)->update, push);
-            printf("    jmp .Lbegin%d\n", lcount);
+            gen(fnode->T, false);
+            printf(".Lbegin%d:\n",lcount);
+            gen(fnode->update, false);
+            printf("    jmp .Ltop%d\n", lcount);
             printf(".Lend%d:\n", lcount);
+            if (push) printf("    push rax\n");
             return;
         }
         case ND_BLOCK: {
@@ -200,23 +207,14 @@ void gen(Node *node, bool push) {
         case ND_CALL: {
             CallNode *fnode = ((CallNode *)node);
             Node *function = fnode->func;
-            int argcount = 0;
-            for (Node *elem = fnode->arg; elem; elem = elem->next) argcount++;
-            Type *mem[argcount];
-            int i = argcount - 1;
-            for (Node *elem = fnode->arg; elem; elem = elem->next, i--) {
-                gen(elem, true);
-                if (i < 6) mem[i] = elem->type;
-            }
-            for (int i = 0; i < min(6, argcount); i++) {
-                printf("    pop rax\n");
-                printf("    mov %s, %s\n", registry_for_arg(mem[i], i),
-                       rax(mem[i]));
-            }
+            int floatCount = 0;
 
-            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる。今は
-            // 0
-            printf("    mov rax, 0\n");
+            // 引数をセット
+            genArgs(fnode->arg);
+
+            // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる
+            printf("    mov rax, %d\n",floatCount);
+
             Callability call = isCallable(function->type);
             if (function->kind == ND_GVAR && call == AsFUNCTION) {
                 VarNode *vfunc = (VarNode *)function;
@@ -330,16 +328,26 @@ void gen(Node *node, bool push) {
         case ND_ANDASS:
         case ND_XORASS:
         case ND_MODASS:{ 
-            BinaryNode *bnode = (BinaryNode *)node;
-
-            gen_lval(bnode->lhs, true);
-            BinaryNode tmp;
+            BinaryNode *bnode = (BinaryNode *)node,tmp;
             set_BinaryNode(&tmp, pairOf(node->kind), bnode->lhs, bnode->rhs);
             type_assign((Node *)&tmp);
+
+            gen_lval(bnode->lhs, true);
             gen((Node *)&tmp, false);
             printf("    pop rdi\n");
             printf("    mov [rdi], %s\n", rax(node->type));
-            printf("    pop rax\n");
+            if (push) printf("   push rax\n");
+            return;
+        }
+        case ND_BREAK:{
+            LabelNode *lnode = (LabelNode*)node;
+            printf("    jmp .Lend%d\n",lnode->jumpTo);
+            if (push) printf("   push rax\n");
+            return;
+        }
+        case ND_CONTINUE:{
+            LabelNode *lnode = (LabelNode*)node;
+            printf("    jmp .Lbegin%d\n",lnode->jumpTo);
             if (push) printf("   push rax\n");
             return;
         }
@@ -437,8 +445,7 @@ void gen(Node *node, bool push) {
         case ND_LGCAND:
         case ND_LGCNOT:
         case ND_GOTO:
-        case ND_BREAK:
-        case ND_CONTINUE:
+        
         case ND_LABEL:
         case ND_CASE:
         case ND_DEFAULT:
@@ -473,5 +480,20 @@ void uniformSizedOper(char *oper,Type *ltp,char* (*lReg)(Type* type),Type *rtp,c
     else{
         printf("    movsx %s, %s\n",lReg(rtp),lReg(ltp));
         printf("    %s %s, %s\n",oper,lReg(rtp),rReg(rtp));
+    }
+}
+void genArgs(Node *arg_top){
+    int argcount = 0;
+    for (Node *elem = arg_top; elem; elem = elem->next) argcount++;
+    Type *mem[argcount];
+    int i = argcount - 1;
+    for (Node *elem = arg_top; elem; elem = elem->next, i--) {
+        gen(elem, true);
+        if (i < 6) mem[i] = elem->type;
+    }
+    for (int i = 0; i < min(6, argcount); i++) {
+        printf("    pop rax\n");
+        printf("    mov %s, %s\n", registry_for_arg(mem[i], i),
+                rax(mem[i]));
     }
 }

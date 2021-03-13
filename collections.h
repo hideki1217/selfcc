@@ -2,6 +2,9 @@
 
 #include<stdbool.h>
 
+typedef struct CC_IntQueue CC_IntQueue;
+typedef struct CC_IntQueueNode CC_IntQueueNode;
+
 typedef struct CC_QueueNode CC_QueueNode;
 typedef struct CC_Queue CC_Queue;
 
@@ -48,7 +51,20 @@ void cc_avltree_Add(CC_AVLTree *tree,char *key,int key_len,void* item);
 void *cc_avltree_Search(CC_AVLTree *tree,char *key,int key_len);
 void cc_avltree_DeleteNode(CC_AVLTree *tree,char *key,int key_len);
 
-
+struct CC_IntQueue{
+    CC_IntQueueNode *top;
+    int size;
+};
+struct CC_IntQueueNode{
+    CC_IntQueueNode *back;
+    int item;
+};
+CC_IntQueue *cc_intqueue_new();
+bool cc_intqueue_delete(CC_IntQueue *table);
+bool cc_intqueue_push(CC_IntQueue *table,int item);
+bool cc_intqueue_top(CC_IntQueue *table, int *value);
+bool cc_intqueue_pop(CC_IntQueue *table);
+void cc_intqueue_clear(CC_IntQueue *table);
 
 struct CC_QueueNode{
     CC_QueueNode *back;

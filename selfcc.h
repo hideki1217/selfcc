@@ -276,6 +276,7 @@ CastNode *new_CastNode(Type *cast, Node *target);
 void set_CastNode(CastNode *node, Type *cast, Node *target);
 struct CondNode {
     Node base;
+    int index;
     Node *T;
     Node *F;
     Node *cond;
@@ -284,6 +285,7 @@ CondNode *new_CondNode(NodeKind kind, Node *cond, Node *T, Node *F);
 void set_CondNode(CondNode *nd, NodeKind kind, Node *cond, Node *T, Node *F);
 struct ForNode {
     Node base;
+    int index;
     Node *init;
     Node *T;
     Node *cond;
@@ -328,13 +330,13 @@ VarInitNode *new_VarInitNode(Var *var, Node *value);
 void set_VarInitNode(VarInitNode *nd, Var *var, Node *value);
 struct LabelNode{
     Node base;
-    char *label;
-    int len;
+    int jumpTo;
 };
-LabelNode *new_LabelNode(NodeKind kind,char *label,int len);
-void set_LabelNode(LabelNode* node,NodeKind kind,char *label,int len);
+LabelNode *new_LabelNode(NodeKind kind,int index);
+void set_LabelNode(LabelNode* node,NodeKind kind,int index);
 
 //文法部
+void initialize_parser();
 
 Node *translation_unit();
 Node *external_declaration();

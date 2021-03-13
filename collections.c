@@ -95,6 +95,46 @@ void cc_heap_pop(CC_Heap *heap) {
 }
 bool cc_heap_empty(CC_Heap *heap) { return heap->root == NULL; }
 
+CC_IntQueue *cc_intqueue_new(){
+    CC_IntQueue *queue = calloc(1,sizeof(CC_IntQueue));
+    return queue;
+}
+bool cc_intqueue_delete(CC_IntQueue *table){
+    while(cc_intqueue_pop(table));
+    free(table);
+    return true;
+}
+bool cc_intqueue_push(CC_IntQueue *table,int item){
+    CC_IntQueueNode *node = calloc(1, sizeof(CC_IntQueueNode));
+    node->item = item;
+    node->back = table->top;
+    table->top = node;
+    table->size++;
+    return true;
+}
+bool cc_intqueue_top(CC_IntQueue *table, int *value){
+    if (table->size == 0){
+        *value = -1;
+        return false;
+    }
+    *value = table->top->item;
+    return true;
+}
+bool cc_intqueue_pop(CC_IntQueue *table){
+    if (table->size == 0) return false;
+    CC_IntQueueNode *nd = table->top;
+    table->top = table->top->back;
+    table->size--;
+    free(nd);
+    return true;
+}
+void cc_intqueue_clear(CC_IntQueue *table){
+    if(table){
+        while (cc_intqueue_pop(table))
+        ;
+    }
+}
+
 CC_Queue *cc_queue_new() {
     CC_Queue *table = calloc(1, sizeof(CC_Queue));
     table->top = NULL;
