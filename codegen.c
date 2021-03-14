@@ -446,8 +446,6 @@ void gen(Node *node, bool push) {
             printf("    %s, %s\n",movsx2rax(ltp),rdx(ltp));
             break;
         
-        case ND_NOT:
-        
         case ND_LGCOR:
         case ND_LGCAND:
         case ND_LGCNOT:
@@ -459,12 +457,7 @@ void gen(Node *node, bool push) {
         
         case ND_SWITCH:
         case ND_CAST:
-        case ND_MODASS:
-        case ND_LSHASS:
-        case ND_RSHASS:
-        case ND_ANDASS:
-        case ND_ORASS:
-        case ND_XORASS:
+        
         case ND_ENUM:
         case ND_FLOAT:
         case ND_CHAR:

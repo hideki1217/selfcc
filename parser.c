@@ -247,62 +247,72 @@ Node *local_declaration(bool asExpr) {
     Type *tp = NULL;
     Token *ident;
     if (!declaration_specifier(&mode, &tp)) return NULL;
-    tp = declarator(tp, &ident);
 
-    Node *res;
-    if (CanbeFuncDef(tp)) {
-        switch (mode) {
-            case SM_AUTO:
-            case SM_REGISTER:
-            case SM_TYPEDEF:
-                error_at(ident->str, "関数に対して無効なストレージ クラスです");
-            case SM_EXTERN:
-            case SM_NONE: {
-                ExVar *var = add_exvar(ident, tp);
-                res = new_Node(ND_NULL);
-                break;
-            }
-            case SM_STATIC:
-                error_at(ident->str,
-                         "blockscopeではextern修飾子のみが許可されています。");
-        }
-    } else {
-        switch (mode) {
-            case SM_TYPEDEF: {
-                Type *alias = new_Alias(tp, ident->str, ident->len);
-                regist_type(alias);
-                res = new_Node(ND_NULL);
-                break;
-            }
-            case SM_EXTERN: {
-                ExVar *var = add_exvar(ident, tp);
-                res = new_Node(ND_NULL);
-                break;
-            }
-            case SM_AUTO:
-            case SM_REGISTER:
-            case SM_NONE: {
-                LVar *var = add_lvar(ident, tp);
-                Node *value = NULL;
-                if (consume("=")) {  // 初期化
-                    value = initilizer();
+    BlockNode *set = new_BlockNode(ND_SET);
+    Node anker, *top = &anker;
+    do {
+        tp = declarator(tp, &ident);
+        Node *res;
+        if (CanbeFuncDef(tp)) {
+            switch (mode) {
+                case SM_AUTO:
+                case SM_REGISTER:
+                case SM_TYPEDEF:
+                    error_at(ident->str,
+                             "関数に対して無効なストレージ クラスです");
+                case SM_EXTERN:
+                case SM_NONE: {
+                    ExVar *var = add_exvar(ident, tp);
+                    res = new_Node(ND_NULL);
+                    break;
                 }
-                res = (Node *)new_VarInitNode((Var *)var, value);
-                break;
+                case SM_STATIC:
+                    error_at(
+                        ident->str,
+                        "blockscopeではextern修飾子のみが許可されています。");
             }
-            case SM_STATIC: {
-                GVar *var = add_gvar(ident, tp, true);
-                Node *value = NULL;
-                if (consume("=")) {  // 初期化
-                    value = initilizer();
+        } else {
+            switch (mode) {
+                case SM_TYPEDEF: {
+                    Type *alias = new_Alias(tp, ident->str, ident->len);
+                    regist_type(alias);
+                    res = new_Node(ND_NULL);
+                    break;
                 }
-                res = (Node *)new_VarInitNode((Var *)var, value);
-                break;
+                case SM_EXTERN: {
+                    ExVar *var = add_exvar(ident, tp);
+                    res = new_Node(ND_NULL);
+                    break;
+                }
+                case SM_AUTO:
+                case SM_REGISTER:
+                case SM_NONE: {
+                    LVar *var = add_lvar(ident, tp);
+                    Node *value = NULL;
+                    if (consume("=")) {  // 初期化
+                        value = initilizer();
+                    }
+                    res = (Node *)new_VarInitNode((Var *)var, value);
+                    break;
+                }
+                case SM_STATIC: {
+                    GVar *var = add_gvar(ident, tp, true);
+                    Node *value = NULL;
+                    if (consume("=")) {  // 初期化
+                        value = initilizer();
+                    }
+                    res = (Node *)new_VarInitNode((Var *)var, value);
+                    break;
+                }
             }
         }
-    }
+        top->next = res;
+        top = res;
+    } while (consume(","));
+    top->next = NULL;
+    set->block = anker.next;
     if (!asExpr) expect(';');
-    return res;
+    return (Node *)set;
 }
 /**
  * @brief  宣言付きのParamsからVarNodeのlistを作成
@@ -330,92 +340,110 @@ Node *global_declaration() {
     Token *ident;
 
     if (!declaration_specifier(&mode, &tp)) return NULL;
-    tp = declarator(tp, &ident);
+    BlockNode *set = new_BlockNode(ND_SET);
+    Node anker, *top = &anker;
+    do {
+        tp = declarator(tp, &ident);
 
-    if (CanbeFuncDef(tp)) {
-        lvar_manager_Clear(locals);
-        switch (mode) {
-            case SM_AUTO:
-            case SM_REGISTER:
-            case SM_TYPEDEF:
-                error_at(ident->str,
-                         "関数定義が不正な修飾子を宣言しています。");
-            case SM_EXTERN: {
-                expect(';');
-                ExVar *var = add_exvar(ident, tp);
-                return new_Node(ND_NULL);
-            }
-            case SM_STATIC:
-            case SM_NONE: {
-                if (consume(";")) {  // extern宣言
+        Node *res;
+        if (CanbeFuncDef(tp)) {
+            lvar_manager_Clear(locals);
+            switch (mode) {
+                case SM_AUTO:
+                case SM_REGISTER:
+                case SM_TYPEDEF:
+                    error_at(ident->str,
+                             "関数定義が不正な修飾子を宣言しています。");
+                case SM_EXTERN: {
                     ExVar *var = add_exvar(ident, tp);
-                    return new_Node(ND_NULL);
+                    res = new_Node(ND_NULL);
+                    break;
                 }
-                RootineNode *rnode;
-                GVar *var = add_gvar(ident, tp, mode == SM_STATIC);
-                VarNode *args;
-                Node *block;
-                {
-                    lvar_manager_PushScope(locals);
-                    args = CreateArgs(tp->params);
-                    block = compound_stmt();
-                    lvar_manager_PopScope(locals);
-                }
-                rnode = new_RootineNode((Var *)var, args, block);
-                rnode->total_offset = lvar_manager_GetTotalOffset(locals);
+                case SM_STATIC:
+                case SM_NONE: {
+                    if (! check("{")) {  // extern宣言
+                        ExVar *var = add_exvar(ident, tp);
+                        res = new_Node(ND_NULL);
+                        break;
+                    }
+                    RootineNode *rnode;
+                    GVar *var = add_gvar(ident, tp, mode == SM_STATIC);
+                    VarNode *args;
+                    Node *block;
+                    {
+                        lvar_manager_PushScope(locals);
+                        args = CreateArgs(tp->params);
+                        block = compound_stmt();
+                        lvar_manager_PopScope(locals);
+                    }
+                    rnode = new_RootineNode((Var *)var, args, block);
+                    rnode->total_offset = lvar_manager_GetTotalOffset(locals);
 
-                return (Node *)rnode;
+                    top->next = (Node *)rnode;
+                    top = (Node *)rnode;
+                    //関数定義が来たらもう終わり。
+                    top->next = NULL;
+                    set->block = anker.next;
+                    return (Node*)set;
+                }
+            }
+        } else {
+            switch (mode) {
+                case SM_TYPEDEF: {
+                    Type *alias = new_Alias(tp, ident->str, ident->len);
+                    regist_type(alias);
+                    res = new_Node(ND_NULL);
+                    break;
+                }
+                case SM_EXTERN: {
+                    ExVar *var = add_exvar(ident, tp);
+                    res = new_Node(ND_NULL);
+                    break;
+                }
+                case SM_AUTO:
+                case SM_REGISTER: {
+                    error_at(ident->str,
+                             "globalセクションでローカルな宣言はできません。");
+                }
+                case SM_STATIC: {
+                    if (tp->kind == TY_FUNCTION) {
+                        ExVar *var = add_exvar(ident, tp);
+                        res = new_Node(ND_NULL);
+                        break;
+                    }
+                    GVar *var = add_gvar(ident, tp, true);
+                    Node *value = NULL;
+                    if (consume("=")) {  // 初期化
+                        value = initilizer();
+                    }
+                    res = (Node*)new_VarInitNode((Var *)var, value);
+                    break;
+                }
+                case SM_NONE: {
+                    if (tp->kind == TY_FUNCTION) {
+                        ExVar *var = add_exvar(ident, tp);
+                        res = new_Node(ND_NULL);
+                        break;
+                    }
+                    GVar *var = add_gvar(ident, tp, false);
+                    Node *value = NULL;
+                    if (consume("=")) {  // 初期化
+                        value = initilizer();
+                    }
+                    res = (Node*)new_VarInitNode((Var *)var, value);
+                    break;
+                }
             }
         }
-    } else {
-        switch (mode) {
-            case SM_TYPEDEF: {
-                Type *alias = new_Alias(tp, ident->str, ident->len);
-                regist_type(alias);
-                return new_Node(ND_NULL);
-            }
-            case SM_EXTERN: {
-                expect(';');
-                ExVar *var = add_exvar(ident, tp);
-                return new_Node(ND_NULL);
-            }
-            case SM_AUTO:
-            case SM_REGISTER: {
-                error_at(ident->str,
-                         "globalセクションでローカルな宣言はできません。");
-            }
-            case SM_STATIC: {
-                if (tp->kind == TY_FUNCTION) {
-                    expect(';');
-                    ExVar *var = add_exvar(ident, tp);
-                    return new_Node(ND_NULL);
-                }
-                GVar *var = add_gvar(ident, tp, true);
-                Node *value = NULL;
-                if (consume("=")) {  // 初期化
-                    value = initilizer();
-                }
-                expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
-                return (Node *)vnode;
-            }
-            case SM_NONE: {
-                if (tp->kind == TY_FUNCTION) {
-                    expect(';');
-                    ExVar *var = add_exvar(ident, tp);
-                    return new_Node(ND_NULL);
-                }
-                GVar *var = add_gvar(ident, tp, false);
-                Node *value = NULL;
-                if (consume("=")) {  // 初期化
-                    value = initilizer();
-                }
-                expect(';');
-                VarInitNode *vnode = new_VarInitNode((Var *)var, value);
-                return (Node *)vnode;
-            }
-        }
-    }
+        top->next = res;
+        top = res;
+    } while (consume(","));
+    expect(';');
+
+    top->next = NULL;
+    set->block = anker.next;
+
+    return (Node*)set;
 }
 bool CanbeFuncDef(Type *tp) {
     if (tp->kind != TY_FUNCTION) return false;
@@ -488,10 +516,16 @@ Node *constant_expr() { return condition_expr(); }
 Node *condition_expr() {
     Node *nd = logical_or_expr();
     if (consume("?")) {
-        CondNode *cnode = new_CondNode(ND_IFEL, nd, expression(), NULL);
-        expect(':');
-        cnode->F = condition_expr();
-        nd = (Node *)cnode;
+        CondNode *res;
+        int lcount = Lcount++;
+        {
+            Node *T = expression();
+            expect(':');
+            Node *F = condition_expr();
+            res = new_CondNode(ND_IFEL, nd, T, F);
+        }
+        res->index = lcount;
+        return (Node *)res;
     }
     return nd;
 }
@@ -807,8 +841,8 @@ Node *labeled_stmt() {
     if (check_ahead(":")) {
         Token *tk = expect_ident();
         expect(':');
-        //return (Node *)new_LabelNode(ND_LABEL, tk->str, tk->len);
-        error("まだlabelを作る機構は未完成だよう");    
+        // return (Node *)new_LabelNode(ND_LABEL, tk->str, tk->len);
+        error("まだlabelを作る機構は未完成だよう");
     }
     return NULL;
 }

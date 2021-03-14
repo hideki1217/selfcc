@@ -570,6 +570,23 @@ int test115(){
     x = ~x;
     return x&1;
 }
+int test116(){
+    int x=6;
+    return x==6 ? 4 : 5;
+}
+int test117(){
+    int x=6;
+    return x!=6 ? 4 : 5;
+}
+int test118(){
+    int x=6,y=7;
+    return y;
+}
+int test119_a,test119_b,test119(){
+    test119_a = 7;
+    test119_b = 6;
+    return test119_a;
+}
 
 
 
@@ -691,6 +708,10 @@ int Test(){
     assert(17,test113());
     assert(1,test114());
     assert(0,test115());
+    assert(4,test116());
+    assert(5,test117());
+    assert(7,test118());
+    assert(7,test119());
 }
 //////////////////////////////////////// 
 int count;
