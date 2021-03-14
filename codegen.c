@@ -351,6 +351,13 @@ void gen(Node *node, bool push) {
             if (push) printf("   push rax\n");
             return;
         }
+        case ND_NOT:{
+            UnaryNode *unode = (UnaryNode*)node;
+            gen(unode->target,false);
+            printf("    not rax\n");
+            if (push) printf("   push rax\n");
+            return;
+        }
     }
 
     Node *lhs = ((BinaryNode *)node)->lhs;

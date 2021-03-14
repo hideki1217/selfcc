@@ -560,6 +560,16 @@ int test113(){
         return x;
     }
 }
+int test114(){
+    int x = 0;
+    x = ~x;
+    return x&1;
+}
+int test115(){
+    int x = 1;
+    x = ~x;
+    return x&1;
+}
 
 
 
@@ -679,6 +689,8 @@ int Test(){
     assert(9,test111());
     assert(9,test112());
     assert(17,test113());
+    assert(1,test114());
+    assert(0,test115());
 }
 //////////////////////////////////////// 
 int count;
