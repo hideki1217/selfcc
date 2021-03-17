@@ -70,3 +70,12 @@ int compare_string(const char *a, int a_len, const char *b, int b_len) {
     }
     return (a[a_i] - b[b_i]);
 }
+
+int is_alnum(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
+           ('0' <= c && c <= '9') || (c == '_');
+}
+
+int is_alp(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || (c == '_');
+}

@@ -17,6 +17,13 @@ assert() {
     fi
 }
 
+assert 3 "
+#define aho 3
+int main(){
+    return aho;
+}
+#undef aho
+"
 
 
 assert 0 "int main(){0;}"

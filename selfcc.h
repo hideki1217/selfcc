@@ -83,7 +83,10 @@ typedef enum {
     TK_EOF,
     TK_FLOAT,
     TK_CHAR,
-    TK_ENUM
+    TK_ENUM,
+    TK_MACRO,
+    TK_MACROSTART,
+    TK_MACROEND
 } TokenKind;
 
 struct Token {
@@ -94,6 +97,7 @@ struct Token {
     int len;
 };
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
+Token *token_clone(const Token *token, const Token *pre);
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
@@ -108,7 +112,9 @@ void error_here(bool flag, char *fmt, ...);
 void unconsume();
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 Token *consume(char *op);
+Token *_consume(char *op,Token **tk);
 Token *check(char *op);
+Token *_check(char *op,Token **tk);
 //一個先を見る
 Token *check_ahead(char *s);
 
@@ -121,12 +127,14 @@ Token *consume_string();
 // identを一つ返し一つ進める
 Token *consume_ident();
 Token *expect_ident();
+Token *_expect_ident(Token **tk);
 Token *expect_var();
 //変数値があるか確認し、進めない
 Token *expect_var_not_proceed();
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op);
+Token *_expect(char op,Token **tk);
 void expect_str(char* s);
 
 //型名がなければエラーを吐く
@@ -141,10 +149,12 @@ Token *consume_char();
 Token *consume_enum();
 
 bool token_ismutch(Token *token, char *str, int len);
-
 bool at_eof();
 
 Token *tokenize(char *p);
+
+void Initialize_preprocesser();
+Token *preproccess(Token *root);
 
 typedef enum {
     ND_ADD,     //"+"

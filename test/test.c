@@ -587,6 +587,11 @@ int test119_a,test119_b,test119(){
     test119_b = 6;
     return test119_a;
 }
+#define aho 3
+int test121(){
+    return aho;
+}
+#undef aho
 
 
 
@@ -712,6 +717,7 @@ int Test(){
     assert(5,test117());
     assert(7,test118());
     assert(7,test119());
+    assert(3,test121());
 }
 //////////////////////////////////////// 
 int count;

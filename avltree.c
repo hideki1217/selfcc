@@ -463,10 +463,15 @@ CC_AVLTreeNode *cc_avltree_deleteTwoChildNode(CC_AVLTreeNode *root, CC_AVLTreeNo
     return root;
 }
 
-/* cc_avltree_deleteNode:指定されたnumberを持つノードを削除する
-   引数１ root : 木の根ノードのアドレス
-   引数２ number : 削除する会員番号
-   返却値 : 根ノードのアドレス */
+
+/**
+ * @brief  指定されたnumberを持つノードを削除する
+ * @note   
+ * @param  *root: 木の根ノードのアドレス
+ * @param  key:  削除するキー
+ * @param  key_len: キーの長さ
+ * @retval 根ノードのアドレス
+ */
 CC_AVLTreeNode *cc_avltree_deleteNode(CC_AVLTreeNode *root, char* key,int key_len) {
     CC_AVLTreeNode *node;
     CC_AVLTreeNode *parent;
@@ -550,6 +555,14 @@ void *cc_avltree_Search(CC_AVLTree *tree,char *key,int key_len){
     if(node)return node->item;
     return NULL;
 }
+/**
+ * @brief  key,key_lenで指定されるノードを消す。なければ何もしない
+ * @note   
+ * @param  *tree: 対象のavl木
+ * @param  *key: 削除するキー
+ * @param  key_len: その長さ
+ * @retval None
+ */
 void cc_avltree_DeleteNode(CC_AVLTree *tree,char *key,int key_len){
     tree->root=cc_avltree_deleteNode(tree->root,key,key_len);
 }

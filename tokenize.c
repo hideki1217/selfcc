@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "selfcc.h"
+#include "utility.h"
 
 Token *tkstream;
 Token *nowToken;
@@ -24,33 +25,49 @@ Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     cur->next = token;
     return token;
 }
+Token *token_clone(const Token *token, const Token *pre) {
+    Token *cur = new_Token(token->kind, (Token *)pre, token->str, token->len);
+    cur->val = token->val;
+    cur->next = NULL;
+    return cur;
+}
 
 bool token_ismutch(Token *token, char *str, int len) {
     return token->len == len && memcmp(token->str, str, len) == 0;
 }
-Token *forward() {
-    Token *tk = tkstream;
-    tkstream = tkstream->next;
-    nowToken = tk;
+Token *_forward(Token **token){
+    Token *tk = *token;
+    *token = (*token)->next;
     return tk;
 }
+Token *forward() {
+    nowToken = _forward(&tkstream);
+    return nowToken;
+}
+
 
 void unconsume() { tkstream = nowToken; }
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
 Token *consume(char *op) {
-    if (tkstream->kind != TK_RESERVED ||
-        !token_ismutch(tkstream, op, strlen(op))) {
+    Token *tk;
+    return (tk = _consume(op,&tkstream))?nowToken = tk: tk;
+}
+Token *_consume(char *op,Token **tk){
+    if (!token_ismutch((*tk), op, strlen(op))) {
         return NULL;
     }
-    return forward();
+    return _forward(tk);
 }
 //　強制的に一つトークンを進める(不用意に使うべきではない)
 Token *consume_hard() { return forward(); }
 
 //次の文字がopかどうかを判定、文字は進めない
 Token *check(char *op) {
-    return token_ismutch(tkstream, op, strlen(op)) ? tkstream : NULL;
+    return _check(op,&tkstream);
+}
+Token *_check(char *op,Token **tk){
+    return token_ismutch(*tk, op, strlen(op)) ? *tk : NULL;
 }
 
 Token *check_ahead(char *s) {
@@ -64,9 +81,12 @@ Token *consume_ident() {
 }
 
 Token *expect_ident() {
-    if (tkstream->kind != TK_IDENT)
-        error_at(tkstream->str, "変数もしくは関数ではありません");
-    return forward();
+    return nowToken = _expect_ident(&tkstream);
+}
+Token *_expect_ident(Token **tk){
+    if ((*tk)->kind != TK_IDENT)
+        error_at((*tk)->str, "変数もしくは関数ではありません");
+    return _forward(tk);
 }
 
 Token *consume_string() {
@@ -89,13 +109,16 @@ Token *expect_var_not_proceed() {
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
 void expect(char op) {
-    if (tkstream->kind != TK_RESERVED || tkstream->str[0] != op) {
-        error_at(tkstream->str, "\"%c\"ではありません", op);
+    nowToken = _expect(op,&tkstream);
+}
+Token *_expect(char op,Token **tk){
+    if ((*tk)->str[0] != op) {
+        error_at((*tk)->str, "\"%c\"ではありません", op);
     }
-    forward();
+    return _forward(tk);
 }
 void expect_str(char *s) {
-    if (tkstream->kind != TK_RESERVED || tkstream->len != strlen(s) ||
+    if (tkstream->len != strlen(s) ||
         memcmp(s, tkstream->str, strlen(s)) != 0) {
         error_at(tkstream->str, "\"%s\"ではありません", s);
     }
@@ -156,15 +179,6 @@ Token *consume_enum() {
 
 bool at_eof() { return tkstream->kind == TK_EOF; }
 
-int is_alnum(char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
-           ('0' <= c && c <= '9') || (c == '_');
-}
-
-int is_alp(char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || (c == '_');
-}
-
 bool match(const char *p, const char *word) {
     return memcmp(p, word, strlen(word)) == 0;
 }
@@ -176,16 +190,42 @@ bool match(const char *p, const char *word) {
         p += n;                                  \
         continue;                                \
     }
-
+#define macroword(p, s)                       \
+    n = strlen(s);                            \
+    if (match(p, s) && !is_alnum(p[n])) {     \
+        cur = new_Token(TK_MACRO, cur, p, n); \
+        p += n;                               \
+        continue;                             \
+    }
 Token *tokenize(char *p) {
     int n;
+    int macroMode = 0;
+
     Token head;
     head.next = NULL;
     Token *cur = &head;
     while (*p) {
-        if (isspace(*p)) {
-            p++;
-            continue;
+        /////////////////読み飛ばす
+        if (!macroMode) {
+            if (isspace(*p)) {
+                p++;
+                continue;
+            }
+        } else {
+            if (*p == ' ' || *p == '\t') {
+                p++;
+                continue;
+            }
+            if (*p == '\\' && p[1] == '\n') {
+                p += 2;
+                continue;
+            }
+            if (*p == '\n') {
+                macroMode = 0;
+                cur = new_Token(TK_MACROEND, cur, p, 1);
+                p++;
+                continue;
+            }
         }
         if (match(p, "/*")) {
             char *q = strstr(p + 2, "*/");
@@ -198,6 +238,7 @@ Token *tokenize(char *p) {
             while (*p != '\n') p++;
             continue;
         }
+        //////////////////////////
 
         if (*p == '"') {
             char *q = ++p;
@@ -209,7 +250,21 @@ Token *tokenize(char *p) {
             p++;  // 最後の「"」を消費する
             continue;
         }
-
+        if (*p == '#') {
+            cur = new_Token(TK_MACROSTART,cur,p,1);
+            p++;
+            macroMode++;
+            macroword(p, "define");
+            macroword(p, "ifdef");
+            macroword(p, "ifndef");
+            macroword(p, "include");
+            macroword(p, "if");
+            macroword(p, "endif");
+            macroword(p, "else");
+            macroword(p, "elif");
+        }
+        macroword(p, "defined");
+        
         //制御構文
         keyword(p, "while");
         keyword(p, "else");
@@ -301,3 +356,5 @@ Token *tokenize(char *p) {
     new_Token(TK_EOF, cur, p, 0);
     return head.next;
 }
+
+#undef keyward

@@ -9,9 +9,13 @@ selfcc: $(OBJS) test/test.c
 $(OBJS): selfcc.h $(SRCS)
 
 test: selfcc 
-		#./test.sh
 		./ctest.sh
 
+tmptest: selfcc
+		./tmptest.sh
+
+pretest: selfcc	
+		./test.sh
 
 clean: 
 		rm -f selfcc *.o *~ tmp* a.out
