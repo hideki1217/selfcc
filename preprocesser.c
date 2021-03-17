@@ -29,14 +29,15 @@ void macro_SetCloneToken(Macro *macro, Token *head, Token *tail) {
     Token anker;
     Token *cur = macro->begin;
     Token *res = NULL;
+    anker.next = tail;
     if (macro->begin->kind != TK_MACROEND) {
-        res = token_clone(cur, &anker);
+        res = &anker;
         while (cur != macro->end) {
             res = token_clone(cur, res);
             cur = cur->next;
         }
     }
-    head->next = res;
+    head->next = anker.next;
     if (res) res->next = tail;
 }
 Macro *macro_Search(char *key, int len) {
@@ -75,6 +76,10 @@ Token *skip2MacroEnd(Token *begin) {
         ;
     return top;
 }
+#define CONNECT_PRE_2_ROOT()  \
+    INCREMENT_ROOT();       \
+    pre_token->next = root; \
+    root = pre_token;       
 Token *preproccess(Token *root) {
     Token anker, *pre_token = &anker;
     anker.next = root;
@@ -82,6 +87,10 @@ Token *preproccess(Token *root) {
         switch (root->kind) {
             case TK_MACROSTART: {
                 INCREMENT_ROOT();
+                if (root->kind == TK_MACROEND) {
+                    CONNECT_PRE_2_ROOT();
+                    continue;
+                }
                 if (_consume("define", &root)) {
                     Token *ident = _expect_ident(&root);
                     if (_consume("(", &root)) {
@@ -92,15 +101,16 @@ Token *preproccess(Token *root) {
                     root = skip2MacroEnd(begin);
 
                     regist_macro(ident->str, ident->len, begin, root);
-                    
-                    INCREMENT_ROOT();
-                    pre_token->next = root;
+
+                    CONNECT_PRE_2_ROOT();
                     continue;
                 }
                 if (_consume("undef", &root)) {
                     Token *ident = _expect_ident(&root);
                     macro_Delete(ident->str, ident->len);
-                    pre_token->next = skip2MacroEnd(ident)->next;
+                    root = skip2MacroEnd(ident);
+
+                    CONNECT_PRE_2_ROOT();
                     continue;
                 }
                 if (_consume("include", &root)) {

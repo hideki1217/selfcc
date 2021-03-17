@@ -592,8 +592,22 @@ int test121(){
     return aho;
 }
 #undef aho
-
-
+#  
+#define aho x+y
+int test122(){
+    int x=8,y=7;
+    return aho;
+}
+#undef aho
+#
+#define aho x \
+        +\
+        y
+int test123(){
+    int x=8,y=7;
+    return aho;
+}
+#undef aho
 
 extern int assert(int,int);
 ////////////////////////////////^テスト部
@@ -718,6 +732,8 @@ int Test(){
     assert(7,test118());
     assert(7,test119());
     assert(3,test121());
+    assert(15,test122());
+    assert(15,test123());
 }
 //////////////////////////////////////// 
 int count;

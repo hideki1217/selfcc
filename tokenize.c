@@ -262,6 +262,7 @@ Token *tokenize(char *p) {
             macroword(p, "endif");
             macroword(p, "else");
             macroword(p, "elif");
+            continue;
         }
         macroword(p, "defined");
         
