@@ -2,6 +2,7 @@
 
 #include<stdbool.h>
 
+
 typedef struct CC_IntQueue CC_IntQueue;
 typedef struct CC_IntQueueNode CC_IntQueueNode;
 
@@ -15,20 +16,18 @@ typedef struct CC_Heap CC_Heap;
 
 typedef struct CC_AVLTreeNode CC_AVLTreeNode;
 typedef struct CC_AVLTree CC_AVLTree;
+typedef struct CC_AVLTreeIter CC_AVLTreeIter;
 
-typedef struct CC_Vector CC_Vector;
-typedef struct CC_VecNode CC_VecNode;
 
-struct CC_Vector{
-    CC_VecNode *first;
+
+struct CC_AVLTreeIter{
+    CC_AVLTree *tree;
+    CC_AVLTreeNode *now;
 };
-CC_Vector *cc_vector_new();
-void cc_vector_add(CC_Vector* vec,void *item);
-bool cc_vector_empty(CC_Vector* vec);
-struct CC_VecNode{
-    CC_VecNode* next;
-    void *item;
-};
+CC_AVLTreeIter *cc_avltreeiter_new(CC_AVLTree *tree);
+void cc_avltreeiter_reset();
+bool cc_avltreeiter_next(CC_AVLTreeIter *iter);
+void *cc_avltreeiter_getItem(CC_AVLTreeIter *iter);
 
 struct CC_AVLTreeNode{
     char* key;

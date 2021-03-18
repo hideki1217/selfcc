@@ -6,6 +6,7 @@
 #include "selfcc.h"
 #include "utility.h"
 
+
 static CC_AVLTree *defined_macros;
 
 void Initialize_preprocesser() { defined_macros = cc_avltree_new(); }
@@ -18,6 +19,24 @@ struct Macro {
     Token *end;    // マクロの最後のTokenの直後
 };
 /**
+ * @brief  終端がNULLのTokenSequance itemをheadとtailの間に挿入
+ * @note
+ * @param  *item: 挿入したいTS
+ * @param  *head: 挿入したい場所の左端
+ * @param  *tail: 挿入したい場所の右端
+ * @retval None
+ */
+void token_insert(Token *item, Token *head, Token *tail) {
+    if (item == NULL) {
+        head->next = tail;
+        return;
+    }
+    head->next = item;
+    for (Token *tmp = item; tmp; item = tmp, tmp = tmp->next)
+        ;
+    item->next = tail;
+}
+/**
  * @brief  マクロに登録されたTSをheadとtailの間に挿入
  * @note
  * @param  *macro: 対象のマクロ
@@ -26,10 +45,8 @@ struct Macro {
  * @retval None
  */
 void macro_SetCloneToken(Macro *macro, Token *head, Token *tail) {
-    Token anker;
     Token *cur = macro->begin;
-    Token *res = NULL;
-    anker.next = tail;
+    Token *res = NULL,anker;
     if (macro->begin->kind != TK_MACROEND) {
         res = &anker;
         while (cur != macro->end) {
@@ -37,8 +54,9 @@ void macro_SetCloneToken(Macro *macro, Token *head, Token *tail) {
             cur = cur->next;
         }
     }
-    head->next = anker.next;
-    if (res) res->next = tail;
+    res->next = NULL;
+
+    token_insert(anker.next,head,tail);
 }
 Macro *macro_Search(char *key, int len) {
     return cc_avltree_Search(defined_macros, key, len);
@@ -62,8 +80,7 @@ static void regist_macro(char *key, int keylen, Token *begin, Token *end) {
     cc_avltree_Add(defined_macros, macro->key, macro->keylen, macro);
 }
 
-#define INCREMENT_ROOT_WITH_SAVE() pre_token = root, root = root->next
-#define INCREMENT_ROOT() root = root->next
+
 /**
  * @brief  TK_MACROENDのノードを返す。
  * @note
@@ -76,12 +93,14 @@ Token *skip2MacroEnd(Token *begin) {
         ;
     return top;
 }
-#define CONNECT_PRE_2_ROOT()  \
-    INCREMENT_ROOT();       \
-    pre_token->next = root; \
-    root = pre_token;       
+#define INCREMENT_ROOT_WITH_SAVE() last_nonemacro_token = root, root = root->next
+#define INCREMENT_ROOT() root = root->next
+#define CONNECT_PRE_2_ROOT() \
+    INCREMENT_ROOT();        \
+    last_nonemacro_token->next = root;  \
+    root = last_nonemacro_token;
 Token *preproccess(Token *root) {
-    Token anker, *pre_token = &anker;
+    Token anker, *last_nonemacro_token = &anker;
     anker.next = root;
     while (root->kind != TK_EOF) {
         switch (root->kind) {
@@ -134,8 +153,8 @@ Token *preproccess(Token *root) {
                 if (macro == NULL) {
                     break;
                 }
-                macro_SetCloneToken(macro, pre_token, root->next);
-                root = pre_token;
+                macro_SetCloneToken(macro, last_nonemacro_token, root->next);
+                root = last_nonemacro_token;
                 INCREMENT_ROOT_WITH_SAVE();
                 continue;
             }

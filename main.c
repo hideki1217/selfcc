@@ -38,7 +38,6 @@ int main(int argc, char **argv) {
         }
         filepath = argv[i];
     }
-
     ////////////////////////////グローバル変数の初期化
     locals = lvar_manager_new();
     globals = cc_avltree_new();
@@ -64,15 +63,15 @@ int main(int argc, char **argv) {
 void code_generate(Node *code) {
     printf(".Intel_syntax noprefix\n");
     // globalな変数を宣言
-    for (CC_VecNode *nd = global_list->first; nd; nd = nd->next) {
-        Var *var = (Var *)nd->item;
+    foreach(nd,global_list) {
+        Var *var = nd->item.ptr;
         string_limitedcopy(buffer, var->name, var->len);
         printf(".globl %s \n", buffer);
     }
     // データセクション
     printf("    .data\n");
-    for (CC_VecNode *nd = constants->first; nd != NULL; nd = nd->next) {
-        CStr *var = (CStr *)nd->item;
+    foreach(nd,constants) {
+        CStr *var = nd->item.ptr;
         string_limitedcopy(buffer, var->text, var->len);
         printf(".LC%d:\n", var->base.LC_id);
         printf("    .string \"%s\"\n", buffer);

@@ -2,7 +2,9 @@
 
 #include <stdbool.h>
 
+#include "vector.h"
 #include "collections.h"
+
 
 typedef struct Token Token;
 
@@ -99,6 +101,7 @@ struct Token {
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
 Token *token_clone(const Token *token, const Token *pre);
 
+
 // エラーを報告するための関数
 // printfと同じ引数を取る
 void error(char *msg, ...);
@@ -148,7 +151,8 @@ Token *consume_float();
 Token *consume_char();
 Token *consume_enum();
 
-bool token_ismutch(Token *token, char *str, int len);
+#define TOKEN_IS_MATCH(token,string,length) \
+    (token)->len == length && memcmp((token)->str, string, length) == 0
 bool at_eof();
 
 Token *tokenize(char *p);

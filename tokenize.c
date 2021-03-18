@@ -32,9 +32,6 @@ Token *token_clone(const Token *token, const Token *pre) {
     return cur;
 }
 
-bool token_ismutch(Token *token, char *str, int len) {
-    return token->len == len && memcmp(token->str, str, len) == 0;
-}
 Token *_forward(Token **token){
     Token *tk = *token;
     *token = (*token)->next;
@@ -54,7 +51,7 @@ Token *consume(char *op) {
     return (tk = _consume(op,&tkstream))?nowToken = tk: tk;
 }
 Token *_consume(char *op,Token **tk){
-    if (!token_ismutch((*tk), op, strlen(op))) {
+    if (!(TOKEN_IS_MATCH((*tk), op, strlen(op)))) {
         return NULL;
     }
     return _forward(tk);
@@ -67,11 +64,11 @@ Token *check(char *op) {
     return _check(op,&tkstream);
 }
 Token *_check(char *op,Token **tk){
-    return token_ismutch(*tk, op, strlen(op)) ? *tk : NULL;
+    return TOKEN_IS_MATCH(*tk, op, strlen(op)) ? *tk : NULL;
 }
 
 Token *check_ahead(char *s) {
-    return token_ismutch(tkstream->next, s, strlen(s)) ? tkstream->next : NULL;
+    return TOKEN_IS_MATCH(tkstream->next, s, strlen(s)) ? tkstream->next : NULL;
 }
 
 //変数ならばそれを返して一つ進める
