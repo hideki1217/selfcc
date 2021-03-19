@@ -12,10 +12,10 @@ Token *nowToken;
 char *user_input;
 char *filename;
 LVar_Manager *locals;
-CC_Vector *global_list;
+CC_BidList *global_list;
 CC_AVLTree *globals;
 CC_AVLTree *externs;
-CC_Vector *constants;
+CC_BidList *constants;
 
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
     Token *token = calloc(1, sizeof(Token));

@@ -15,7 +15,7 @@ CStr *new_CStr(char *text, int len) {
 }
 CVar *add_CStr(char *text, int len) {
     CVar *var = (CVar *)new_CStr(text, len);
-    cc_vector_pbPtr(constants, var);
+    cc_bidlist_pbPtr(constants, var);
     return var;
 }
 
@@ -63,7 +63,7 @@ GVar *add_gvar(Token *token, Type *type,bool isStatic) {
     if (res == NULL) {
         res = new_GVar(token, type);
         cc_avltree_Add(globals, res->base.name, res->base.len, (void*)res);
-        if(! isStatic) cc_vector_pbPtr(global_list,(void*)res);
+        if(! isStatic) cc_bidlist_pbPtr(global_list,(void*)res);
         return res;
     } else
         error_at(token->str,

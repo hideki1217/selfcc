@@ -41,9 +41,9 @@ int main(int argc, char **argv) {
     ////////////////////////////グローバル変数の初期化
     locals = lvar_manager_new();
     globals = cc_avltree_new();
-    global_list = cc_vector_new();
+    global_list = cc_bidlist_new();
     externs = cc_avltree_new();
-    constants = cc_vector_new();
+    constants = cc_bidlist_new();
     Initialize_type_tree();
     initialize_parser();
     Initialize_preprocesser();
@@ -63,14 +63,14 @@ int main(int argc, char **argv) {
 void code_generate(Node *code) {
     printf(".Intel_syntax noprefix\n");
     // globalな変数を宣言
-    foreach(nd,global_list) {
+    LIST_FOR(nd,global_list) {
         Var *var = nd->item.ptr;
         string_limitedcopy(buffer, var->name, var->len);
         printf(".globl %s \n", buffer);
     }
     // データセクション
     printf("    .data\n");
-    foreach(nd,constants) {
+    LIST_FOR(nd,constants) {
         CStr *var = nd->item.ptr;
         string_limitedcopy(buffer, var->text, var->len);
         printf(".LC%d:\n", var->base.LC_id);

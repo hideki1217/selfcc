@@ -20,6 +20,7 @@
         "ctype.h": "c",
         "math.h": "c",
         "floatn.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "vector.h": "c"
     }
 }

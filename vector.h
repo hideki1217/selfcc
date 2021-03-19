@@ -4,60 +4,94 @@
 
 typedef struct CC_Iterable CC_Iterable;
 
-typedef struct CC_VecNode CC_VecNode;
+typedef union CC_Item CC_Item;
+
 typedef struct CC_Vector CC_Vector;
+typedef struct CC_VecIterator CC_VecIterator;
 
-typedef struct CC_PtrNode CC_PtrNode;
-typedef struct CC_PtrVector CC_PtrVector;
+typedef struct CC_BidListNode CC_BidListNode;
+typedef struct CC_BidList CC_BidList;
 
-typedef struct CC_IntNode CC_IntNode;
-typedef struct CC_IntVector CC_IntVector;
 
-#define foreach(name,vector) \
-    for(CC_VecNode *name = vector->front;name != NULL; name = (name)->next)
-
-struct CC_Iterable
-{
-    CC_Iterable *next;
+struct CC_Iterable{
+    CC_Iterable *(*next)(CC_Iterable *this);
+    CC_Item (*item)(CC_Iterable *this);
 };
 
-struct CC_VecNode{
-    CC_VecNode *next;
-    CC_VecNode *prev;
-    union{
-        void* ptr; 
-        int val;
-        struct{
-            char *str;
-            int len;
-        } string;
-    }item;
+union CC_Item{
+    void* ptr; 
+    int val;
+    struct{
+        char *str;
+        int len;
+    } string;
 };
-void cc_vecnode_delete(CC_VecNode *front);
+
+#define VEC_MAX_SIZE 10
+#define VEC_FOR(name,vector) \
+    for(CC_Iterable *name = cc_vector_begin(vector);name;name = name->next(name))
+/**
+ * @brief  ランダムアクセス可能な可変長配列
+ */
+struct CC_Vector{
+    CC_Item *items;
+    int size;
+    int max_size;
+};
+CC_Vector *cc_vector_new();
+void cc_vector_delete(CC_Vector *vec);
+void cc_vector_clear(CC_Vector *vec);
+void cc_vector_init(CC_Vector *vec);
+void cc_vector_pbPtr(CC_Vector *vec, void *ptr);
+void cc_vector_pbInt(CC_Vector *vec, int val);
+void cc_vector_pbStr(CC_Vector *vec, char *str,int len);
+CC_Iterable *cc_vector_begin(CC_Vector *vec);
+CC_Item cc_vector_(CC_Vector *vec,int index);
+struct CC_VecIterator{
+    CC_Iterable base;
+    CC_Vector *vec;
+    int index;
+};
+void cc_veciterator_init(CC_VecIterator *iter,CC_Vector *vec);
+CC_Iterable *cc_veciterator_next(CC_Iterable *this);
+CC_Item cc_veciterator_item(CC_Iterable *this);
+
+
+#define LIST_FOR(name,list) \
+    for(CC_BidListNode *name = (list)->front;name != NULL; name = (name)->next)
+/**
+ * @brief  双方向リスト
+ */
+struct CC_BidListNode{
+    CC_BidListNode *next;
+    CC_BidListNode *prev;
+    CC_Item item;
+};
+void cc_bidlistnode_delete(CC_BidListNode *front);
 /**
  * @brief  ...cur => ...cur*(new)
  * @note   
  * @param  *cur: 挿入する右端
  * @retval 挿入したノード
  */
-CC_VecNode *cc_vecnode_new(CC_VecNode *cur);
-struct CC_Vector{
-    CC_VecNode *front;
-    CC_VecNode *back;
+CC_BidListNode *cc_bidlistnode_new(CC_BidListNode *cur);
+struct CC_BidList{
+    CC_BidListNode *front;
+    CC_BidListNode *back;
     int size;
 };
-CC_Vector *cc_vector_new();
-void cc_vector_delete(CC_Vector *vec);
+CC_BidList *cc_bidlist_new();
+void cc_bidlist_delete(CC_BidList *vec);
 /**
  * @brief  要素を消す
  * @note   
  * @param  *vec: 対象のvector
  * @retval None
  */
-void cc_vector_clear(CC_Vector *vec);
-void cc_vector_pbPtr(CC_Vector *vec, void *ptr);
-void cc_vector_pbInt(CC_Vector *vec, int val);
-void cc_vector_pbStr(CC_Vector *vec, char *str,int len);
+void cc_bidlist_clear(CC_BidList *vec);
+void cc_bidlist_pbPtr(CC_BidList *vec, void *ptr);
+void cc_bidlist_pbInt(CC_BidList *vec, int val);
+void cc_bidlist_pbStr(CC_BidList *vec, char *str,int len);
 /**
  * @brief  lf...lb,rf...rb => lf...lb*rf...rb
  * @note   
@@ -65,7 +99,7 @@ void cc_vector_pbStr(CC_Vector *vec, char *str,int len);
  * @param  *r: 結合の左側
  * @retval None
  */
-void cc_vector_concat(CC_Vector *l,CC_Vector *r);
+void cc_bidlist_concat(CC_BidList *l,CC_BidList *r);
 /**
  * @brief  ...*begin...X*end... => ...*item*end...
  * @note   
@@ -75,58 +109,7 @@ void cc_vector_concat(CC_Vector *l,CC_Vector *r);
  * @param  *item: 挿入したいvector
  * @retval None
  */
-void cc_vector_insert(CC_Vector *vec,CC_VecNode *begin,CC_VecNode *end,CC_Vector *item);
-bool cc_vecotr_isEmpty(const CC_Vector *vec);
-int cc_vector_size(const CC_Vector *vec);
+void cc_bidlist_insert(CC_BidList *vec,CC_BidListNode *begin,CC_BidListNode *end,CC_BidList *item);
+bool cc_bidlist_isEmpty(const CC_BidList *vec);
+int cc_bidlist_size(const CC_BidList *vec);
 
-/*
-struct CC_PtrNode{
-    CC_Iterable itr;
-    void *item;
-};
-struct CC_PtrVector{
-    CC_PtrNode *front;
-    CC_PtrNode *top;
-    int size;
-};
-CC_PtrVector *cc_ptrvector_New();
-void cc_ptrvector_Delete(CC_PtrVector *vec);
-void cc_ptrvector_Add(CC_PtrVector *vec, void *item);
-void cc_ptrvector_Concat(CC_PtrVector *l,CC_PtrVector *r);
-bool cc_ptrvecotr_Empty(CC_PtrVector *vec);
-int cc_ptrvector_Size(CC_PtrVector *vec);
-
-struct CC_IntNode{
-    CC_Iterable itr;
-    int val;
-};
-struct CC_IntVector{
-    CC_IntNode *front;
-    CC_IntNode *top;
-    int size;
-};
-CC_IntVector *cc_intvector_New();
-void cc_intvector_Delete(CC_IntVector *vec);
-void cc_intvector_Add(CC_IntVector *vec, int val);
-void cc_intvector_Concat(CC_IntVector *l,CC_IntVector *r);
-bool cc_intvecotr_Empty(CC_IntVector *vec);
-int cc_intvector_Size(CC_IntVector *vec);
-
-struct CC_StrNode{
-    CC_Iterable itr;
-    char *str;
-    int len;
-};
-struct CC_StrVector{
-    CC_StrNode *front;
-    CC_StrNode *top;
-    int size;
-};
-CC_IntVector *cc_intvector_New();
-void cc_intvector_Delete(CC_IntVector *vec);
-void cc_intvector_Add(CC_IntVector *vec, int val);
-void cc_intvector_Concat(CC_IntVector *l,CC_IntVector *r);
-bool cc_intvecotr_Empty(CC_IntVector *vec);
-int cc_intvector_Size(CC_IntVector *vec);
-
-*/

@@ -70,10 +70,10 @@ extern Node *nullNode;
 
 extern LVar_Manager *locals;
 extern CC_AVLTree *globals;
-extern CC_Vector *global_list;
+extern CC_BidList *global_list;
 extern CC_AVLTree *externs;
 
-extern CC_Vector *constants;
+extern CC_BidList *constants;
 
 //////////////////////////////////
 
