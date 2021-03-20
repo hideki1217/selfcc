@@ -13,9 +13,11 @@ typedef struct CC_BidListNode CC_BidListNode;
 typedef struct CC_BidList CC_BidList;
 
 
+#define ITER_NEXT(iter) (iter)->next(iter)
+#define ITER_ITEM(iter) (iter)->item(iter)
 struct CC_Iterable{
-    CC_Iterable *(*next)(CC_Iterable *this);
-    CC_Item (*item)(CC_Iterable *this);
+    CC_Iterable *(*next)(CC_Iterable *this); // 次に進める
+    CC_Item (*item)(CC_Iterable *this); // 要素を返す
 };
 
 union CC_Item{
@@ -29,12 +31,13 @@ union CC_Item{
 
 #define VEC_MAX_SIZE 10
 #define VEC_FOR(name,vector) \
-    for(CC_Iterable *name = cc_vector_begin(vector);name;name = name->next(name))
+    for(CC_Iterable *name = cc_vector_begin(vector);name;name = ITER_NEXT(name))
+#define VEC(vector,index) (vector)->_[index]
 /**
  * @brief  ランダムアクセス可能な可変長配列
  */
 struct CC_Vector{
-    CC_Item *items;
+    CC_Item *_;
     int size;
     int max_size;
 };

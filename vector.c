@@ -7,7 +7,7 @@
 #define NULL ((void *)0)
 
 void cc_vector_init(CC_Vector *vec){
-    vec->items = calloc(VEC_MAX_SIZE,sizeof(CC_Item));
+    vec->_ = calloc(VEC_MAX_SIZE,sizeof(CC_Item));
     vec->max_size = VEC_MAX_SIZE;
     vec->size = 0;
 }
@@ -17,34 +17,34 @@ CC_Vector *cc_vector_new(){
     return vec;
 }
 void cc_vector_delete(CC_Vector *vec){
-    free(vec->items);
+    free(vec->_);
     free(vec);
 }
 void cc_vector_clear(CC_Vector *vec){
-    free(vec->items);
+    free(vec->_);
     cc_vector_init(vec);
 }
 static void *cc_vector_grow(CC_Vector *vec){
-    CC_Item *tmp =vec->items;
-    vec->items = calloc(vec->max_size + VEC_MAX_SIZE,sizeof(CC_Item));
-    memcpy(vec->items,tmp,vec->max_size * sizeof(CC_Item));
+    CC_Item *tmp =vec->_;
+    vec->_ = calloc(vec->max_size + VEC_MAX_SIZE,sizeof(CC_Item));
+    memcpy(vec->_,tmp,vec->max_size * sizeof(CC_Item));
     free(tmp);
 }
 void cc_vector_pbPtr(CC_Vector *vec, void *ptr){
     if(vec->size == vec->max_size)
         cc_vector_grow(vec);
-    vec->items[vec->size++].ptr = ptr;
+    vec->_[vec->size++].ptr = ptr;
 }
 void cc_vector_pbInt(CC_Vector *vec, int val){
     if(vec->size == vec->max_size)
         cc_vector_grow(vec);
-    vec->items[vec->size++].val = val;
+    vec->_[vec->size++].val = val;
 }
 void cc_vector_pbStr(CC_Vector *vec, char *str,int len){
     if(vec->size == vec->max_size)
         cc_vector_grow(vec);
-    vec->items[vec->size].string.str = str;
-    vec->items[vec->size++].string.len = len;
+    vec->_[vec->size].string.str = str;
+    vec->_[vec->size++].string.len = len;
 }
 CC_Iterable *cc_vector_begin(CC_Vector *vec){
     CC_VecIterator *iter = calloc(1,sizeof(CC_VecIterator));
@@ -52,7 +52,7 @@ CC_Iterable *cc_vector_begin(CC_Vector *vec){
     return (CC_Iterable*)iter;
 }
 CC_Item cc_vector_(CC_Vector *vec,int index){
-    return vec->items[index];
+    return vec->_[index];
 }
 
 
@@ -71,7 +71,7 @@ CC_Iterable *cc_veciterator_next(CC_Iterable *this){
 }
 CC_Item cc_veciterator_item(CC_Iterable *this){
     CC_VecIterator *iter = (CC_VecIterator*)this;
-    return iter->vec->items[iter->index];
+    return iter->vec->_[iter->index];
 }
 
 #define CONCAT(vnd1, vnd2) \
