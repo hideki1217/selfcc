@@ -52,12 +52,21 @@ void swap(void **a, void **b) {
     *a = *b;
     *b = temp;
 }
-void string_limitedcopy(char *s, char *text, int len) {
+void string_ncopy(char *s, char *text, int len) {
     strncpy(s, text, len);
     s[len] = '\0';
 }
 // a>b -> 負数, a<b -> 正数, a=b -> 0
-int compare_string(const char *a, int a_len, const char *b, int b_len) {
+/**
+ * @brief  辞書順比較:: - => a>b, + =>a<b, 0 => a=b
+ * @note   
+ * @param  *a: 比較対象1
+ * @param  a_len: 比較対象1の長さ
+ * @param  *b: 比較対象2
+ * @param  b_len: 比較対象2の長さ
+ * @retval 比較結果
+ */
+int string_cmp(const char *a, int a_len, const char *b, int b_len) {
     int a_i = 0, b_i = 0;
     a_len--;
     b_len--;

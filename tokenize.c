@@ -6,6 +6,7 @@
 
 #include "selfcc.h"
 #include "utility.h"
+#include "vector.h"
 
 Token *tkstream;
 Token *nowToken;

@@ -289,7 +289,7 @@ CC_AVLTreeNode *cc_avltree_add(CC_AVLTreeNode *root,char* key,int key_len,void* 
     /* 根ノードから順に追加する場所を探索 */
     node = root;
     while (1) {
-        int compare_res=compare_string(key,key_len,node->key,node->len);
+        int compare_res=string_cmp(key,key_len,node->key,node->len);
         if (compare_res>0) {
             /* 追加する値がノードの値よりも小さい場合 */
 
@@ -350,7 +350,7 @@ CC_AVLTreeNode *cc_avltree_search(CC_AVLTreeNode *root,char* key,int key_len) {
 
     /* 探索を行うループ（注目ノードがNULLになったら終了 */
     while (node) {
-        int compare_res=compare_string(key,key_len,node->key,node->len);
+        int compare_res=string_cmp(key,key_len,node->key,node->len);
         if (compare_res>0) {
             /* 探索値がノードの値よりも小さい場合 */
 
@@ -487,7 +487,7 @@ CC_AVLTreeNode *cc_avltree_deleteNode(CC_AVLTreeNode *root, char* key,int key_le
     parent = NULL;
 
     while (node != NULL) {
-        int compare_res=compare_string(key,key_len,node->key,node->len);
+        int compare_res=string_cmp(key,key_len,node->key,node->len);
         if (compare_res>0) {
             parent = node;
             node = node->left;

@@ -20,7 +20,7 @@ void gen_lval(Node *node, bool push) {
     }
     if (node->kind == ND_GVAR) {
         Var *var = ((VarNode *)node)->var;
-        string_limitedcopy(buffer, var->name, var->len);
+        string_ncopy(buffer, var->name, var->len);
         printf("    lea rax, %s[rip]\n", buffer);
         if (push) printf("    push rax\n");
         return;
@@ -44,7 +44,7 @@ void gen(Node *node, bool push) {
             return;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
-            string_limitedcopy(buffer, rootine->func->name, rootine->func->len);
+            string_ncopy(buffer, rootine->func->name, rootine->func->len);
             printf("%s:\n", buffer);
             // プロローグ
             // local変数分の領域を確保　
@@ -84,7 +84,7 @@ void gen(Node *node, bool push) {
             if (inode->value) {
                 // グローバル変数の初期化についてはここに書くべし
             } else {
-                string_limitedcopy(buffer, var->name, var->len);
+                string_ncopy(buffer, var->name, var->len);
                 printf("    .comm %s,%d\n", buffer, var->type->size);
             }
             return;
@@ -218,7 +218,7 @@ void gen(Node *node, bool push) {
             Callability call = isCallable(function->type);
             if (function->kind == ND_GVAR && call == AsFUNCTION) {
                 VarNode *vfunc = (VarNode *)function;
-                string_limitedcopy(buffer, vfunc->var->name, vfunc->var->len);
+                string_ncopy(buffer, vfunc->var->name, vfunc->var->len);
                 printf("    call %s\n", buffer);
             } else {
                 if (call == AsFUNCTION) {

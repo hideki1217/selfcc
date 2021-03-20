@@ -1,10 +1,11 @@
 #pragma once
 
 #include <stdbool.h>
+#include "utility.h"
 
 typedef struct CC_Iterable CC_Iterable;
 
-typedef union CC_Item CC_Item;
+typedef union Object Object;
 
 typedef struct CC_Vector CC_Vector;
 typedef struct CC_VecIterator CC_VecIterator;
@@ -12,22 +13,16 @@ typedef struct CC_VecIterator CC_VecIterator;
 typedef struct CC_BidListNode CC_BidListNode;
 typedef struct CC_BidList CC_BidList;
 
+typedef struct CC_BidList CC_SortedStrList; 
+
 
 #define ITER_NEXT(iter) (iter)->next(iter)
 #define ITER_ITEM(iter) (iter)->item(iter)
 struct CC_Iterable{
     CC_Iterable *(*next)(CC_Iterable *this); // 次に進める
-    CC_Item (*item)(CC_Iterable *this); // 要素を返す
+    Object (*item)(CC_Iterable *this); // 要素を返す
 };
 
-union CC_Item{
-    void* ptr; 
-    int val;
-    struct{
-        char *str;
-        int len;
-    } string;
-};
 
 #define VEC_MAX_SIZE 10
 #define VEC_FOR(name,vector) \
@@ -37,7 +32,7 @@ union CC_Item{
  * @brief  ランダムアクセス可能な可変長配列
  */
 struct CC_Vector{
-    CC_Item *_;
+    Object *_;
     int size;
     int max_size;
 };
@@ -49,7 +44,7 @@ void cc_vector_pbPtr(CC_Vector *vec, void *ptr);
 void cc_vector_pbInt(CC_Vector *vec, int val);
 void cc_vector_pbStr(CC_Vector *vec, char *str,int len);
 CC_Iterable *cc_vector_begin(CC_Vector *vec);
-CC_Item cc_vector_(CC_Vector *vec,int index);
+Object cc_vector_(CC_Vector *vec,int index);
 struct CC_VecIterator{
     CC_Iterable base;
     CC_Vector *vec;
@@ -57,7 +52,7 @@ struct CC_VecIterator{
 };
 void cc_veciterator_init(CC_VecIterator *iter,CC_Vector *vec);
 CC_Iterable *cc_veciterator_next(CC_Iterable *this);
-CC_Item cc_veciterator_item(CC_Iterable *this);
+Object cc_veciterator_item(CC_Iterable *this);
 
 
 #define LIST_FOR(name,list) \
@@ -68,7 +63,7 @@ CC_Item cc_veciterator_item(CC_Iterable *this);
 struct CC_BidListNode{
     CC_BidListNode *next;
     CC_BidListNode *prev;
-    CC_Item item;
+    Object obj;
 };
 void cc_bidlistnode_delete(CC_BidListNode *front);
 /**
@@ -104,15 +99,21 @@ void cc_bidlist_pbStr(CC_BidList *vec, char *str,int len);
  */
 void cc_bidlist_concat(CC_BidList *l,CC_BidList *r);
 /**
- * @brief  ...*begin...X*end... => ...*item*end...
+ * @brief  ...*begin...X*end... => ...*obj*end...
  * @note   
  * @param  *vec: 元のvector
  * @param  *begin: 挿入の左端
  * @param  *end: 挿入の右端の右
- * @param  *item: 挿入したいvector
+ * @param  *obj: 挿入したいvector
  * @retval None
  */
 void cc_bidlist_insert(CC_BidList *vec,CC_BidListNode *begin,CC_BidListNode *end,CC_BidList *item);
 bool cc_bidlist_isEmpty(const CC_BidList *vec);
 int cc_bidlist_size(const CC_BidList *vec);
 
+
+#define cc_sortedstrlist_new() cc_bidlist_new()
+#define cc_sortedstrlist_delete() cc_bidlist_delete()
+void cc_sortedstrlist_add(CC_SortedStrList *list,char *str,int len);
+bool cc_sortedstrlist_find(CC_SortedStrList *list,char *str,int len);
+CC_SortedStrList *cc_sortedstrlist_cross(CC_SortedStrList *l,CC_SortedStrList *r);

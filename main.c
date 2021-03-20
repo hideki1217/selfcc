@@ -16,7 +16,7 @@ void debug_pp(){
             printf("\n");
             count = t->len +1;
         }
-        string_limitedcopy(buffer,t->str,t->len);
+        string_ncopy(buffer,t->str,t->len);
         printf("%s ",buffer);
         t = t->next;
     }
@@ -64,15 +64,15 @@ void code_generate(Node *code) {
     printf(".Intel_syntax noprefix\n");
     // globalな変数を宣言
     LIST_FOR(nd,global_list) {
-        Var *var = nd->item.ptr;
-        string_limitedcopy(buffer, var->name, var->len);
+        Var *var = nd->obj.ptr;
+        string_ncopy(buffer, var->name, var->len);
         printf(".globl %s \n", buffer);
     }
     // データセクション
     printf("    .data\n");
     LIST_FOR(nd,constants) {
-        CStr *var = nd->item.ptr;
-        string_limitedcopy(buffer, var->text, var->len);
+        CStr *var = nd->obj.ptr;
+        string_ncopy(buffer, var->text, var->len);
         printf(".LC%d:\n", var->base.LC_id);
         printf("    .string \"%s\"\n", buffer);
     }

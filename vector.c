@@ -7,7 +7,7 @@
 #define NULL ((void *)0)
 
 void cc_vector_init(CC_Vector *vec){
-    vec->_ = calloc(VEC_MAX_SIZE,sizeof(CC_Item));
+    vec->_ = calloc(VEC_MAX_SIZE,sizeof(Object));
     vec->max_size = VEC_MAX_SIZE;
     vec->size = 0;
 }
@@ -25,9 +25,9 @@ void cc_vector_clear(CC_Vector *vec){
     cc_vector_init(vec);
 }
 static void *cc_vector_grow(CC_Vector *vec){
-    CC_Item *tmp =vec->_;
-    vec->_ = calloc(vec->max_size + VEC_MAX_SIZE,sizeof(CC_Item));
-    memcpy(vec->_,tmp,vec->max_size * sizeof(CC_Item));
+    Object *tmp =vec->_;
+    vec->_ = calloc(vec->max_size + VEC_MAX_SIZE,sizeof(Object));
+    memcpy(vec->_,tmp,vec->max_size * sizeof(Object));
     free(tmp);
 }
 void cc_vector_pbPtr(CC_Vector *vec, void *ptr){
@@ -38,7 +38,7 @@ void cc_vector_pbPtr(CC_Vector *vec, void *ptr){
 void cc_vector_pbInt(CC_Vector *vec, int val){
     if(vec->size == vec->max_size)
         cc_vector_grow(vec);
-    vec->_[vec->size++].val = val;
+    vec->_[vec->size++].ival = val;
 }
 void cc_vector_pbStr(CC_Vector *vec, char *str,int len){
     if(vec->size == vec->max_size)
@@ -51,7 +51,7 @@ CC_Iterable *cc_vector_begin(CC_Vector *vec){
     cc_veciterator_init(iter,vec);
     return (CC_Iterable*)iter;
 }
-CC_Item cc_vector_(CC_Vector *vec,int index){
+Object cc_vector_(CC_Vector *vec,int index){
     return vec->_[index];
 }
 
@@ -69,7 +69,7 @@ CC_Iterable *cc_veciterator_next(CC_Iterable *this){
     if(iter->index == iter->vec->size)return NULL;
     return this;
 }
-CC_Item cc_veciterator_item(CC_Iterable *this){
+Object cc_veciterator_item(CC_Iterable *this){
     CC_VecIterator *iter = (CC_VecIterator*)this;
     return iter->vec->_[iter->index];
 }
@@ -112,22 +112,22 @@ void cc_bidlist_clear(CC_BidList *vec) { cc_bidlistnode_delete(vec->front); }
 void cc_bidlist_pbPtr(CC_BidList *vec, void *ptr) {
     CC_BidListNode *nd = cc_bidlistnode_new(vec->back);
     if(vec->back == NULL)vec->front = nd;
-    nd->item.ptr = ptr;
+    nd->obj.ptr = ptr;
     vec->back = nd;
     vec->size++;
 }
 void cc_bidlist_pbInt(CC_BidList *vec, int val) {
     CC_BidListNode *nd = cc_bidlistnode_new(vec->back);
     if(vec->back == NULL)vec->front = nd;
-    nd->item.val = val;
+    nd->obj.ival = val;
     vec->back = nd;
     vec->size++;
 }
 void cc_bidlist_pbStr(CC_BidList *vec, char *str, int len) {
     CC_BidListNode *nd = cc_bidlistnode_new(vec->back);
     if(vec->back == NULL)vec->front = nd;
-    nd->item.string.str = str;
-    nd->item.string.len = len;
+    nd->obj.string.str = str;
+    nd->obj.string.len = len;
     vec->back = nd;
     vec->size++;
 }
@@ -147,6 +147,37 @@ bool cc_bidlist_isEmpty(const CC_BidList *vec) { return vec->size == 0; }
 int cc_bidlist_size(const CC_BidList *vec) { return vec->size; }
 
 
+void cc_sortedstrlist_add(CC_SortedStrList *list,char *str,int len){
+    LIST_FOR(iter,list){
+        String string = iter->obj.string;
+        int res = string_cmp(string.str,string.len,str,len);
+        if(res==0)return;
+        if(res<0){ // str < iter
+            CC_BidListNode *nd = cc_bidlistnode_new(iter->prev);
+            nd->obj.string = string;
+            CONCAT(nd,iter);
+            return;
+        }
+        if(res>0)// str > iter
+            continue; 
+    }
+}
+bool cc_sortedstrlist_find(CC_SortedStrList *list,char *str,int len){
+    LIST_FOR(iter,list){
+        int res = string_cmp(iter->obj.string.str,iter->obj.string.len,str,len);
+        if(res==0)return true;
+    }
+    return false;
+}
+CC_SortedStrList *cc_sortedstrlist_cross(CC_SortedStrList *l,CC_SortedStrList *r){
+    CC_SortedStrList *res = cc_sortedstrlist_new();
+    LIST_FOR(iter,l){
+        if(cc_sortedstrlist_find(r,iter->obj.string.str,iter->obj.string.len)){
+            cc_sortedstrlist_add(res,iter->obj.string.str,iter->obj.string.len);
+        }
+    }
+    return res;
+}
 
 #undef CONCAT
 #undef NULL

@@ -26,7 +26,7 @@ void cc_heapnode_delete(CC_HeapNode *node) {
 CC_HeapNode *cc_heapnode_meld(CC_HeapNode *a, CC_HeapNode *b) {
     if (a == NULL) return b;
     if (b == NULL) return a;
-    if (compare_string(a->key, a->key_len, b->key, b->key_len) > 0)
+    if (string_cmp(a->key, a->key_len, b->key, b->key_len) > 0)
         swap((void **)&a, (void **)&b);
     if (a->l == NULL)
         a->l = b;

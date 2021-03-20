@@ -49,7 +49,7 @@ char *type2str(Type *tp) {
             break;
         case TY_STRUCT: {
             char s[tp->len + 1];
-            string_limitedcopy(s, tp->name, tp->len);
+            string_ncopy(s, tp->name, tp->len);
             sprintf(buffer, "%s %s", s, res);
             break;
         }

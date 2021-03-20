@@ -127,6 +127,6 @@ void* cc_heap_top(CC_Heap* heap);
 void cc_heap_pop(CC_Heap* heap);
 bool cc_heap_empty(CC_Heap* heap);
 
-int compare_string(const char* a,int a_len,const char* b,int b_len);
+int string_cmp(const char* a,int a_len,const char* b,int b_len);
 
 
