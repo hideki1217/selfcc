@@ -54,7 +54,7 @@ void error_at(char *loc, char *msg, ...) {
 void error_here(bool flag,char *msg, ...) {
     va_list ap;
     va_start(ap, msg);
-    char *loc=flag ? tkstream->str: nowToken->str;
+    char *loc=flag ? tkstream->str: token_prev(tkstream)->str;
     // locが含まれている行の開始地点と終了地点を取得
     char *line = loc;
     while (user_input < line && line[-1] != '\n') line--;

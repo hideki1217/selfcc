@@ -114,7 +114,7 @@ Token *preproccess(Token *root) {
                     Token *ident = _expect_ident(&root);
                     if (_consume("(", &root)) {
                         // TODO:　関数型マクロ
-                        _expect(')', &root);
+                        _expect(")", &root);
                     }
                     Token *begin = root;
                     root = skip2MacroEnd(begin);

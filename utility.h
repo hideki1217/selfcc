@@ -1,5 +1,7 @@
 #pragma once
 
+#define times(n) for(int i=0;i<(int)n;i++)
+
 typedef struct String String;
 struct String{
     char *str;

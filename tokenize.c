@@ -9,67 +9,25 @@
 #include "vector.h"
 
 Token *tkstream;
-Token *nowToken;
 char *user_input;
 char *filename;
-LVar_Manager *locals;
-CC_BidList *global_list;
-CC_AVLTree *globals;
-CC_AVLTree *externs;
-CC_BidList *constants;
-
-Token *new_Token(TokenKind kind, Token *cur, char *str, int len) {
-    Token *token = calloc(1, sizeof(Token));
-    token->kind = kind;
-    token->str = str;
-    token->len = len;
-    cur->next = token;
-    return token;
-}
-Token *token_clone(const Token *token, const Token *pre) {
-    Token *cur = new_Token(token->kind, (Token *)pre, token->str, token->len);
-    cur->val = token->val;
-    cur->next = NULL;
-    return cur;
-}
-
-Token *_forward(Token **token){
-    Token *tk = *token;
-    *token = (*token)->next;
-    return tk;
-}
-Token *forward() {
-    nowToken = _forward(&tkstream);
-    return nowToken;
-}
 
 
-void unconsume() { tkstream = nowToken; }
+bool nforward(int n) { return _nforward(&tkstream, n); }
+Token *forward() { return _forward(&tkstream); }
+bool nbackward(int n) { return _nbackward(&tkstream, n); }
+Token *backward() { return _backward(&tkstream); }
+
+void unconsume() { backward(); }
 
 //文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
-Token *consume(char *op) {
-    Token *tk;
-    return (tk = _consume(op,&tkstream))?nowToken = tk: tk;
-}
-Token *_consume(char *op,Token **tk){
-    if (!(TOKEN_IS_MATCH((*tk), op, strlen(op)))) {
-        return NULL;
-    }
-    return _forward(tk);
-}
-//　強制的に一つトークンを進める(不用意に使うべきではない)
-Token *consume_hard() { return forward(); }
+Token *consume(char *op) { return _consume(op, &tkstream); }
 
 //次の文字がopかどうかを判定、文字は進めない
-Token *check(char *op) {
-    return _check(op,&tkstream);
-}
-Token *_check(char *op,Token **tk){
-    return TOKEN_IS_MATCH(*tk, op, strlen(op)) ? *tk : NULL;
-}
+Token *check(char *op) { return _check(op, &tkstream); }
 
 Token *check_ahead(char *s) {
-    return TOKEN_IS_MATCH(tkstream->next, s, strlen(s)) ? tkstream->next : NULL;
+    return token_match(tkstream->next, s, strlen(s)) ? tkstream->next : NULL;
 }
 
 //変数ならばそれを返して一つ進める
@@ -78,10 +36,8 @@ Token *consume_ident() {
     return forward();
 }
 
-Token *expect_ident() {
-    return nowToken = _expect_ident(&tkstream);
-}
-Token *_expect_ident(Token **tk){
+Token *expect_ident() { return _expect_ident(&tkstream); }
+Token *_expect_ident(Token **tk) {
     if ((*tk)->kind != TK_IDENT)
         error_at((*tk)->str, "変数もしくは関数ではありません");
     return _forward(tk);
@@ -98,30 +54,14 @@ Token *expect_var() {
     }
     return forward();
 }
-Token *expect_var_not_proceed() {
-    if (tkstream->kind != TK_IDENT || *(tkstream->next->str) == '(') {
-        error_at(tkstream->str, "変数ではありません");
-    }
-    return tkstream;
-}
 
 //文字が期待する文字列に当てはまらないならエラーを吐く
-void expect(char op) {
-    nowToken = _expect(op,&tkstream);
+void _expect(char *op, Token **token) {
+    Token *res;
+    if ((res = _consume(op, token)) == NULL)
+        error_at(token_prev(tkstream)->str, "\"%s\"ではありません", op);
 }
-Token *_expect(char op,Token **tk){
-    if ((*tk)->str[0] != op) {
-        error_at((*tk)->str, "\"%c\"ではありません", op);
-    }
-    return _forward(tk);
-}
-void expect_str(char *s) {
-    if (tkstream->len != strlen(s) ||
-        memcmp(s, tkstream->str, strlen(s)) != 0) {
-        error_at(tkstream->str, "\"%s\"ではありません", s);
-    }
-    forward();
-}
+void expect(char *op) { _expect(op, &tkstream); }
 
 Type *expect_type() {
     if (tkstream->kind != TK_IDENT) {
@@ -249,7 +189,7 @@ Token *tokenize(char *p) {
             continue;
         }
         if (*p == '#') {
-            cur = new_Token(TK_MACROSTART,cur,p,1);
+            cur = new_Token(TK_MACROSTART, cur, p, 1);
             p++;
             macroMode++;
             macroword(p, "define");
@@ -263,7 +203,7 @@ Token *tokenize(char *p) {
             continue;
         }
         macroword(p, "defined");
-        
+
         //制御構文
         keyword(p, "while");
         keyword(p, "else");
@@ -355,5 +295,7 @@ Token *tokenize(char *p) {
     new_Token(TK_EOF, cur, p, 0);
     return head.next;
 }
+
+//////ヘルパ関数
 
 #undef keyward

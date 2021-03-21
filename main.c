@@ -7,17 +7,17 @@
 char buffer[BUFFERSIZE];
 
 void code_generate(Node *code);
-void debug_pp(){
+void debug_pp() {
     const int MAX_WIDTH = 50;
     Token *t = tkstream;
     int count = 0;
-    while(t->kind != TK_EOF){
-        if((count = count + t->len +1)>MAX_WIDTH){
+    while (t->kind != TK_EOF) {
+        if ((count = count + t->len + 1) > MAX_WIDTH) {
             printf("\n");
-            count = t->len +1;
+            count = t->len + 1;
         }
-        string_ncopy(buffer,t->str,t->len);
-        printf("%s ",buffer);
+        string_ncopy(buffer, t->str, t->len);
+        printf("%s ", buffer);
         t = t->next;
     }
 }
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
             fromfile = false;
             continue;
         }
-        if( strncmp(argv[i],"--dpp",5) == 0){
+        if (strncmp(argv[i], "--dpp", 5) == 0) {
             dpp = true;
             continue;
         }
@@ -48,29 +48,29 @@ int main(int argc, char **argv) {
     initialize_parser();
     Initialize_preprocesser();
 
-    nullNode = (Node *)new_NumNode(1);// ここは0以外
+    nullNode = (Node *)new_NumNode(1);  // ここは0以外
     /////////////////////////////////////////////
     if (fromfile) user_input = read_file(filepath);
     filename = fromfile ? path_filename(filepath) : "";
-    tkstream = tokenize(user_input);              // トークン化
-    nowToken = tkstream = preproccess(tkstream);  // プリプロセス
-    if(dpp)debug_pp();
-    Node *code = translation_unit();              // 抽象構文木化
-    code_generate(code);                          // コード生成
+    tkstream = tokenize(user_input);   // トークン化
+    tkstream = preproccess(tkstream);  // プリプロセス
+    if (dpp) debug_pp();
+    Node *code = translation_unit();  // 抽象構文木化
+    code_generate(code);              // コード生成
     return 0;
 }
 
 void code_generate(Node *code) {
     printf(".Intel_syntax noprefix\n");
     // globalな変数を宣言
-    LIST_FOR(nd,global_list) {
+    LIST_FOR(nd, global_list) {
         Var *var = nd->obj.ptr;
         string_ncopy(buffer, var->name, var->len);
         printf(".globl %s \n", buffer);
     }
     // データセクション
     printf("    .data\n");
-    LIST_FOR(nd,constants) {
+    LIST_FOR(nd, constants) {
         CStr *var = nd->obj.ptr;
         string_ncopy(buffer, var->text, var->len);
         printf(".LC%d:\n", var->base.LC_id);

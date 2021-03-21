@@ -2,11 +2,13 @@
 
 #include <stdbool.h>
 
+#include "token.h"
+
 #include "vector.h"
 #include "collections.h"
 
 
-typedef struct Token Token;
+
 
 typedef struct Type Type;
 
@@ -57,7 +59,6 @@ typedef enum StorageMode StorageMode;
 extern char buffer[BUFFERSIZE];
 //////////////////////////// グローバル変数
 extern Token *tkstream;
-extern Token *nowToken;
 extern char *user_input;
 extern char *filename;
 
@@ -77,82 +78,36 @@ extern CC_BidList *constants;
 
 //////////////////////////////////
 
-typedef enum {
-    TK_RESERVED,
-    TK_STRING,
-    TK_IDENT,
-    TK_NUM,
-    TK_EOF,
-    TK_FLOAT,
-    TK_CHAR,
-    TK_ENUM,
-    TK_MACRO,
-    TK_MACROSTART,
-    TK_MACROEND
-} TokenKind;
-
-struct Token {
-    TokenKind kind;
-    Token *next;
-    int val;
-    char *str;
-    int len;
-};
-Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
-Token *token_clone(const Token *token, const Token *pre);
-
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
 void error(char *msg, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_here(bool flag, char *fmt, ...);
-/**
- * @brief  消費したtokenを一つ戻す。
- * @note   もどせるtokenはただ一つだけ
- * @retval None
- */
-void unconsume();
-//文字が期待する文字列にに当てはまるなら、trueを返して一つ進める
+
+/** opのtokenであるか確認。進める*/
 Token *consume(char *op);
-Token *_consume(char *op,Token **tk);
+/** 消費したtokenを一つ戻す。 */
+void unconsume();
+/** opのTokenであるか確認。進めない*/
 Token *check(char *op);
-Token *_check(char *op,Token **tk);
-//一個先を見る
+/** 一つ先がopのTokenであるか確認。進めない*/
 Token *check_ahead(char *s);
-
-Token *consume_hard();
-//変数値があるか確認
-Token *expect_var_not_proceed();
-
-Token *consume_string();
-
-// identを一つ返し一つ進める
+void expect(char* op);
+void _expect(char *op,Token **token);
 Token *consume_ident();
 Token *expect_ident();
 Token *_expect_ident(Token **tk);
 Token *expect_var();
-//変数値があるか確認し、進めない
-Token *expect_var_not_proceed();
-
-//文字が期待する文字列に当てはまらないならエラーを吐く
-void expect(char op);
-Token *_expect(char op,Token **tk);
-void expect_str(char* s);
-
-//型名がなければエラーを吐く
 Type *expect_type();
 Token *consume_Type(Type **tp);
-
-//トークンが数であればそれを出力し、トークンを一つ進める。
 int expect_integer();
 Token *consume_integer();
 Token *consume_float();
 Token *consume_char();
 Token *consume_enum();
-
-#define TOKEN_IS_MATCH(token,string,length) \
-    (token)->len == length && memcmp((token)->str, string, length) == 0
+Token *consume_string();
+/** EOFトークンならtrueを返す*/
 bool at_eof();
 
 Token *tokenize(char *p);

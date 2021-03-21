@@ -10,6 +10,13 @@
 #define ISNULL(a) (a) == NULL
 #define ISNNULL(a) (a) == NULL
 
+
+LVar_Manager *locals;
+CC_BidList *global_list;
+CC_AVLTree *globals;
+CC_AVLTree *externs;
+CC_BidList *constants;
+
 //文法部
 static int structId = 0;
 static int unionId = 0;
@@ -60,14 +67,14 @@ Token *direct_declarator(Type **base) {
     Token *identName = NULL;
     if (consume("(")) {
         ptr = declarator(ptr, &identName);
-        expect(')');
+        expect(")");
     } else
         identName = consume_ident();
     // if (tk == NULL) error_here(false, "宣言すべき識別子が存在しません。");
     if (consume("[")) {
         int size = expect_integer();  // TODO:　定数式ならおっけ
         *base = new_Array(*base, size);
-        expect(']');
+        expect("]");
     }
     if (consume("(")) {
         Params *params = new_Params();
@@ -77,7 +84,7 @@ Token *direct_declarator(Type **base) {
             consume(",");
             if (consume("...")) {
                 params_addVaArg(params);
-                expect(')');
+                expect(")");
                 break;
             }
             // 引数の型名を読む
@@ -147,13 +154,13 @@ void abstract_declarator(Type **base) {
     }
     if (consume("(")) {
         abstract_declarator(&ptr);
-        expect(')');
+        expect(")");
     }
     if (tk == NULL) error_here(false, "ここに識別子は存在してはいけません");
     if (consume("[")) {
         int size = expect_integer();  // TODO:　定数式ならおっけ
         *base = new_Array(*base, size);
-        expect(']');
+        expect("]");
     }
     if (consume("(")) {
         Params *params = new_Params();
@@ -163,7 +170,7 @@ void abstract_declarator(Type **base) {
             consume(",");
             if (consume("...")) {
                 params_addVaArg(params);
-                expect(')');
+                expect(")");
                 break;
             }
             now_type = type_name(false);
@@ -171,7 +178,7 @@ void abstract_declarator(Type **base) {
             params_addParam(params, now_type);
         }
         *base = new_Function(*base, params);
-        expect(')');
+        expect(")");
     }
     Type *res = ptr;
     while (1) {
@@ -311,7 +318,7 @@ Node *local_declaration(bool asExpr) {
     } while (consume(","));
     top->next = NULL;
     set->block = anker.next;
-    if (!asExpr) expect(';');
+    if (!asExpr) expect(";");
     return (Node *)set;
 }
 /**
@@ -438,7 +445,7 @@ Node *global_declaration() {
         top->next = res;
         top = res;
     } while (consume(","));
-    expect(';');
+    expect(";");
 
     top->next = NULL;
     set->block = anker.next;
@@ -520,7 +527,7 @@ Node *condition_expr() {
         int lcount = Lcount++;
         {
             Node *T = expression();
-            expect(':');
+            expect(":");
             Node *F = condition_expr();
             res = new_CondNode(ND_IFEL, nd, T, F);
         }
@@ -632,7 +639,7 @@ Node *cast_expr() {
             unconsume();
             return unary_expr();
         }
-        expect(')');
+        expect(")");
         return (Node *)new_CastNode(tp, cast_expr());
     }
     return unary_expr();
@@ -667,7 +674,7 @@ Node *postfix_expr() {
         // 配列要素への参照
         if (consume("[")) {
             Node *index = expression();  // TODO: 配列
-            expect(']');
+            expect("]");
             // x[a] -> *(x+a)
             return (Node *)new_UnaryNode(
                 ND_DEREF, (Node *)new_BinaryNode(ND_ADD, nd, index));
@@ -702,7 +709,7 @@ Node *postfix_expr() {
 Node *primary_expr() {
     if (consume("(")) {  // ( expr)の場合
         Node *node = expression();
-        expect(')');
+        expect(")");
         return node;
     }
     Token *tk;
@@ -829,18 +836,18 @@ Node *statement() {
 Node *labeled_stmt() {
     if (consume("case")) {
         Node *label = constant_expr();
-        expect(':');
+        expect(":");
         Node *nd = statement();
         return (Node *)new_BinaryNode(ND_CASE, label, nd);
     }
     if (consume("default")) {
-        expect(':');
+        expect(":");
         Node *nd = statement();
         return (Node *)new_UnaryNode(ND_DEFAULT, nd);
     }
     if (check_ahead(":")) {
         Token *tk = expect_ident();
-        expect(':');
+        expect(":");
         // return (Node *)new_LabelNode(ND_LABEL, tk->str, tk->len);
         error("まだlabelを作る機構は未完成だよう");
     }
@@ -849,7 +856,7 @@ Node *labeled_stmt() {
 Node *expression_stmt() {
     if (consume(";")) return new_Node(ND_NULL);
     Node *nd = expression();
-    expect(';');
+    expect(";");
     return nd;
 }
 Node *selection_stmt() {
@@ -858,9 +865,9 @@ Node *selection_stmt() {
         CondNode *res;
         lcount = Lcount++;
         {
-            expect('(');
+            expect("(");
             Node *cond = expression();
-            expect(')');
+            expect(")");
             Node *T = statement();
             if (consume("else")) {
                 Node *F = statement();
@@ -876,9 +883,9 @@ Node *selection_stmt() {
         lcount = Lcount++;
         break_push(lcount);
         {
-            expect('(');
+            expect("(");
             Node *cond = expression();
-            expect(')');
+            expect(")");
             res = new_CondNode(ND_SWITCH, cond, statement(), NULL);
         }
         break_pop();
@@ -895,9 +902,9 @@ Node *iteration_stmt() {
         continue_push(lcount);
         break_push(lcount);
         {
-            expect('(');
+            expect("(");
             Node *cond = expression();
-            expect(')');
+            expect(")");
             Node *T = statement();
             res = new_CondNode(ND_WHILE, cond, T, NULL);
         }
@@ -913,11 +920,11 @@ Node *iteration_stmt() {
         break_push(lcount);
         {
             Node *T = compound_stmt();
-            expect_str("while");
-            expect('(');
+            expect("while");
+            expect("(");
             Node *cond = expression();
-            expect(')');
-            expect(';');
+            expect(")");
+            expect(";");
             res = new_CondNode(ND_DOWHILE, cond, T, NULL);
         }
         continue_pop();
@@ -932,13 +939,13 @@ Node *iteration_stmt() {
         break_push(lcount);
         lvar_manager_PushScope(locals);
         {
-            expect('(');
+            expect("(");
             Node *init = check(";") ? nullNode : declaration_or_expr();
-            expect(';');
+            expect(";");
             Node *cond = check(";") ? nullNode : expression();
-            expect(';');
+            expect(";");
             Node *update = check(")") ? nullNode : expression();
-            expect(')');
+            expect(")");
             Node *block = statement();
             res = new_ForNode(init, cond, update, block);
         }
@@ -955,12 +962,12 @@ Node *jump_stmt() {
     Token *token;
     if (consume("goto")) {  // TODO: gotoを実装
         Token *tk = expect_ident();
-        expect(';');
+        expect(";");
         // return (Node *)new_LabelNode(ND_GOTO, tk->str, tk->len);
         error("gotoは未対応だよう");
     }
     if (token = consume("continue")) {
-        expect(';');
+        expect(";");
         if ((jumpTo = continue_top()) != NOITEM)
             return (Node *)new_LabelNode(ND_CONTINUE, jumpTo);
         else
@@ -968,7 +975,7 @@ Node *jump_stmt() {
                      "continueはfor,while,do-while文の中でだけ使えます");
     }
     if (consume("break")) {
-        expect(';');
+        expect(";");
         if ((jumpTo = break_top()) != NOITEM)
             return (Node *)new_LabelNode(ND_BREAK, jumpTo);
         else
@@ -978,7 +985,7 @@ Node *jump_stmt() {
     if (consume("return")) {
         if (consume(";")) return (Node *)new_UnaryNode(ND_RETURN, NULL);
         Node *nd = expression();
-        expect(';');
+        expect(";");
         return (Node *)new_UnaryNode(ND_RETURN, nd);
     }
     return NULL;
