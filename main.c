@@ -54,9 +54,9 @@ int main(int argc, char **argv) {
     filename = fromfile ? path_filename(filepath) : "";
     tkstream = tokenize(user_input);   // トークン化
     tkstream = preproccess(tkstream);  // プリプロセス
-    if (dpp) debug_pp();
-    Node *code = translation_unit();  // 抽象構文木化
-    code_generate(code);              // コード生成
+    if (dpp) debug_pp();               // プリプロセスの結果デバッグ
+    Node *code = translation_unit();   // 抽象構文木化
+    code_generate(code);               // コード生成
     return 0;
 }
 

@@ -113,7 +113,7 @@ int cc_bidlist_size(const CC_BidList *vec);
 
 
 #define cc_sortedstrlist_new() cc_bidlist_new()
-#define cc_sortedstrlist_delete() cc_bidlist_delete()
+#define cc_sortedstrlist_delete(vec) cc_bidlist_delete(vec)
 void cc_sortedstrlist_add(CC_SortedStrList *list,char *str,int len);
 bool cc_sortedstrlist_find(CC_SortedStrList *list,char *str,int len);
 CC_SortedStrList *cc_sortedstrlist_cross(CC_SortedStrList *l,CC_SortedStrList *r);

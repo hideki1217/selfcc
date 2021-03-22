@@ -1,6 +1,7 @@
+#include "selfcc.h"
+
 #include <stdlib.h>
 
-#include "selfcc.h"
 #include "utility.h"
 
 ////////////////定数

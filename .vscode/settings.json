@@ -22,6 +22,8 @@
         "floatn.h": "c",
         "stdarg.h": "c",
         "vector.h": "c",
-        "token.h": "c"
+        "token.h": "c",
+        "params.h": "c",
+        "type.h": "c"
     }
 }

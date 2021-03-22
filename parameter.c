@@ -1,6 +1,5 @@
-#include <stdlib.h>
-
 #include "selfcc.h"
+#include <stdlib.h>
 
 /*
 関数呼び出しの引数チェック

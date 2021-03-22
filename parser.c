@@ -1,6 +1,7 @@
+#include "selfcc.h"
+
 #include <stdlib.h>
 
-#include "selfcc.h"
 
 #define ISCONST 1
 #define ISVOLATILE 2

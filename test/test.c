@@ -608,6 +608,15 @@ int test123(){
     return aho;
 }
 #undef aho
+#define ahoaho "test124:"
+#define ahoho "clear\n"
+int test124(){
+    char *x= "***"ahoaho ahoho;
+    print(x);
+    return 3;
+}
+#undef ahoaho
+#undef ahoho
 
 extern int assert(int,int);
 ////////////////////////////////^テスト部
@@ -734,6 +743,7 @@ int Test(){
     assert(3,test121());
     assert(15,test122());
     assert(15,test123());
+    assert(3,test124());
 }
 //////////////////////////////////////// 
 int count;

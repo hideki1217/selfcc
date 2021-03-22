@@ -36,6 +36,7 @@ struct Token {
     int val;
     char *str;
     int len;
+    HideSet *hs;
 };
 Token *new_Token(TokenKind kind, Token *cur, char *str, int len);
 Token *token_clone(const Token *token, const Token *pre);
@@ -47,3 +48,5 @@ Token *_backward(Token **token);
 
 Token *_consume(char *op,Token **tk);
 Token *_check(char *op,Token **tk);
+
+HideSet *token_geths(Token *token);

@@ -1,3 +1,5 @@
+#include "preprocesser.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,18 +8,10 @@
 #include "selfcc.h"
 #include "utility.h"
 
-
 static CC_AVLTree *defined_macros;
 
 void Initialize_preprocesser() { defined_macros = cc_avltree_new(); }
 
-typedef struct Macro Macro;
-struct Macro {
-    char *key;     // キー
-    int keylen;    // キーの長さ
-    Token *begin;  // マクロの最初のToken
-    Token *end;    // マクロの最後のTokenの直後
-};
 /**
  * @brief  終端がNULLのTokenSequance itemをheadとtailの間に挿入
  * @note
@@ -46,7 +40,7 @@ void token_insert(Token *item, Token *head, Token *tail) {
  */
 void macro_SetCloneToken(Macro *macro, Token *head, Token *tail) {
     Token *cur = macro->begin;
-    Token *res = NULL,anker;
+    Token *res = NULL, anker;
     if (macro->begin->kind != TK_MACROEND) {
         res = &anker;
         while (cur != macro->end) {
@@ -56,7 +50,7 @@ void macro_SetCloneToken(Macro *macro, Token *head, Token *tail) {
     }
     res->next = NULL;
 
-    token_insert(anker.next,head,tail);
+    token_insert(anker.next, head, tail);
 }
 Macro *macro_Search(char *key, int len) {
     return cc_avltree_Search(defined_macros, key, len);
@@ -69,8 +63,6 @@ void macro_Delete(char *key, int len) {
     (token)->len == strlen(string) && \
         memcmp(string, (token)->str, (token)->len) == 0
 
-Token *expand(Token *tk) {}
-
 static void regist_macro(char *key, int keylen, Token *begin, Token *end) {
     Macro *macro = calloc(1, sizeof(Macro));
     macro->key = key;
@@ -79,7 +71,6 @@ static void regist_macro(char *key, int keylen, Token *begin, Token *end) {
     macro->end = end;
     cc_avltree_Add(defined_macros, macro->key, macro->keylen, macro);
 }
-
 
 /**
  * @brief  TK_MACROENDのノードを返す。
@@ -93,18 +84,95 @@ Token *skip2MacroEnd(Token *begin) {
         ;
     return top;
 }
-#define INCREMENT_ROOT_WITH_SAVE() last_nonemacro_token = root, root = root->next
+#define INCREMENT_ROOT_WITH_SAVE() noneMacro = root, root = root->next
 #define INCREMENT_ROOT() root = root->next
 #define CONNECT_PRE_2_ROOT() \
-    INCREMENT_ROOT();        \
-    last_nonemacro_token->next = root;  \
-    root = last_nonemacro_token;
+    INCREMENT_ROOT(), noneMacro->next = root, root = noneMacro
 Token *preproccess(Token *root) {
-    Token anker, *last_nonemacro_token = &anker;
+    root = expand_include(root);
+    root = expand(root);
+    free_Hideset(root);
+    root = combine_strings(root);
+    return root;
+}
+
+Token *expand_include(Token *root) {
+    return root;  // TODO: 未完成
+}
+/** TK_STRINGを連結 beginをTK_STRING出ないとこまで進める*/
+Token *combine(Token **begin) {
+    Token *end = *begin;
+
+    // 長さを計算
+    int str_length = 0;
+    while (end->kind == TK_STRING) {
+        str_length += end->len;
+        end = token_next(end);
+    }
+
+    // TK_STRING系列が一つだけならそのまま返す
+    if (token_next(*begin) == end) {
+        Token *tmp = *begin;
+        *begin = end;
+        return tmp;
+    }
+
+    // 文字列を連結してTK_STRING系列の先頭にセット
+    char *combined = calloc(str_length + 1, sizeof(char));
+    for (Token *x = *begin; x != end; x = token_next(x)) {
+        strncat(combined, x->str, x->len);
+    }
+    (*begin)->str = combined;
+    (*begin)->len = str_length;
+
+    //不要なトークンを開放
+    Token *frees = token_next(*begin);
+    while (frees != end) {
+        Token *tmp = frees;
+        frees = token_next(frees);
+        free(tmp);
+    }
+    // TK_STRINGじゃないとこまで進める
+    Token *tmp = *begin;
+    *begin = end;
+    return tmp;
+}
+Token *combine_strings(Token *root) {
+    Token anker, *noneString = &anker;
+    anker.next = root;
+    while (root->kind != TK_EOF) {
+        if (root->kind == TK_STRING) {
+            noneString = token_prev(root);
+            Token *combined = combine(&root);
+
+            token_join(noneString, combined);
+            token_join(combined, root);
+        }
+        root = token_next(root);
+    }
+    return anker.next;
+}
+
+void free_Hideset(Token *root) {
+    while (root->kind != TK_EOF) {
+        if (root->hs != NULL) {
+            cc_sortedstrlist_delete(root->hs);
+            root->hs = NULL;
+        }
+        root = token_next(root);
+    }
+    if (root->hs != NULL) {
+        cc_sortedstrlist_delete(root->hs);
+        root->hs = NULL;
+    }
+}
+
+Token *expand(Token *root) {
+    Token anker, *noneMacro = &anker;
     anker.next = root;
     while (root->kind != TK_EOF) {
         switch (root->kind) {
-            case TK_MACROSTART: {
+            case TK_MACROSTART: {  // マクロ定義部
                 INCREMENT_ROOT();
                 if (root->kind == TK_MACROEND) {
                     CONNECT_PRE_2_ROOT();
@@ -147,14 +215,16 @@ Token *preproccess(Token *root) {
                 if (_consume("ifndef", &root)) {
                 }
             }
-            case TK_IDENT: {
+            case TK_IDENT: {  // マクロ展開部
                 Macro *macro =
                     cc_avltree_Search(defined_macros, root->str, root->len);
-                if (macro == NULL) {
+                if (macro == NULL) break;
+                if (cc_sortedstrlist_find(token_geths(root), root->str,
+                                          root->len))
                     break;
-                }
-                macro_SetCloneToken(macro, last_nonemacro_token, root->next);
-                root = last_nonemacro_token;
+
+                macro_SetCloneToken(macro, noneMacro, root->next);
+                root = noneMacro;
                 INCREMENT_ROOT_WITH_SAVE();
                 continue;
             }
@@ -163,6 +233,14 @@ Token *preproccess(Token *root) {
     }
     return anker.next;
 }
+Token *subst(Token *is, Token *fp, Token *ap, HideSet *hs, Token *os);
+Token *glue(Token *ls, Token *rs);
+Token *hsadd(HideSet *hs, Token *ts);
+Token *ts(Token *tk);
+Token *fp(Token *tk);
+Token *select(int i, Token *ts);
+Token *stringize(Token *ts);
+
 #undef INCREMENT_ROOT
 #undef INCREMENT_ROOT_WITH_SAVE
 
