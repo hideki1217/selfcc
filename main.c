@@ -7,17 +7,34 @@
 char buffer[BUFFERSIZE];
 
 void code_generate(Node *code);
-void debug_pp() {
+#define print_tab(n)\
+    times(n){\
+        fprintf(stderr,"\t");\
+    }\
+
+void debug_pp(TkSequence *ts) {
     const int MAX_WIDTH = 50;
-    Token *t = tkstream;
-    int count = 0;
-    while (t->kind != TK_EOF) {
-        if ((count = count + t->len + 1) > MAX_WIDTH) {
-            printf("\n");
-            count = t->len + 1;
-        }
+    Token *t = ts->begin;
+    int indent = 0;
+    while (t->kind != TK_END) {
         string_ncopy(buffer, t->str, t->len);
-        printf("%s ", buffer);
+        if(t->kind == TK_STRING){
+            fprintf(stderr,"\"%s\" ",buffer);
+        }else if(token_match(t,"{",1) ){
+            fprintf(stderr,"%s \n", buffer);
+            indent++;
+            print_tab(indent);
+        }    
+        else if( token_match(t,"}",1)){
+            fprintf(stderr,"%s \n", buffer);
+            indent--;
+            print_tab(indent);
+        } else if( token_match(t,";",1)){
+            fprintf(stderr,"%s \n", buffer);
+            print_tab(indent);
+        }else{
+            fprintf(stderr,"%s ", buffer);
+        }
         t = t->next;
     }
 }
@@ -49,14 +66,17 @@ int main(int argc, char **argv) {
     Initialize_preprocesser();
 
     nullNode = (Node *)new_NumNode(1);  // ここは0以外
-    /////////////////////////////////////////////
+    ////////////////////////////////////////////
+    TkSequence *tokens;
+
     if (fromfile) user_input = read_file(filepath);
     filename = fromfile ? path_filename(filepath) : "";
-    tkstream = tokenize(user_input);   // トークン化
-    tkstream = preproccess(tkstream);  // プリプロセス
-    if (dpp) debug_pp();               // プリプロセスの結果デバッグ
-    Node *code = translation_unit();   // 抽象構文木化
-    code_generate(code);               // コード生成
+    tokens = tokenize(user_input);    // トークン化
+    tokens = preproccess(tokens);     // プリプロセス
+    if (dpp) debug_pp(tokens);              // プリプロセスの結果デバッグ
+    tkstream = tokens->begin;         // streamにセット
+    Node *code = translation_unit();  // 抽象構文木化
+    code_generate(code);              // コード生成
     return 0;
 }
 

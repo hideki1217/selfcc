@@ -12,7 +12,6 @@ Token *tkstream;
 char *user_input;
 char *filename;
 
-
 bool nforward(int n) { return _nforward(&tkstream, n); }
 Token *forward() { return _forward(&tkstream); }
 bool nbackward(int n) { return _nbackward(&tkstream, n); }
@@ -24,28 +23,19 @@ void unconsume() { backward(); }
 Token *consume(char *op) { return _consume(op, &tkstream); }
 
 //次の文字がopかどうかを判定、文字は進めない
-Token *check(char *op) { return _check(op, &tkstream); }
+Token *check(char *op) { return _check(op, tkstream); }
 
 Token *check_ahead(char *s) {
     return token_match(tkstream->next, s, strlen(s)) ? tkstream->next : NULL;
 }
 
 //変数ならばそれを返して一つ進める
-Token *consume_ident() {
-    if (tkstream->kind != TK_IDENT) return NULL;
-    return forward();
-}
 
 Token *expect_ident() { return _expect_ident(&tkstream); }
 Token *_expect_ident(Token **tk) {
     if ((*tk)->kind != TK_IDENT)
         error_at((*tk)->str, "変数もしくは関数ではありません");
     return _forward(tk);
-}
-
-Token *consume_string() {
-    if (tkstream->kind != TK_STRING) return NULL;
-    return forward();
 }
 
 Token *expect_var() {
@@ -59,7 +49,7 @@ Token *expect_var() {
 void _expect(char *op, Token **token) {
     Token *res;
     if ((res = _consume(op, token)) == NULL)
-        error_at(token_prev(tkstream)->str, "\"%s\"ではありません", op);
+        error_at((*token)->str, "\"%s\"ではありません", op);
 }
 void expect(char *op) { _expect(op, &tkstream); }
 
@@ -98,24 +88,21 @@ int expect_integer() {
     forward();
     return val;
 }
-Token *consume_integer() {
-    if (tkstream->kind != TK_NUM) return NULL;
-    return forward();
-}
-Token *consume_float() {
-    if (tkstream->kind != TK_FLOAT) return NULL;
-    return forward();
-}
-Token *consume_char() {
-    if (tkstream->kind != TK_CHAR) return NULL;
-    return forward();
-}
-Token *consume_enum() {
-    if (tkstream->kind != TK_ENUM) return NULL;
-    return forward();
-}
+Token *consume_ident() { return _consume_ident(&tkstream); }
+Token *consume_integer() { return _consume_integer(&tkstream); }
+Token *consume_float() { return _consume_float(&tkstream); }
+Token *consume_char() { return _consume_char(&tkstream); }
+Token *consume_enum() { return _consume_enum(&tkstream); }
+Token *consume_string() { return _consume_string(&tkstream); }
 
-bool at_eof() { return tkstream->kind == TK_EOF; }
+Token *check_ident() { return _check_ident(tkstream); }
+Token *check_integer() { return _check_integer(tkstream); }
+Token *check_float() { return _check_float(tkstream); }
+Token *check_char() { return _check_char(tkstream); }
+Token *check_enum() { return _check_enum(tkstream); }
+Token *check_string() { return _check_string(tkstream); }
+
+bool at_eof() { return tkstream->kind == TK_END; }
 
 bool match(const char *p, const char *word) {
     return memcmp(p, word, strlen(word)) == 0;
@@ -135,7 +122,14 @@ bool match(const char *p, const char *word) {
         p += n;                               \
         continue;                             \
     }
-Token *tokenize(char *p) {
+#define macrokey(p, s) \
+    n = strlen(s);\
+    if (match(p, s)) {     \
+        cur = new_Token(TK_MACRO, cur, p, n); \
+        p += n;                               \
+        continue;                             \
+    }
+TkSequence *tokenize(char *p) {
     int n;
     int macroMode = 0;
 
@@ -188,6 +182,11 @@ Token *tokenize(char *p) {
             p++;  // 最後の「"」を消費する
             continue;
         }
+        if (macroMode) {
+            macroword(p, "defined");
+            macrokey(p, "##");
+            macrokey(p, "#");
+        }
         if (*p == '#') {
             cur = new_Token(TK_MACROSTART, cur, p, 1);
             p++;
@@ -201,9 +200,7 @@ Token *tokenize(char *p) {
             macroword(p, "else");
             macroword(p, "elif");
             continue;
-        }
-        macroword(p, "defined");
-
+        }        
         //制御構文
         keyword(p, "while");
         keyword(p, "else");
@@ -292,8 +289,8 @@ Token *tokenize(char *p) {
         error_at(p, "トークナイズできません");
     }
 
-    new_Token(TK_EOF, cur, p, 0);
-    return head.next;
+    cur = new_Token(TK_END, cur, p, 0);
+    return create_TkSq(head.next, cur);
 }
 
 //////ヘルパ関数

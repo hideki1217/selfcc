@@ -9,6 +9,18 @@ extern int fact(int x);
 extern void alloc4(int **p ,int a,int b,int c,int d);
 extern void doexit(int x);
 
+#define TEST_BEGIN()\
+    int ans,act;
+#define TEST(answer,test) \
+    ans = answer;\
+    act = test();\
+    if(ans == act)print("test:%-20s is pass! :: answer: %-5d, actual: %-5d\n",#test,ans,act);\
+    else{ \
+        print("test:%-10s is failed... :: answer: %-5d, actual: %-5d\n",#test,ans,act);\
+        doexit(1);\
+    }
+#define TEST_END() 
+
 int test1(){0;}
 int test2(){42;}
 int test3(){4+3-5;}
@@ -618,147 +630,179 @@ int test124(){
 #undef ahoaho
 #undef ahoho
 
+#define aho() "test125:"
+#define ahoaho(test) "clear\n"
+int test125(){
+    char *x= "***"aho() ahoaho(aha);
+    print(x);
+    return 3;
+}
+#undef aho
+#undef ahoaho
+
+#define aho() "test126:"
+#define ahoaho(test) test
+int test126(){
+    char *x= "***"aho() ahoaho("clear\n");
+    print(x);
+    return 3;
+}
+#undef aho
+#undef ahoaho
+
+#define debug(value) print(#value"=%d\n",value)
+int test127(){
+    int x = 6;
+    debug(x);
+    return x;
+}
+#undef debug
+#define AHO(a,b) a##b
+#define AHOAHO 4
+int test128(){
+    return AHO(AHO,AHO);
+}
+#undef AHO
+#undef AHOAHO
+
+
+
+
 extern int assert(int,int);
 ////////////////////////////////^テスト部
 int Test(){
-    assert(0,test1());
-    assert(42,test2());
-    assert(2,test3());
-    assert(3,test4());
-    assert(2,test5());
-    assert(3,test6());
-    assert(47,test7());
-    assert(15,test8());
-    assert(4,test9());
-    assert(2,test10());
-    assert(2,test11());
-    assert(1,test12());
-    assert(1,test13());
-    assert(0,test14());
-    assert(1,test15());
-    assert(1,test16());
-    assert(15,test17());
-    assert(1,test18());
-    assert(0,test19());
-    assert(0,test20());
-    assert(1,test21());
-    assert(10,test22());
-    assert(7,test23());
-    assert(1,test24());
-    assert(12,test25());
-    assert(5,test26());
-    assert(18,test27());
-    assert(3,test28());
-    assert(48,test29());
-    assert(4,test30());
-    assert(1,test31());
-    assert(6,test32());
-    assert(6,test33());
-    assert(18,test34());
-    assert(50,test35());
-    assert(5,test36());
-    assert(3,test37());
-    assert(3,test38());
-    assert(36,test39());
-    assert(6,test40());
-    assert(5,test41());
-    assert(8,test42());
-    assert(10,test43());
-    assert(3,test44());
-    assert(3,test45());
-    assert(5,test46());
-    assert(3,test47());
-    assert(3,test48());
-    assert(8,test49());
-    assert(13,test50());
-    assert(6,test51());
-    assert(7,test52());
-    assert(3,test53());
-    assert(2,test54());
-    assert(144,test55());
-    assert(6,test56());
-    assert(5,test57());
-    assert(24,test58());
-    assert(15,test59());
-    assert(6,test60());
-    assert(6,test61());
-    assert(5,test62());
-    assert(3,test63());
-    assert(5,test64());
-    assert(3,test65());
-    assert(3,test66());
-    assert(7,test67());
-    assert(1,test68());
-    assert(4,test69());
-    assert(8,test70());
-    assert(4,test71());
-    assert(8,test72());
-    assert(4,test73());
-    assert(8,test74());
-    assert(5,test75());
-    assert(3,test76());
-    assert(5,test77());
-    assert(10,test78());
-    assert(3,test79());
-    assert(5,test80());
-    assert(10,test81());
-    assert(3,test82());
-    assert(10,test83());
-    assert(5,test84());
-    assert(5,test85());
-    assert(3,test86());
-    assert(4,test87());
-    assert(97,test88());
-    assert(7,test89());
-    assert(6,test90());
-    assert(6,test91());
-    assert(3,test92());
-    assert(10,test93());
-    assert(3,test94());
-    assert(3,test95());
-    assert(8,test96());
-    assert(2,test97());
-    assert(6,test98());
-    assert(0,test99());
-    assert(0,test100());
-    assert(1,test101());
-    assert(8,test102());
-    assert(2,test103());
-    assert(6,test104());
-    assert(0,test105());
-    assert(0,test106());
-    assert(1,test107());
-    assert(10,test108());
-    assert(9,test109());
-    assert(9,test110());
-    assert(9,test111());
-    assert(9,test112());
-    assert(17,test113());
-    assert(1,test114());
-    assert(0,test115());
-    assert(4,test116());
-    assert(5,test117());
-    assert(7,test118());
-    assert(7,test119());
-    assert(3,test121());
-    assert(15,test122());
-    assert(15,test123());
-    assert(3,test124());
-}
-//////////////////////////////////////// 
-int count;
-int assert(int answer,int res){
-    if(answer == res){
-        print("test%d is pass :: expect: %d, actual: %d\n",count,answer,res);
-    }else{
-        print("test%d is failed :: expect: %d, actual: %d\n",count,answer,res);
-        doexit(1);
-    }
-    count=count+1;
-}
+    TEST_BEGIN()
+    TEST(0,test1)
+    TEST(42,test2)
+    TEST(2,test3)
+    TEST(3,test4)
+    TEST(2,test5)
+    TEST(3,test6)
+    TEST(47,test7)
+    TEST(15,test8)
+    TEST(4,test9)
+    TEST(2,test10)
+    TEST(2,test11)
+    TEST(1,test12)
+    TEST(1,test13)
+    TEST(0,test14)
+    TEST(1,test15)
+    TEST(1,test16)
+    TEST(15,test17)
+    TEST(1,test18)
+    TEST(0,test19)
+    TEST(0,test20)
+    TEST(1,test21)
+    TEST(10,test22)
+    TEST(7,test23)
+    TEST(1,test24)
+    TEST(12,test25)
+    TEST(5,test26)
+    TEST(18,test27)
+    TEST(3,test28)
+    TEST(48,test29)
+    TEST(4,test30)
+    TEST(1,test31)
+    TEST(6,test32)
+    TEST(6,test33)
+    TEST(18,test34)
+    TEST(50,test35)
+    TEST(5,test36)
+    TEST(3,test37)
+    TEST(3,test38)
+    TEST(36,test39)
+    TEST(6,test40)
+    TEST(5,test41)
+    TEST(8,test42)
+    TEST(10,test43)
+    TEST(3,test44)
+    TEST(3,test45)
+    TEST(5,test46)
+    TEST(3,test47)
+    TEST(3,test48)
+    TEST(8,test49)
+    TEST(13,test50)
+    TEST(6,test51)
+    TEST(7,test52)
+    TEST(3,test53)
+    TEST(2,test54)
+    TEST(144,test55)
+    TEST(6,test56)
+    TEST(5,test57)
+    TEST(24,test58)
+    TEST(15,test59)
+    TEST(6,test60)
+    TEST(6,test61)
+    TEST(5,test62)
+    TEST(3,test63)
+    TEST(5,test64)
+    TEST(3,test65)
+    TEST(3,test66)
+    TEST(7,test67)
+    TEST(1,test68)
+    TEST(4,test69)
+    TEST(8,test70)
+    TEST(4,test71)
+    TEST(8,test72)
+    TEST(4,test73)
+    TEST(8,test74)
+    TEST(5,test75)
+    TEST(3,test76)
+    TEST(5,test77)
+    TEST(10,test78)
+    TEST(3,test79)
+    TEST(5,test80)
+    TEST(10,test81)
+    TEST(3,test82)
+    TEST(10,test83)
+    TEST(5,test84)
+    TEST(5,test85)
+    TEST(3,test86)
+    TEST(4,test87)
+    TEST(97,test88)
+    TEST(7,test89)
+    TEST(6,test90)
+    TEST(6,test91)
+    TEST(3,test92)
+    TEST(10,test93)
+    TEST(3,test94)
+    TEST(3,test95)
+    TEST(8,test96)
+    TEST(2,test97)
+    TEST(6,test98)
+    TEST(0,test99)
+    TEST(0,test100)
+    TEST(1,test101)
+    TEST(8,test102)
+    TEST(2,test103)
+    TEST(6,test104)
+    TEST(0,test105)
+    TEST(0,test106)
+    TEST(1,test107)
+    TEST(10,test108)
+    TEST(9,test109)
+    TEST(9,test110)
+    TEST(9,test111)
+    TEST(9,test112)
+    TEST(17,test113)
+    TEST(1,test114)
+    TEST(0,test115)
+    TEST(4,test116)
+    TEST(5,test117)
+    TEST(7,test118)
+    TEST(7,test119)
+    TEST(3,test121)
+    TEST(15,test122)
+    TEST(15,test123)
+    TEST(3,test124)
+    TEST(3,test125)
+    TEST(3,test126)
+    TEST(6,test127)
 
+    TEST_END()
+}
+////////////////////////////////////////
 int main(){
-    count=1;
     Test();
     print("OK\n");
     return 0;

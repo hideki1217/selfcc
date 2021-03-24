@@ -1,40 +1,25 @@
 #pragma once
 
 #include "token.h"
+#include "vector.h"
 
 void Initialize_preprocesser();
 
+typedef enum { MC_OBJECT, MC_FUNC } MacroKind;
+
 typedef struct Macro Macro;
 struct Macro {
-    char *key;     // キー
-    int keylen;    // キーの長さ
-    Token *begin;  // マクロの最初のToken
-    Token *end;    // マクロの最後のTokenの直後
+    MacroKind kind;
+    char *key;        // キー
+    int keylen;       // キーの長さ
+    TkSequence *ts;     // マクロの中身
+    CC_Vector *params;  // 引数名リスト
 };
-/**
- * @brief  終端がNULLのTokenSequance itemをheadとtailの間に挿入
- * @note
- * @param  *item: 挿入したいTS
- * @param  *head: 挿入したい場所の左端
- * @param  *tail: 挿入したい場所の右端
- * @retval None
- */
-void token_insert(Token *item, Token *head, Token *tail);
-/**
- * @brief  マクロに登録されたTSをheadとtailの間に挿入
- * @note
- * @param  *macro: 対象のマクロ
- * @param  *head: TSの挿入したいところの先頭
- * @param  *tail: TSの挿入したいところの末尾
- * @retval None
- */
-void macro_SetCloneToken(Macro *macro, Token *head, Token *tail);
+Macro *new_Macro();
+void set_Macro(Macro *macro, char *key, int keylen, Token *begin, Token *end,
+               CC_Vector *params);
 Macro *macro_Search(char *key, int len);
 void macro_Delete(char *key, int len);
-
-
-static void regist_macro(char *key, int keylen, Token *begin, Token *end);
-
 
 /**
  * @brief  TK_MACROENDのノードを返す。
@@ -43,18 +28,16 @@ static void regist_macro(char *key, int keylen, Token *begin, Token *end);
  * @retval TK_MACROENDのノードへのpointer
  */
 Token *skip2MacroEnd(Token *begin);
-Token *preproccess(Token *begin);
+TkSequence *preproccess(TkSequence *ts);
 
-Token *expand_include(Token *root);
-Token *combine_strings(Token *root);
-void free_Hideset(Token *root);
+TkSequence *expand_include(TkSequence *ts);
+TkSequence *combine_strings(TkSequence *ts);
+void free_Hideset(TkSequence *ts);
 
-Token *expand(Token *start);
-Token *subst(Token *is,Token *fp, Token *ap, HideSet *hs, Token *os);
-Token *glue(Token *ls,Token *rs);
-Token *hsadd(HideSet *hs,Token *ts);
+TkSequence *expand(TkSequence *ts);
+TkSequence *subst(TkSequence *is, CC_Vector *fp, CC_Vector *ap, HideSet *hs);
+Token *glue(Token *os_end, Token *rt);
 Token *ts(Token *tk);
 Token *fp(Token *tk);
-Token *select(int i,Token *ts);
-Token *stringize(Token *ts);
-
+#define select(i,vec_ts) ((vec_ts)->_)[i].ptr
+Token *stringize(const TkSequence *ts);

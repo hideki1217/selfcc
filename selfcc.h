@@ -2,13 +2,10 @@
 
 #include <stdbool.h>
 
-#include "token.h"
-
-#include "vector.h"
 #include "collections.h"
-
-
-
+#include "preprocesser.h"
+#include "token.h"
+#include "vector.h"
 
 typedef struct Type Type;
 
@@ -51,7 +48,6 @@ typedef int flag_n;
 
 typedef enum StorageMode StorageMode;
 
-
 #define BUFFERSIZE 256
 #define ARG_MAX 30
 
@@ -78,7 +74,6 @@ extern CC_BidList *constants;
 
 //////////////////////////////////
 
-
 // エラーを報告するための関数
 // printfと同じ引数を取る
 void error(char *msg, ...);
@@ -93,8 +88,8 @@ void unconsume();
 Token *check(char *op);
 /** 一つ先がopのTokenであるか確認。進めない*/
 Token *check_ahead(char *s);
-void expect(char* op);
-void _expect(char *op,Token **token);
+void expect(char *op);
+void _expect(char *op, Token **token);
 Token *consume_ident();
 Token *expect_ident();
 Token *_expect_ident(Token **tk);
@@ -107,13 +102,16 @@ Token *consume_float();
 Token *consume_char();
 Token *consume_enum();
 Token *consume_string();
+Token *check_ident();
+Token *check_integer();
+Token *check_float();
+Token *check_char();
+Token *check_enum();
+Token *check_string();
 /** EOFトークンならtrueを返す*/
 bool at_eof();
 
-Token *tokenize(char *p);
-
-void Initialize_preprocesser();
-Token *preproccess(Token *root);
+TkSequence *tokenize(char *p);
 
 typedef enum {
     ND_ADD,     //"+"
@@ -138,20 +136,20 @@ typedef enum {
     ND_LVAR,    //ローカル変数
     ND_GVAR,    //グローバル変数
     ND_RETURN,
-    ND_GOTO, // TODO
-    ND_BREAK, // TODO
-    ND_CONTINUE, // TODO
-    ND_LABEL, // TODO "** : ..."ってやつ
-    ND_CASE, // case ** : ...
-    ND_DEFAULT, // defalut: ...
+    ND_GOTO,      // TODO
+    ND_BREAK,     // TODO
+    ND_CONTINUE,  // TODO
+    ND_LABEL,     // TODO "** : ..."ってやつ
+    ND_CASE,      // case ** : ...
+    ND_DEFAULT,   // defalut: ...
     ND_IF,
     ND_IFEL,
     ND_WHILE,
-    ND_DOWHILE, // TODO
+    ND_DOWHILE,  // TODO
     ND_FOR,
-    ND_SWITCH, // TODO
-    ND_BLOCK,  //ブロック
-    ND_CAST,   // TODO
+    ND_SWITCH,  // TODO
+    ND_BLOCK,   //ブロック
+    ND_CAST,    // TODO
     ND_CALL,
     ND_ROOTINE,
     ND_ADDR,    //'&'
@@ -177,7 +175,7 @@ typedef enum {
     ND_FLOAT,  // TODO
     ND_CHAR,   // TODO
     ND_STR,
-    ND_NULL // 何もしないノード
+    ND_NULL  // 何もしないノード
 } NodeKind;
 
 NodeKind pairOf(NodeKind kind);
@@ -268,7 +266,7 @@ struct CallNode {
     Node *arg;
 };
 CallNode *new_CallNode(Node *func);
-void set_CallNode(CallNode *nd,Node *func);
+void set_CallNode(CallNode *nd, Node *func);
 struct VarNode {
     Node base;
     Var *var;  // for ND_VAR
@@ -282,14 +280,14 @@ struct RootineNode {
     Var *func;
     int total_offset;
 };
-RootineNode *new_RootineNode(Var *var,VarNode *args,Node *block);
-void set_RootineNode(RootineNode *nd,Var *var,VarNode *args,Node *block);
+RootineNode *new_RootineNode(Var *var, VarNode *args, Node *block);
+void set_RootineNode(RootineNode *nd, Var *var, VarNode *args, Node *block);
 struct BlockNode {
     Node base;
     Node *block;
 };
 BlockNode *new_BlockNode(NodeKind kind);
-void set_BlockNode(BlockNode *nd,NodeKind kind);
+void set_BlockNode(BlockNode *nd, NodeKind kind);
 struct VarInitNode {
     Node base;
     Var *var;
@@ -297,12 +295,12 @@ struct VarInitNode {
 };
 VarInitNode *new_VarInitNode(Var *var, Node *value);
 void set_VarInitNode(VarInitNode *nd, Var *var, Node *value);
-struct LabelNode{
+struct LabelNode {
     Node base;
     int jumpTo;
 };
-LabelNode *new_LabelNode(NodeKind kind,int index);
-void set_LabelNode(LabelNode* node,NodeKind kind,int index);
+LabelNode *new_LabelNode(NodeKind kind, int index);
+void set_LabelNode(LabelNode *node, NodeKind kind, int index);
 
 //文法部
 void initialize_parser();
@@ -311,7 +309,7 @@ Node *translation_unit();
 Node *external_declaration();
 /**
  * @brief  グローバルでの宣言
- * @note   
+ * @note
  * @retval 宣言によるNode
  */
 Node *global_declaration();
@@ -330,26 +328,25 @@ StorageMode storage_specifier();
 Type *type_specifier();
 /**
  * @brief ベースの型を期待する構文
- * @note   
+ * @note
  * @param  **tp: ベースの型
  * @param  errorExpected: エラーを期待するか
  * @retval false=>tokenを消費していない
  */
-bool specifier_qualifier(Type **tp,bool errorExpected);
+bool specifier_qualifier(Type **tp, bool errorExpected);
 
 /**
  * @brief  抽象な型名を読む
- * @note   
+ * @note
  * @param  isCheck: マッチしなければNULLを返すか？
  * @retval 読んだ型(もし何もなければvoid)
  */
 Type *type_name(bool isCheck);
 /*識別子を含まない宣言*/
-void abstract_declarator(Type **base);// 保留
-Type *declarator(Type *base,Token **tk);
+void abstract_declarator(Type **base);  // 保留
+Type *declarator(Type *base, Token **tk);
 /*識別子を含む宣言。識別子を返す。なければNULL*/
 Token *direct_declarator(Type **base);
-
 
 /*RET: 2進数表示でabとすると
 a=1 => const
@@ -357,7 +354,7 @@ b=1 => volatile */
 flag_n type_qualifier();
 /**
  * @brief  ローカルでの宣言
- * @note   
+ * @note
  * @param asExpr: 式と並列に扱うか?
  * @retval 宣言によるNode
  */
@@ -394,13 +391,13 @@ Node *jump_stmt();
 
 /**
  * @brief  関数定義になりえるか確認
- * @note   
+ * @note
  * @param  *tp: 対象の型
  * @retval 関数定義になれればtrue
  */
 bool CanbeFuncDef(Type *tp);
 
-enum StorageMode{
+enum StorageMode {
     SM_NONE,
     SM_AUTO,
     SM_REGISTER,
@@ -409,10 +406,9 @@ enum StorageMode{
     SM_TYPEDEF
 };
 
-
 /**
  * @brief  型を割り当てる
- * @note   
+ * @note
  * @param  *node: 対象のnode
  * @retval 割り当てられた型
  */
@@ -420,7 +416,7 @@ Type *type_assign(Node *node);
 
 /**
  * @brief  nodeから左辺値をraxに残すコードを生成する
- * @note   
+ * @note
  * @param  *node: 対象のnode
  * @param  push: 最後にpushしておいてほしいか
  * @retval None
@@ -428,7 +424,7 @@ Type *type_assign(Node *node);
 void gen_lval(Node *node, bool push);
 /**
  * @brief  nodeからコードを生成する
- * @note   
+ * @note
  * @param  *node: 対象のnode
  * @param  push: 最後にpushしてほしいか否か
  * @retval None
@@ -465,7 +461,7 @@ struct Type {
 };
 /**
  * @brief  type_treeに新たな型名を登録
- * @note   
+ * @note
  * @param  *tp: 登録する型(name,lenを埋めておく必要あり)
  * @retval None
  */
@@ -473,10 +469,10 @@ void regist_type(Type *tp);
 
 Type *new_PrimType(TypeKind kind, char *name, int len, int size);
 Type *new_Pointer(Type *base);
-Type *new_Function(Type *base,Params *arg);
+Type *new_Function(Type *base, Params *arg);
 Type *new_Array(Type *base, int length);
 Type *new_Struct(Type *bases);
-Type *new_Alias(Type *base,char *name,int len);
+Type *new_Alias(Type *base, char *name, int len);
 Type *clone_Type(Type *tp);
 Type *find_type(Token *token);
 Type *find_type_from_name(char *name);
@@ -490,19 +486,15 @@ bool isAssignable(Type *l, Type *r);
 bool isLeftsidevalue(Type *tp);
 bool isAddSubable(Type *l, Type *r);
 bool isMulDivable(Type *l, Type *r);
-typedef enum {
-    CANNOT,
-    AsFUNCTION,
-    AsPTR2FUNC
-} Callability;
+typedef enum { CANNOT, AsFUNCTION, AsPTR2FUNC } Callability;
 /**
  * @brief  Callできる変数かどうか
- * @note   
+ * @note
  * @param  *tp: 対象の変数の型
  * @retval Callability
  */
 Callability isCallable(Type *tp);
-Type *commonType(Type *l, Type *r) ;
+Type *commonType(Type *l, Type *r);
 
 char *type2str(Type *tp);
 
@@ -511,30 +503,28 @@ int make_memorysize(Type *type);
 void Initialize_type_tree();
 
 //パラメータ
-typedef enum{ PA_ARG, PA_VAARG} ParamKind;
-struct Param{
+typedef enum { PA_ARG, PA_VAARG } ParamKind;
+struct Param {
     ParamKind kind;
     Type *type;
     Param *next;
     Token *token;
 };
-struct Params{
+struct Params {
     Param *root;
     Param *front;
 };
 Params *new_Params();
 void set_Params(Params *p);
-void set_Param(Param *p,Type* tp);
+void set_Param(Param *p, Type *tp);
 void set_VaArg(Param *p);
 /*変数名をセット*/
-void params_setIdent(Params *params,Token *tk);
+void params_setIdent(Params *params, Token *tk);
 /*可変長引数出ない引数を足す*/
-void params_addParam(Params *p,Type *tp);
+void params_addParam(Params *p, Type *tp);
 /*可変長引数を足す*/
 void params_addVaArg(Params *p);
-int params_compare(const Params *base,const Params *act);
-
-
+int params_compare(const Params *base, const Params *act);
 
 //変数を管理
 typedef enum { LOCAL, GLOBAL } Var_kind;
@@ -544,18 +534,18 @@ struct Var {
     int len;
     Type *type;
 };
-/* 
+/*
 tokenの文字列をつかい、
 宣言済みの変数や関数の中から
 一致するものを探す。
 もしなければ、NULLを返す
 */
 Var *find_Var(Token *token);
-/* 
+/*
 tokenの文字列をつかい、
 宣言済みの変数や関数の中から
 一致するものを探す。
-もしなければ、エラー終了 
+もしなければ、エラー終了
 */
 Var *get_Var(Token *token);
 
@@ -563,12 +553,12 @@ bool IsExtern(flag_n flag);
 bool IsStatic(flag_n flag);
 bool IsAuto(flag_n flag);
 bool IsRegister(flag_n flag);
-flag_n setExtern(flag_n flag,bool tof);
-flag_n setStatic(flag_n flag,bool tof);
-flag_n setAuto(flag_n flag,bool tof);
-flag_n setRegister(flag_n flag,bool tof);
-flag_n makeFlag(bool isTypedef,bool isExtern,bool isStatic,bool isAuto,bool isRegister);
-
+flag_n setExtern(flag_n flag, bool tof);
+flag_n setStatic(flag_n flag, bool tof);
+flag_n setAuto(flag_n flag, bool tof);
+flag_n setRegister(flag_n flag, bool tof);
+flag_n makeFlag(bool isTypedef, bool isExtern, bool isStatic, bool isAuto,
+                bool isRegister);
 
 // 定数を管理
 struct CVar {
@@ -589,7 +579,7 @@ struct LVar {
 };
 LVar *add_lvar(Token *token, Type *type);
 
-struct LVar_Manager{
+struct LVar_Manager {
     CC_Queue *queue;
     Map_for_LVar *top;
     int max_offset;
@@ -597,12 +587,13 @@ struct LVar_Manager{
 LVar_Manager *lvar_manager_new();
 void lvar_manager_PushScope(LVar_Manager *manager);
 void lvar_manager_PopScope(LVar_Manager *manager);
-int lvar_manager_Add(LVar_Manager *manager,char *key,int len,LVar *var);
+int lvar_manager_Add(LVar_Manager *manager, char *key, int len, LVar *var);
 int lvar_manager_GetOffset(LVar_Manager *manager);
-void lvar_manager_SetOffset(LVar_Manager *manager,int offset);
+void lvar_manager_SetOffset(LVar_Manager *manager, int offset);
 void lvar_manager_Clear(LVar_Manager *manager);
 int lvar_manager_GetTotalOffset(LVar_Manager *manager);
-LVar *lvar_manager_Find(LVar_Manager *manager,char* key,int len,bool nowScope);
+LVar *lvar_manager_Find(LVar_Manager *manager, char *key, int len,
+                        bool nowScope);
 
 struct Map_for_LVar {
     CC_AVLTree base;
@@ -611,8 +602,7 @@ struct Map_for_LVar {
 Map_for_LVar *map_for_var_new();
 void map_for_var_delete(Map_for_LVar *map);
 void map_for_var_clear(Map_for_LVar *map);
-void map_for_var_add(Map_for_LVar *map, char *key, int key_len,
-                        LVar *item);
+void map_for_var_add(Map_for_LVar *map, char *key, int key_len, LVar *item);
 void *map_for_var_search(Map_for_LVar *map, char *key, int key_len);
 bool map_for_var_empty(Map_for_LVar *map);
 
@@ -620,13 +610,13 @@ bool map_for_var_empty(Map_for_LVar *map);
 struct GVar {
     Var base;
 };
-GVar *add_gvar(Token *token, Type *type,bool isStatic);
+GVar *add_gvar(Token *token, Type *type, bool isStatic);
 
 // 外部変数
-struct ExVar{
+struct ExVar {
     Var base;
 };
-ExVar *add_exvar(Token *token,Type *type);
+ExVar *add_exvar(Token *token, Type *type);
 
 //関数を管理
 struct Rootine {

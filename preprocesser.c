@@ -1,5 +1,11 @@
 #include "preprocesser.h"
 
+/**
+ * @brief  アルゴリズムはhttps://github.com/rui314/8cc/wiki/cpp.algo.pdf による
+ * @note
+ * @retval None
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,55 +13,34 @@
 #include "collections.h"
 #include "selfcc.h"
 #include "utility.h"
+#include "vector.h"
 
 static CC_AVLTree *defined_macros;
 
 void Initialize_preprocesser() { defined_macros = cc_avltree_new(); }
-
-/**
- * @brief  終端がNULLのTokenSequance itemをheadとtailの間に挿入
- * @note
- * @param  *item: 挿入したいTS
- * @param  *head: 挿入したい場所の左端
- * @param  *tail: 挿入したい場所の右端
- * @retval None
- */
-void token_insert(Token *item, Token *head, Token *tail) {
-    if (item == NULL) {
-        head->next = tail;
-        return;
-    }
-    head->next = item;
-    for (Token *tmp = item; tmp; item = tmp, tmp = tmp->next)
-        ;
-    item->next = tail;
+Macro *new_Macro() { return calloc(1, sizeof(Macro)); }
+void set_Macro(Macro *macro, char *key, int keylen, Token *begin, Token *end,
+               CC_Vector *params) {
+    macro->kind = (params) ? MC_FUNC : MC_OBJECT;
+    macro->key = key;
+    macro->keylen = keylen;
+    macro->ts = create_TkSq(begin, end);
+    macro->params = params;
 }
-/**
- * @brief  マクロに登録されたTSをheadとtailの間に挿入
- * @note
- * @param  *macro: 対象のマクロ
- * @param  *head: TSの挿入したいところの先頭
- * @param  *tail: TSの挿入したいところの末尾
- * @retval None
- */
-void macro_SetCloneToken(Macro *macro, Token *head, Token *tail) {
-    Token *cur = macro->begin;
-    Token *res = NULL, anker;
-    if (macro->begin->kind != TK_MACROEND) {
-        res = &anker;
-        while (cur != macro->end) {
-            res = token_clone(cur, res);
-            cur = cur->next;
-        }
-    }
-    res->next = NULL;
+#define macro_clonets(macro) tksq_clone(macro->ts)
 
-    token_insert(anker.next, head, tail);
-}
 Macro *macro_Search(char *key, int len) {
     return cc_avltree_Search(defined_macros, key, len);
 }
 void macro_Delete(char *key, int len) {
+    Macro *macro = cc_avltree_Search(defined_macros, key, len);
+    if (macro->params) free(macro->params);
+    Token *iter = macro->ts->begin;
+    while (iter != macro->ts->end) {
+        Token *tmp = token_next(iter);
+        free(iter);
+        iter = tmp;
+    }
     cc_avltree_DeleteNode(defined_macros, key, len);
 }
 
@@ -63,13 +48,12 @@ void macro_Delete(char *key, int len) {
     (token)->len == strlen(string) && \
         memcmp(string, (token)->str, (token)->len) == 0
 
-static void regist_macro(char *key, int keylen, Token *begin, Token *end) {
+static Macro *regist_macro(char *key, int keylen) {
     Macro *macro = calloc(1, sizeof(Macro));
     macro->key = key;
     macro->keylen = keylen;
-    macro->begin = begin;
-    macro->end = end;
     cc_avltree_Add(defined_macros, macro->key, macro->keylen, macro);
+    return macro;
 }
 
 /**
@@ -80,24 +64,26 @@ static void regist_macro(char *key, int keylen, Token *begin, Token *end) {
  */
 Token *skip2MacroEnd(Token *begin) {
     Token *top = begin;
-    for (; top->kind != TK_MACROEND; top = top->next)
+    for (; top->kind != TK_MACROEND && top->kind != TK_END; top = top->next)
         ;
     return top;
 }
 #define INCREMENT_ROOT_WITH_SAVE() noneMacro = root, root = root->next
 #define INCREMENT_ROOT() root = root->next
-#define CONNECT_PRE_2_ROOT() \
-    INCREMENT_ROOT(), noneMacro->next = root, root = noneMacro
-Token *preproccess(Token *root) {
-    root = expand_include(root);
-    root = expand(root);
-    free_Hideset(root);
-    root = combine_strings(root);
-    return root;
+#define CONNECT_PRE_2_ROOT()     \
+    INCREMENT_ROOT();            \
+    token_join(noneMacro, root); \
+    root = noneMacro
+TkSequence *preproccess(TkSequence *ts) {
+    ts = expand_include(ts);
+    ts = expand(ts);
+    free_Hideset(ts);
+    ts = combine_strings(ts);
+    return ts;
 }
 
-Token *expand_include(Token *root) {
-    return root;  // TODO: 未完成
+TkSequence *expand_include(TkSequence *ts) {
+    return ts;  // TODO: 未完成
 }
 /** TK_STRINGを連結 beginをTK_STRING出ないとこまで進める*/
 Token *combine(Token **begin) {
@@ -137,10 +123,11 @@ Token *combine(Token **begin) {
     *begin = end;
     return tmp;
 }
-Token *combine_strings(Token *root) {
+TkSequence *combine_strings(TkSequence *ts) {
+    Token *root = ts->begin;
     Token anker, *noneString = &anker;
     anker.next = root;
-    while (root->kind != TK_EOF) {
+    while (root->kind != TK_END) {
         if (root->kind == TK_STRING) {
             noneString = token_prev(root);
             Token *combined = combine(&root);
@@ -150,27 +137,36 @@ Token *combine_strings(Token *root) {
         }
         root = token_next(root);
     }
-    return anker.next;
+    ts->begin = anker.next;
+    ts->end = root;
+    return ts;
 }
 
-void free_Hideset(Token *root) {
-    while (root->kind != TK_EOF) {
+void free_Hideset(TkSequence *ts) {
+    Token *root = ts->begin;
+    while (root->kind != TK_END) {
         if (root->hs != NULL) {
-            cc_sortedstrlist_delete(root->hs);
+            hs_delete(root->hs);
             root->hs = NULL;
         }
         root = token_next(root);
     }
     if (root->hs != NULL) {
-        cc_sortedstrlist_delete(root->hs);
+        hs_delete(root->hs);
         root->hs = NULL;
     }
 }
+/** token[0] * insert * token[1]...*/
+#define INSERT(token, insert)          \
+    token_join(insert, (token)->next); \
+    token_join(token, insert);
+TkSequence *expand(TkSequence *ts) {
+    if (!ts) return NULL;
+    Token *root = ts->begin;
 
-Token *expand(Token *root) {
     Token anker, *noneMacro = &anker;
     anker.next = root;
-    while (root->kind != TK_EOF) {
+    while (root->kind != TK_END) {
         switch (root->kind) {
             case TK_MACROSTART: {  // マクロ定義部
                 INCREMENT_ROOT();
@@ -179,15 +175,24 @@ Token *expand(Token *root) {
                     continue;
                 }
                 if (_consume("define", &root)) {
+                    // 識別子を確保
                     Token *ident = _expect_ident(&root);
+                    Macro *macro = regist_macro(ident->str, ident->len);
+                    //関数型マクロなら引数が存在
+                    CC_Vector *vec = NULL;
                     if (_consume("(", &root)) {
-                        // TODO:　関数型マクロ
-                        _expect(")", &root);
+                        vec = cc_vector_new();
+                        while (!_consume(")", &root)) {
+                            _consume(",", &root);
+                            Token *param = _expect_ident(&root);
+                            cc_vector_pbStr(vec, param->str, param->len);
+                        }
                     }
+                    // マクロの内容
                     Token *begin = root;
                     root = skip2MacroEnd(begin);
 
-                    regist_macro(ident->str, ident->len, begin, root);
+                    set_Macro(macro, ident->str, ident->len, begin, root, vec);
 
                     CONNECT_PRE_2_ROOT();
                     continue;
@@ -216,30 +221,228 @@ Token *expand(Token *root) {
                 }
             }
             case TK_IDENT: {  // マクロ展開部
+                Token *ident = root;
                 Macro *macro =
-                    cc_avltree_Search(defined_macros, root->str, root->len);
+                    cc_avltree_Search(defined_macros, ident->str, ident->len);
                 if (macro == NULL) break;
-                if (cc_sortedstrlist_find(token_geths(root), root->str,
-                                          root->len))
-                    break;
+                if (hs_find(token_geths(ident), ident->str, ident->len))
+                    break;  // HideSetに入っていたら何もしない
 
-                macro_SetCloneToken(macro, noneMacro, root->next);
-                root = noneMacro;
+                INCREMENT_ROOT();  // ident
+                if (macro->kind == MC_FUNC) {
+                    CC_Vector *args = cc_vector_new();
+                    Token *begin, *end;
+                    {
+                        int bracket_n=0;
+                        _expect("(", &root);
+                        if (!(end = _consume(")", &root))) {  // 引数0と1を区別
+                            begin = root;
+                            while (1) {
+                                if (end = _consume(")", &root)) {
+                                    if(bracket_n==0){
+                                        TkSequence *ts =
+                                            (begin == end)
+                                                ? NULL
+                                                : create_TkSq(begin, end);
+                                        cc_vector_pbPtr(args, ts);
+                                        break;
+                                    }
+                                    bracket_n--;
+                                    continue;
+                                }
+                                if (end = _consume(",", &root)) {
+                                    if(bracket_n==0){
+                                        TkSequence *ts =
+                                            (begin == end)
+                                                ? NULL
+                                                : create_TkSq(begin, end);
+                                        cc_vector_pbPtr(args, ts);
+                                        begin = root;
+                                    }
+                                    continue;
+                                }
+                                if(_consume("(",&root))bracket_n++;
+                                INCREMENT_ROOT();
+                            }
+                        }
+                    }
+                    if (args->size != macro->params->size)
+                        error_at(ident->str, "引数の個数が違います。");
+
+                    TkSequence *TS = macro_clonets(macro);
+                    HideSet *HS =
+                        hs_cross(token_geths(ident), token_geths(end));
+                    hs_add(HS, ident->str, ident->len);
+                    TkSequence *res = subst(TS, macro->params, args, HS);
+
+                    // noneMacroとrootの間にマクロ呼び出しTokenがゴミになっている
+                    token_join(noneMacro, root);  // TODO: [ゴミ集め]
+
+                    tksq_insert(ts, root, res);
+
+                    root = noneMacro;
+                } else if (macro->kind == MC_OBJECT) {
+                    TkSequence *TS = macro_clonets(macro);
+                    HideSet *HS = hs_clone(token_geths(ident));
+                    hs_add(HS, ident->str, ident->len);
+                    TkSequence *res = subst(TS, NULL, NULL, HS);
+
+                    // noneMacroとrootの間にマクロ呼び出しTokenがゴミになっている
+                    token_join(noneMacro, root);  // TODO: [ゴミ集め]
+
+                    tksq_insert(ts, root, res);
+
+                    root = noneMacro;
+                }
                 INCREMENT_ROOT_WITH_SAVE();
                 continue;
             }
         }
         INCREMENT_ROOT_WITH_SAVE();
     }
-    return anker.next;
+    ts->begin = anker.next;
+    ts->end = root;
+    return ts;
 }
-Token *subst(Token *is, Token *fp, Token *ap, HideSet *hs, Token *os);
-Token *glue(Token *ls, Token *rs);
-Token *hsadd(HideSet *hs, Token *ts);
-Token *ts(Token *tk);
-Token *fp(Token *tk);
-Token *select(int i, Token *ts);
-Token *stringize(Token *ts);
+TkSequence *subst(TkSequence *is, CC_Vector *fp, CC_Vector *ap, HideSet *hs) {
+    Token anker, *root = is->begin;
+    anker.str = "";
+    anker.len = 0;
+    token_join(&anker, root);
+
+    Token *ident, *OS = &anker;
+    int index;
+    while (root->kind != TK_END) {
+        if (fp != NULL && _check("#", root) &&
+            (ident = _check_ident(token_next(root)))) {
+            // 引数リストに存在するか?
+            index = cc_vector_findStr(fp, ident->str, ident->len);
+            if (index >= 0) {
+                INCREMENT_ROOT();  // "#"
+                INCREMENT_ROOT();  // ident
+                Token *str_token = stringize(select(index, ap));
+                INSERT(OS, str_token);
+                OS = str_token;
+
+                continue;
+            }
+        }
+        if (_consume("##", &root)) {
+            if (fp) {
+                index = cc_vector_findStr(fp, root->str, root->len);
+                if (index >= 0) {  // 置換対象
+                    TkSequence *actual = tksq_clone(select(index, ap));
+                    if (actual == NULL) {
+                        token_join(OS, root);  // TODO: [ゴミ集め]
+                        continue;
+                    }
+                    Token *cbd = glue(OS, actual->begin), *gbg = OS;
+                    token_join(OS->prev, cbd);
+                    token_join(cbd, actual->begin->next);
+
+                    free(gbg);
+                    free(actual->end);
+
+                    OS = actual->end->prev;
+                    INCREMENT_ROOT();
+                    continue;
+                }
+            }
+            // 普通のトークン
+            Token *cbd = glue(OS, root);
+            token_join(OS->prev, cbd);
+            token_join(cbd, root->next);
+
+            free(OS);
+            free(root);
+
+            OS = cbd;
+            root = OS->next;
+            continue;
+        }
+        if ((ident = _check_ident(root)) != NULL && fp != NULL &&
+            (index = cc_vector_findStr(fp, ident->str, ident->len)) >= 0) {
+            INCREMENT_ROOT();  // ident
+            TkSequence *actual = tksq_clone(select(index, ap));
+            Token *ds;
+            if (ds = _check("##", root)) {
+                if (actual == NULL) {
+                    INCREMENT_ROOT();  // "##"
+                    int jndex = cc_vector_findStr(fp, root->str, root->len);
+                    if (jndex >= 0) {
+                        INCREMENT_ROOT();  // ident
+                        actual = tksq_clone(select(jndex, ap));
+                        if (actual) {
+                            token_join(OS, actual->begin);
+                            OS = actual->end->prev;
+
+                            free(actual->end);
+                            continue;
+                        }
+                    }
+                    // jndex>= 0 ^ actual == NULL or jndex<0　
+                    continue;
+                } else {
+                    // root = "##"
+                    token_join(OS, actual->begin);
+                    OS = actual->end->prev;
+                    continue;
+                }
+            }
+            TkSequence *ts = expand(actual);
+            if (ts) {
+                token_join(OS, ts->begin);
+                OS = ts->end->prev;
+            }
+            continue;
+        }
+        token_join(OS, root);
+        OS = root;
+        INCREMENT_ROOT();  // some token
+    }
+
+    token_join(OS, is->end);
+    TOKEN_FOR(token, anker.next) {
+        HideSet *token_hs = token_geths(token);
+        LIST_FOR(iter, hs) {
+            String str = iter->obj.string;
+            hs_add(token_hs, str.str, str.len);
+        }
+    }
+    construct_TkSq(is, anker.next, root);
+    return is;
+}
+/**os_endとrtの字面で合成したトークンを生成*/
+Token *glue(Token *os_end, Token *rt) {
+    int str_length = os_end->len + rt->len;
+    char *combined = calloc(str_length + 1, sizeof(char));
+    strncat(combined, os_end->str, os_end->len);
+    strncat(combined, rt->str, rt->len);
+
+    TkSequence *res = tokenize(combined);
+    Token *cbd_tk = res->begin;
+    cbd_tk->hs = hs_cross(token_geths(os_end), token_geths(rt));
+
+    free(res);
+
+    return cbd_tk;
+}
+Token *stringize(const TkSequence *ts) {
+    // 長さを計算
+    int str_length = 0;
+    TOKEN_FOR(token, ts->begin) { str_length += token->len; }
+
+    // TSの要素が一つだけなら文字列にしたものを返す
+    if (token_next(ts->begin) == ts->end) {
+        return new_Token(TK_STRING, NULL, ts->begin->str, ts->begin->len);
+    }
+
+    // 文字列を連結してTSの先頭にセット
+    char *combined = calloc(str_length + 1, sizeof(char));
+    TOKEN_FOR(token, ts->begin) { strncat(combined, token->str, token->len); }
+
+    return new_Token(TK_STRING, NULL, combined, str_length);
+}
 
 #undef INCREMENT_ROOT
 #undef INCREMENT_ROOT_WITH_SAVE

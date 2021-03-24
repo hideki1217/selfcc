@@ -24,6 +24,7 @@
         "vector.h": "c",
         "token.h": "c",
         "params.h": "c",
-        "type.h": "c"
+        "type.h": "c",
+        "preprocesser.h": "c"
     }
 }

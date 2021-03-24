@@ -43,6 +43,8 @@ void cc_vector_init(CC_Vector *vec);
 void cc_vector_pbPtr(CC_Vector *vec, void *ptr);
 void cc_vector_pbInt(CC_Vector *vec, int val);
 void cc_vector_pbStr(CC_Vector *vec, char *str,int len);
+/**あればindexなければ-1*/
+int cc_vector_findStr(CC_Vector *vec, char *str,int len);
 CC_Iterable *cc_vector_begin(CC_Vector *vec);
 Object cc_vector_(CC_Vector *vec,int index);
 struct CC_VecIterator{
@@ -57,6 +59,8 @@ Object cc_veciterator_item(CC_Iterable *this);
 
 #define LIST_FOR(name,list) \
     for(CC_BidListNode *name = (list)->front;name != NULL; name = (name)->next)
+#define LIST_rFOR(name,list) \
+    for(CC_BidListNode *name = (list)->back;name != NULL; name = (name)->prev)
 /**
  * @brief  双方向リスト
  */
@@ -114,6 +118,8 @@ int cc_bidlist_size(const CC_BidList *vec);
 
 #define cc_sortedstrlist_new() cc_bidlist_new()
 #define cc_sortedstrlist_delete(vec) cc_bidlist_delete(vec)
+CC_SortedStrList *cc_sortedstrlist_clone(CC_SortedStrList *list);
 void cc_sortedstrlist_add(CC_SortedStrList *list,char *str,int len);
 bool cc_sortedstrlist_find(CC_SortedStrList *list,char *str,int len);
 CC_SortedStrList *cc_sortedstrlist_cross(CC_SortedStrList *l,CC_SortedStrList *r);
+CC_SortedStrList *cc_sortedstrlist_sum(CC_SortedStrList *l,CC_SortedStrList *r);
