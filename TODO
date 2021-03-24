@@ -9,11 +9,11 @@ CompilerProj:
   ☐ global変数における配列の初期化を実装
   ☐ global変数において定義できることに制限をかけながら拡張
   ☐ char 型で初期化できるようにすべし
-  ☐ breakを実装
-  ☐ continueを実装
+  ✔ breakを実装 @done(21-03-24 18:29)
+  ✔ continueを実装 @done(21-03-24 18:29)
   ☐ typedef を実装
   ☐ enum　を実装
   ✔ テストの実現方法を模索 @done(21-03-11 16:27)
   ☐ 型どうしを演算したらどんな型が出てくるか対応表を実装するべし
-  ☐ 簡易Preprocesserを実装すべし
+  ✔ 簡易Preprocesserを実装すべし @done(21-03-24 18:29)
 

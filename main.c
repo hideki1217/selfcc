@@ -7,10 +7,8 @@
 char buffer[BUFFERSIZE];
 
 void code_generate(Node *code);
-#define print_tab(n)\
-    times(n){\
-        fprintf(stderr,"\t");\
-    }\
+#define print_tab(n) \
+    times(n) { fprintf(stderr, "\t"); }
 
 void debug_pp(TkSequence *ts) {
     const int MAX_WIDTH = 50;
@@ -18,22 +16,21 @@ void debug_pp(TkSequence *ts) {
     int indent = 0;
     while (t->kind != TK_END) {
         string_ncopy(buffer, t->str, t->len);
-        if(t->kind == TK_STRING){
-            fprintf(stderr,"\"%s\" ",buffer);
-        }else if(token_match(t,"{",1) ){
-            fprintf(stderr,"%s \n", buffer);
+        if (t->kind == TK_STRING) {
+            fprintf(stderr, "\"%s\" ", buffer);
+        } else if (token_match(t, "{", 1)) {
+            fprintf(stderr, "%s \n", buffer);
             indent++;
             print_tab(indent);
-        }    
-        else if( token_match(t,"}",1)){
-            fprintf(stderr,"%s \n", buffer);
+        } else if (token_match(t, "}", 1)) {
+            fprintf(stderr, "%s \n", buffer);
             indent--;
             print_tab(indent);
-        } else if( token_match(t,";",1)){
-            fprintf(stderr,"%s \n", buffer);
+        } else if (token_match(t, ";", 1)) {
+            fprintf(stderr, "%s \n", buffer);
             print_tab(indent);
-        }else{
-            fprintf(stderr,"%s ", buffer);
+        } else {
+            fprintf(stderr, "%s ", buffer);
         }
         t = t->next;
     }
@@ -73,7 +70,7 @@ int main(int argc, char **argv) {
     filename = fromfile ? path_filename(filepath) : "";
     tokens = tokenize(user_input);    // トークン化
     tokens = preproccess(tokens);     // プリプロセス
-    if (dpp) debug_pp(tokens);              // プリプロセスの結果デバッグ
+    if (dpp) debug_pp(tokens);        // プリプロセスの結果デバッグ
     tkstream = tokens->begin;         // streamにセット
     Node *code = translation_unit();  // 抽象構文木化
     code_generate(code);              // コード生成
