@@ -9,6 +9,7 @@
  * @param  *act: 実際の引数
  * @retval 0::正常終了, 1::型が不正, 2::引数が少ない, 3::引数が多い
  */
+/*
 int params_compare(const Params *base,const Params *act) {
     Param *base_arg = base->root;
     Param *act_arg = act->root;
@@ -65,4 +66,5 @@ void params_addVaArg(Params *p) {
     p->front = par;
     if(p->root==NULL)p->root=par;
 }
+*/
 

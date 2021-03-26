@@ -8,7 +8,8 @@
 
 Node *code;
 
-void uniformSizedOper(char *oper,Type *ltp,char* (*lReg)(Type*),Type *rtp,char* (*rReg)(Type*));
+void uniformSizedOper(char *oper, Type *ltp, char *(*lReg)(Type *), Type *rtp,
+                      char *(*rReg)(Type *));
 void genArgs(Node *arg_top);
 
 void gen_lval(Node *node, bool push) {
@@ -85,7 +86,7 @@ void gen(Node *node, bool push) {
                 // グローバル変数の初期化についてはここに書くべし
             } else {
                 string_ncopy(buffer, var->name, var->len);
-                printf("    .comm %s,%d\n", buffer, var->type->size);
+                printf("    .comm %s,%d\n", buffer, type_size(var->type));
             }
             return;
         }
@@ -104,8 +105,7 @@ void gen(Node *node, bool push) {
         case ND_GVAR: {
             VarNode *vnode = (VarNode *)node;
             gen_lval(node, push);
-            if (vnode->var->type->kind == TY_ARRAY ||
-                vnode->var->type->kind == TY_FUNCTION)
+            if (type_isarray(vnode->var->type) || type_isfunc(vnode->var->type))
                 return;  // 配列型と関数型はPOINTERみたいにしてあげる
             if (push) printf("    pop rax\n");
             printf("    %s, %s [rax]\n",
@@ -171,7 +171,7 @@ void gen(Node *node, bool push) {
             if (push) printf("    push rax\n");
             return;
         }
-        case ND_DOWHILE:{
+        case ND_DOWHILE: {
             CondNode *cnode = (CondNode *)node;
             lcount = cnode->index;
             printf(".Lbegin%d:\n", lcount);
@@ -193,7 +193,7 @@ void gen(Node *node, bool push) {
             printf("    cmp rax, 0\n");
             printf("    je .Lend%d\n", lcount);
             gen(fnode->T, false);
-            printf(".Lbegin%d:\n",lcount);
+            printf(".Lbegin%d:\n", lcount);
             gen(fnode->update, false);
             printf("    jmp .Ltop%d\n", lcount);
             printf(".Lend%d:\n", lcount);
@@ -213,7 +213,7 @@ void gen(Node *node, bool push) {
             genArgs(fnode->arg);
 
             // 可変長引数の関数を呼ぶ際は、浮動小数点数の引数の個数をalに入れる
-            printf("    mov rax, %d\n",floatCount);
+            printf("    mov rax, %d\n", floatCount);
 
             Callability call = isCallable(function->type);
             if (function->kind == ND_GVAR && call == AsFUNCTION) {
@@ -226,7 +226,7 @@ void gen(Node *node, bool push) {
                 } else if (call == AsPTR2FUNC) {
                     UnaryNode tmp;
                     set_UnaryNode(&tmp, ND_DEREF, function);
-                    tmp.base.type = function->type->ptr_to;
+                    tmp.base.type = type_ptr_to(function->type);
                     gen((Node *)&tmp, false);
                 }
                 printf("    call rax\n");
@@ -241,11 +241,11 @@ void gen(Node *node, bool push) {
         case ND_DEREF: {
             UnaryNode *unode = (UnaryNode *)node;
             gen(unode->target, false);
-            if (node->type->kind != TY_FUNCTION) {
+            if (!type_isfunc(node->type)) {
                 printf("    %s, %s [rax]\n",
-                       movsx2rax(unode->target->type
-                                     ->ptr_to),  // 符号拡張ありになっている
-                       sizeoption(unode->target->type->ptr_to));
+                       movsx2rax(type_ptr_to(
+                           unode->target->type)),  // 符号拡張ありになっている
+                       sizeoption(type_ptr_to(unode->target->type)));
             }
             if (push) printf("    push rax\n");
             return;
@@ -264,11 +264,11 @@ void gen(Node *node, bool push) {
             VarInitNode *inode = (VarInitNode *)node;
             if (inode->value) {
                 LVar *var = (LVar *)inode->var;
-                if (var->base.type->kind == TY_ARRAY) {
+                if (type_isarray(var->base.type)) {
                     if (inode->value) {
                         // TODO: 配列の宣言時初期化について書くならここ
                     }
-                } else if (var->base.type->kind == TY_STRUCT) {
+                } else if (type_isstruct(var->base.type)) {
                     if (inode->value) {
                         // TODO: structの宣言時初期化について書くならここ
                     }
@@ -318,17 +318,17 @@ void gen(Node *node, bool push) {
             if (push) printf("   push rax\n");
             return;
         }
-        case ND_ADDASS: 
-        case ND_SUBASS: 
+        case ND_ADDASS:
+        case ND_SUBASS:
         case ND_MULASS:
-        case ND_DIVASS: 
+        case ND_DIVASS:
         case ND_RSHASS:
         case ND_LSHASS:
         case ND_ORASS:
         case ND_ANDASS:
         case ND_XORASS:
-        case ND_MODASS:{ 
-            BinaryNode *bnode = (BinaryNode *)node,tmp;
+        case ND_MODASS: {
+            BinaryNode *bnode = (BinaryNode *)node, tmp;
             set_BinaryNode(&tmp, pairOf(node->kind), bnode->lhs, bnode->rhs);
             type_assign((Node *)&tmp);
 
@@ -339,21 +339,21 @@ void gen(Node *node, bool push) {
             if (push) printf("   push rax\n");
             return;
         }
-        case ND_BREAK:{
-            LabelNode *lnode = (LabelNode*)node;
-            printf("    jmp .Lend%d\n",lnode->jumpTo);
+        case ND_BREAK: {
+            LabelNode *lnode = (LabelNode *)node;
+            printf("    jmp .Lend%d\n", lnode->jumpTo);
             if (push) printf("   push rax\n");
             return;
         }
-        case ND_CONTINUE:{
-            LabelNode *lnode = (LabelNode*)node;
-            printf("    jmp .Lbegin%d\n",lnode->jumpTo);
+        case ND_CONTINUE: {
+            LabelNode *lnode = (LabelNode *)node;
+            printf("    jmp .Lbegin%d\n", lnode->jumpTo);
             if (push) printf("   push rax\n");
             return;
         }
-        case ND_NOT:{
-            UnaryNode *unode = (UnaryNode*)node;
-            gen(unode->target,false);
+        case ND_NOT: {
+            UnaryNode *unode = (UnaryNode *)node;
+            gen(unode->target, false);
             printf("    not rax\n");
             if (push) printf("   push rax\n");
             return;
@@ -372,24 +372,24 @@ void gen(Node *node, bool push) {
     printf("    pop rdi\n");
     printf("    pop rax\n");
 
-    Type *type_int = find_type_from_name("int");
+    Type *type_int = typemgr_find("int",3,BK_OTHER);
 
     switch (node->kind) {
         case ND_ADD:
             if (equal(ltp, type_int) && isArrayorPtr(rtp)) {
-                printf("    imul rax, %d\n", rhs->type->ptr_to->size);
+                printf("    imul rax, %d\n", type_size(type_ptr_to(rhs->type)));
             }
             if (isArrayorPtr(ltp) && equal(rtp, type_int)) {
-                printf("    imul rdi, %d\n", lhs->type->ptr_to->size);
+                printf("    imul rdi, %d\n", type_size(type_ptr_to(lhs->type)));
             }
             printf("    add rax, rdi\n");
             break;
         case ND_SUB:
             if (equal(ltp, type_int) && isArrayorPtr(rtp)) {
-                printf("    imul rax, %d\n", rhs->type->ptr_to->size);
+                printf("    imul rax, %d\n", type_size(type_ptr_to(rhs->type)));
             }
             if (isArrayorPtr(ltp) && equal(rtp, type_int)) {
-                printf("    imul rdi, %d\n", lhs->type->ptr_to->size);
+                printf("    imul rdi, %d\n", type_size(type_ptr_to(lhs->type)));
             }
             printf("    sub rax, rdi\n");
             break;
@@ -421,43 +421,43 @@ void gen(Node *node, bool push) {
             printf("    movzb rax, al\n");
             break;
         case ND_RSHFT:
-            printf("    mov ecx, edi\n"); 
-            printf("    sar %s, cl\n",rax(ltp));
+            printf("    mov ecx, edi\n");
+            printf("    sar %s, cl\n", rax(ltp));
             break;
         case ND_LSHFT:
-            printf("    mov ecx, edi\n"); 
-            printf("    sal %s, cl\n",rax(ltp));
+            printf("    mov ecx, edi\n");
+            printf("    sal %s, cl\n", rax(ltp));
             break;
         case ND_OR:
-            uniformSizedOper("or",ltp,rax,rtp,rdi);
-            //printf("    or %s, %s",rax(ltp),rdi(rtp));
+            uniformSizedOper("or", ltp, rax, rtp, rdi);
+            // printf("    or %s, %s",rax(ltp),rdi(rtp));
             break;
         case ND_XOR:
-            uniformSizedOper("xor",ltp,rax,rtp,rdi);
-            //printf("    xor %s, %s",rax(ltp),rdi(rtp));
+            uniformSizedOper("xor", ltp, rax, rtp, rdi);
+            // printf("    xor %s, %s",rax(ltp),rdi(rtp));
             break;
         case ND_AND:
-            uniformSizedOper("and",ltp,rax,rtp,rdi);
-            //printf("    and %s, %s",rax(ltp),rdi(rtp));
+            uniformSizedOper("and", ltp, rax, rtp, rdi);
+            // printf("    and %s, %s",rax(ltp),rdi(rtp));
             break;
         case ND_MOD:
             printf("    cqo\n");
             printf("    idiv rdi\n");
-            printf("    %s, %s\n",movsx2rax(ltp),rdx(ltp));
+            printf("    %s, %s\n", movsx2rax(ltp), rdx(ltp));
             break;
-        
+
         case ND_LGCOR:
         case ND_LGCAND:
         case ND_LGCNOT:
         case ND_GOTO:
-        
+
         case ND_LABEL:
         case ND_CASE:
         case ND_DEFAULT:
-        
+
         case ND_SWITCH:
         case ND_CAST:
-        
+
         case ND_ENUM:
         case ND_FLOAT:
         case ND_CHAR:
@@ -470,19 +470,19 @@ void gen(Node *node, bool push) {
     return;
 }
 
-void uniformSizedOper(char *oper,Type *ltp,char* (*lReg)(Type* type),Type *rtp,char* (*rReg)(Type* type)){
-    if(ltp->size==rtp->size)
-        printf("    %s %s, %s\n",oper,lReg(ltp),rReg(rtp));
-    else if(ltp->size > rtp->size){
-        printf("    movsx %s, %s\n",rReg(ltp),rReg(rtp));
-        printf("    %s %s, %s\n",oper,lReg(ltp),rReg(ltp));
-    }
-    else{
-        printf("    movsx %s, %s\n",lReg(rtp),lReg(ltp));
-        printf("    %s %s, %s\n",oper,lReg(rtp),rReg(rtp));
+void uniformSizedOper(char *oper, Type *ltp, char *(*lReg)(Type *type),
+                      Type *rtp, char *(*rReg)(Type *type)) {
+    if (type_size(ltp) == type_size(rtp))
+        printf("    %s %s, %s\n", oper, lReg(ltp), rReg(rtp));
+    else if (type_size(ltp) > type_size(rtp)) {
+        printf("    movsx %s, %s\n", rReg(ltp), rReg(rtp));
+        printf("    %s %s, %s\n", oper, lReg(ltp), rReg(ltp));
+    } else {
+        printf("    movsx %s, %s\n", lReg(rtp), lReg(ltp));
+        printf("    %s %s, %s\n", oper, lReg(rtp), rReg(rtp));
     }
 }
-void genArgs(Node *arg_top){
+void genArgs(Node *arg_top) {
     int argcount = 0;
     for (Node *elem = arg_top; elem; elem = elem->next) argcount++;
     Type *mem[argcount];
@@ -493,7 +493,6 @@ void genArgs(Node *arg_top){
     }
     for (int i = 0; i < min(6, argcount); i++) {
         printf("    pop rax\n");
-        printf("    mov %s, %s\n", registry_for_arg(mem[i], i),
-                rax(mem[i]));
+        printf("    mov %s, %s\n", registry_for_arg(mem[i], i), rax(mem[i]));
     }
 }

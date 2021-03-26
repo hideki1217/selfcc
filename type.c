@@ -1,9 +1,9 @@
 #include "type.h"
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "collections.h"
 #include "utility.h"
@@ -18,10 +18,9 @@ static Type *_float;
 static Type *_long;
 static Type *_double;
 
-static CC_AVLTree *trees[TM_SIZE];
+static CC_AVLTree /*<ModelType*>*/ *trees[BK_SIZE];
 
 static BaseType *new_BaseType(TypeKind kind, int size);
-static Type *new_Type(BaseType *btype, bool isConst, bool isVolatile);
 static Type *type_clone(const Type *type);
 static Type *new_PrimType(char *name, int namelen, TypeKind kind,
                           int memory_size);
@@ -35,9 +34,10 @@ static Type *new_Struct(char *name, int namelen);
 static Type *new_Union(char *name, int namelen);
 static Type *new_Incomplete();
 
-#define regist_Type(tm_kind, name_char, len_int, type_ptr) \
-    cc_avltree_Add(trees[tm_kind], name_char, len_int, tpmodel_tnew(type_ptr))
-void initilize_typemgr() {
+#define regist_Type(bkind, type_name, namelen, type_ptr) \
+    cc_avltree_Add(trees[bkind], type_name, namelen, tpmodel_tnew(type_ptr))
+
+void initialize_typemgr() {
     _void = new_PrimType("void", 4, TY_VOID, 8);
     _int = new_PrimType("int", 3, TY_INT, 4);
     _char = new_PrimType("char", 4, TY_CHAR, 1);
@@ -45,16 +45,16 @@ void initilize_typemgr() {
     _long = new_PrimType("long", 4, TY_LONG, 8);
     _double = new_PrimType("double", 6, TY_DOUBLE, 8);
 
-    trees[TM_OTHER] = cc_avltree_new();
-    trees[TM_STRUCT] = cc_avltree_new();
-    trees[TM_UNION] = cc_avltree_new();
+    trees[BK_OTHER] = cc_avltree_new();
+    trees[BK_STRUCT] = cc_avltree_new();
+    trees[BK_UNION] = cc_avltree_new();
 
-    regist_Type(TM_OTHER, "void", 4, _void);
-    regist_Type(TM_OTHER, "int", 3, _int);
-    regist_Type(TM_OTHER, "char", 4, _char);
-    regist_Type(TM_OTHER, "float", 5, _float);
-    regist_Type(TM_OTHER, "long", 4, _double);
-    regist_Type(TM_OTHER, "double", 6, _long);
+    regist_Type(BK_OTHER, "void", 4, _void);
+    regist_Type(BK_OTHER, "int", 3, _int);
+    regist_Type(BK_OTHER, "char", 4, _char);
+    regist_Type(BK_OTHER, "float", 5, _float);
+    regist_Type(BK_OTHER, "long", 4, _double);
+    regist_Type(BK_OTHER, "double", 6, _long);
 }
 
 Type *typemgr_find(char *name, int len, BaseKind kind) {
@@ -64,7 +64,7 @@ Type *typemgr_find(char *name, int len, BaseKind kind) {
 }
 
 TypeModel *typemgr_excl(char *name, int len, BaseKind kind) {
-    if (kind == TM_OTHER) error("structやunionへの利用を目的としています。");
+    if (kind == BK_OTHER) error("structやunionへの利用を目的としています。");
     Type *type = typemgr_find(name, len, kind);
     if (type) return NULL;
 
@@ -73,12 +73,24 @@ TypeModel *typemgr_excl(char *name, int len, BaseKind kind) {
     return model;
 }
 
-void typemgr_reg(char *name, int len, TypeModel *model) {
-    cc_avltree_Add(trees[TM_OTHER], name, len, model);
-}
+void typemgr_reg(char *name, int len, Type *type) {
+    TypeModel *model;
+    if (type_hasname(type)) {  // 名前の付いた型ならばエイリアス
+        BaseKind bkind;
+        if (type_isstruct(type))
+            bkind = BK_STRUCT;
+        else if (type_isunion(type))
+            bkind = BK_UNION;
+        else
+            bkind = BK_OTHER;
 
-void typemgr_regalias(char *alname, int allen, bool isStUni, char *base,
-                      int baselen);
+        model = cc_avltree_Search(trees[bkind], type_name(type),
+                                  type_namelen(type));
+    } else {  // そうでなければ新規modelを登録
+        model = tpmodel_tnew(type);
+    }
+    cc_avltree_Add(trees[BK_OTHER], name, len, model);
+}
 
 TypeModel *tpmodel_tnew(Type *base) {
     TypeModel *model = calloc(1, sizeof(TypeModel));
@@ -90,6 +102,9 @@ TypeModel *tpmodel_tnew(Type *base) {
 }
 void tpmodel_addptr(TypeModel *model) {
     model->type = new_Pointer(model->type);
+}
+void tpmodel_addarray(TypeModel *model, int arraylen) {
+    model->type = new_Array(model->type, arraylen);
 }
 void tpmodel_addfunc(TypeModel *model) {
     model->type = new_Function(model->type);
@@ -107,21 +122,25 @@ void tpmodel_addvaarg(TypeModel *model) {
     if (!type_isfunc(model->type))
         error("関数でない型に引数をつけようとしました。");
     Param *par = calloc(1, sizeof(Param));
-    par->kind  = PA_VAARG;
+    par->kind = PA_VAARG;
     cc_vector_pbPtr(type_params(model->type), par);
 }
 void tpmodel_addmem(TypeModel *model, Type *prm_tp, Token *ident) {
     if (!(type_isstruct(model->type) || type_isunion(model->type)))
         error("structやunion以外にmemberを足そうとしました。");
     Param *par = calloc(1, sizeof(Param));
-    par->kind  = PA_ARG;
+    par->kind = PA_ARG;
     par->type = prm_tp;
     par->token = ident;
     cc_vector_pbPtr(type_params(model->type), par);
 }
 void tpmodel_setbase(TypeModel *model, Type *base) {
-    Type *top = model->type, *pre;
-    while (type_hasptr_to(top)) {
+    Type *top = model->type, *pre = top;
+    if (top == NULL) {
+        model->type = base;
+        return;
+    }
+    while ((top != NULL) && type_hasptr_to(top)) {
         pre = top;
         top = type_ptr_to(top);
     }
@@ -274,20 +293,21 @@ Type *commonType(Type *l, Type *r) {
 
 /**
  * @brief  関数呼び出しの引数チェック
- * @note   
+ * @note
  * @param  *base: 元の引数
  * @param  *act: 実際の引数
  * @retval 0::正常終了, 1::型が不正, 2::引数が少ない, 3::引数が多い
  */
-int params_compare(const Params *base,const Params *act) {
-    int base_i = 0,act_i = 0;
-    Param *base_arg,*act_arg;
+int params_compare(const Params *base, const Params *act) {
+    if (base->size == 0 && act->size == 0) return 0;
+    int base_i = 0, act_i = 0;
+    Param *base_arg, *act_arg;
     while (1) {
+        if (base_i == base->size) break;
         base_arg = base->_[base_i].ptr;
-        act_arg = act->_[act_i].ptr;
-        if (base_i == base->size - 1) break;
         if (base_arg->kind == PA_VAARG) return 0;  // 可変長引数
-        if (act_i == act->size - 1) return 2;             // 引数が少ない
+        if (act_i == act->size) return 2;          // 引数が少ない
+        act_arg = act->_[act_i].ptr;
         if (isAssignable(base_arg->type, act_arg->type)) {
             base_i++;
             act_i++;
@@ -295,7 +315,7 @@ int params_compare(const Params *base,const Params *act) {
             return 1;  // 型の互換性がない
         }
     }
-    if (act_i == act->size - 1) return 0;  // 正常
+    if (act_i == act->size) return 0;  // 正常
 
     return 3;  // 引数が多い
 }
@@ -371,7 +391,7 @@ static Type *new_Incomplete() {
     type_kind(type) = TY_INCOMPLETE;
     return type;
 }
-static Type *new_Type(BaseType *btype, bool isConst, bool isVolatile) {
+Type *new_Type(BaseType *btype, bool isConst, bool isVolatile) {
     Type *type = calloc(1, sizeof(Type));
     type->btype = btype;
     type->isConst = isConst;

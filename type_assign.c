@@ -5,7 +5,7 @@ Type *type_assign(Node *node) {
     Type *tp;
     switch (node->kind) {
         case ND_NULL:
-            tp = find_type_from_name("void");
+            tp = typemgr_find("void",4,BK_OTHER);
             break;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
@@ -27,7 +27,11 @@ Type *type_assign(Node *node) {
         case ND_ASSIGN: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
-            if (rtp->kind == TY_FUNCTION) rtp = new_Pointer(rtp);
+            if (type_isfunc(rtp)){
+                TypeModel model = {rtp};
+                tpmodel_addptr(&model);
+                rtp = model.type;
+            }
             if (!isLeftsidevalue(ltp))
                 error_at(node->pos->str,
                          "変更可能な左辺値でなければいけません");
@@ -93,22 +97,20 @@ Type *type_assign(Node *node) {
                 error_at(fptr->pos->str,
                          "関数のように呼び出すことはできません。");
 
-            Params act_par;
-            set_Params(&act_par);
+            Params *act_par = cc_vector_new();
             Param par[ARG_MAX];
             int i = 0;
             // fnodeのargは逆順で出てくる
             for (Node *elem = fnode->arg; elem; elem = elem->next) {
                 Param *param = par + (i++);
-                set_Param(param, type_assign(elem));
-                param->next = act_par.root;
-                act_par.root = param;  // 逆順にいれていく
+                param->type = type_assign(elem);
+                cc_vector_pfPtr(act_par,param);// 逆順にいれていく
             }
 
             // 関数の引数チェック
             Params *exact =
-                (call == AsFUNCTION) ? ftype->params : ftype->ptr_to->params;
-            int res = params_compare(exact, &act_par);
+                (call == AsFUNCTION) ? type_params(ftype) : type_params(type_ptr_to(ftype));
+            int res = params_compare(exact, act_par);
             switch (res) {
                 case 1:
                     error_at(node->pos->str, "引数の型が違います。");
@@ -118,12 +120,14 @@ Type *type_assign(Node *node) {
                     error_at(node->pos->str, "引数が多すぎます。");
             }
 
-            tp = ftype->ptr_to;  // 関数の返り値の型
+            tp = type_ptr_to(ftype);  // 関数の返り値の型
             break;
         }
         case ND_ADDR: {
             tp = type_assign(((UnaryNode *)node)->target);
-            tp = new_Pointer(tp);
+            TypeModel model = {tp};
+            tpmodel_addptr(&model);
+            tp = model.type;
             break;
         }
         case ND_DEREF: {
@@ -131,7 +135,7 @@ Type *type_assign(Node *node) {
             if (!isArrayorPtr(tp))
                 error_at(node->pos->str,
                          "ポインタ型Likeでない変数を参照できません。");
-            tp = tp->ptr_to;
+            tp = type_ptr_to(tp);
             break;
         }
         case ND_SET: {
@@ -225,14 +229,14 @@ Type *type_assign(Node *node) {
         }
         case ND_BREAK:
         case ND_CONTINUE:{
-            tp = find_type_from_name("void");
+            tp = typemgr_find("void",4,BK_OTHER);
             break;
         }
         default: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
-            Type *type_int = find_type_from_name("int");
+            Type *type_int = typemgr_find("int",3,BK_OTHER);
             tp = type_int;  // default の型は今のところ int
             switch (node->kind) {
                 case ND_ADD:

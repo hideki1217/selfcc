@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
     global_list = cc_bidlist_new();
     externs = cc_avltree_new();
     constants = cc_bidlist_new();
-    Initialize_type_tree();
+    initialize_typemgr();
     initialize_parser();
     Initialize_preprocesser();
 

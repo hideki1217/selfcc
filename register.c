@@ -26,7 +26,7 @@ char *registry_for_arg(Type *tp, int i) {
 
 // 符号拡張しない
 char *movzx2rax(Type *tp){
-    switch(tp->size){
+    switch(type_size(tp)){
         case 1:
         case 2:
             return "movzx eax";
@@ -37,7 +37,7 @@ char *movzx2rax(Type *tp){
     }
 }
 char *movsx2rax(Type *tp){
-    switch(tp->size){
+    switch(type_size(tp)){
         case 1:
         case 2:
             return "movsx eax";
@@ -49,7 +49,7 @@ char *movsx2rax(Type *tp){
 }
 // 符号拡張しない
 char *movzx2rdi(Type *tp){
-    switch(tp->size){
+    switch(type_size(tp)){
         case 1:
         case 2:
             return "movzx edi";
@@ -60,7 +60,7 @@ char *movzx2rdi(Type *tp){
     }
 }
 char *movsx2rdi(Type *tp){
-    switch(tp->size){
+    switch(type_size(tp)){
         case 1:
         case 2:
             return "movsx edi";
@@ -74,7 +74,7 @@ char *movsx2rdi(Type *tp){
 
 
 char *movsx(Type *tp){
-    switch(tp->size){
+    switch(type_size(tp)){
         case 2:
         case 1:
             return "movsx";
@@ -84,7 +84,7 @@ char *movsx(Type *tp){
 }
 
 char *movzx(Type *tp){
-    switch(tp->size){
+    switch(type_size(tp)){
         case 2:
         case 1:
             return "movzx";
@@ -95,7 +95,7 @@ char *movzx(Type *tp){
 
 
 char *rax(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "al";
         case 2:
@@ -107,7 +107,7 @@ char *rax(Type *tp) {
     }
 }
 char *rbx(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "bl";
         case 2:
@@ -119,7 +119,7 @@ char *rbx(Type *tp) {
     }
 }
 char *rcx(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "cl";
         case 2:
@@ -131,7 +131,7 @@ char *rcx(Type *tp) {
     }
 }
 char *rdx(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "dl";
         case 2:
@@ -143,7 +143,7 @@ char *rdx(Type *tp) {
     }
 }
 char *rsi(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "sil";
         case 2:
@@ -155,7 +155,7 @@ char *rsi(Type *tp) {
     }
 }
 char *rdi(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "dil";
         case 2:
@@ -167,7 +167,7 @@ char *rdi(Type *tp) {
     }
 }
 char *r8(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r8b";
         case 2:
@@ -179,7 +179,7 @@ char *r8(Type *tp) {
     }
 }
 char *r9(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r9b";
         case 2:
@@ -191,7 +191,7 @@ char *r9(Type *tp) {
     }
 }
 char *r10(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r10b";
         case 2:
@@ -203,7 +203,7 @@ char *r10(Type *tp) {
     }
 }
 char *r11(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r11b";
         case 2:
@@ -215,7 +215,7 @@ char *r11(Type *tp) {
     }
 }
 char *r12(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r12b";
         case 2:
@@ -227,7 +227,7 @@ char *r12(Type *tp) {
     }
 }
 char *r13(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r13b";
         case 2:
@@ -239,7 +239,7 @@ char *r13(Type *tp) {
     }
 }
 char *r14(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "r14b";
         case 2:
@@ -252,7 +252,7 @@ char *r14(Type *tp) {
 }
 
 char *sizeoption(Type *tp) {
-    switch (tp->size) {
+    switch (type_size(tp)) {
         case 1:
             return "BYTE PTR";
         case 2:

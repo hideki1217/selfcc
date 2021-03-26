@@ -15,23 +15,23 @@ void set_UnaryNode(UnaryNode *node, NodeKind kind, Node *target) {
 void set_NumNode(NumNode *node, int val) {
     set_Node((Node*)node,ND_INT);
     node->val = val;
-    node->base.type = find_type_from_name("int");
+    node->base.type = typemgr_find("int",3,BK_OTHER);
 }
 void set_FloatNode(FloatNode *node, float val) {
     set_Node((Node*)node,ND_FLOAT);
     node->val = val;
-    node->base.type = find_type_from_name("float");
+    node->base.type = typemgr_find("float",5,BK_OTHER);
 }
 void set_CharNode(CharNode *node, char val) {
     set_Node((Node*)node,ND_CHAR);
-    node->base.type = find_type_from_name("char");
+    node->base.type = typemgr_find("char",4,BK_OTHER);
     node->val = val;
 }
 void set_EnumNode(EnumNode *node, char *name, int len) {
     set_Node((Node*)node,ND_ENUM);
     node->name = name;
     node->len = len;
-    node->base.type->kind = TY_ENUM;
+    type_kind(node->base.type) = TY_ENUM;
 }
 void set_ConstNode(ConstNode *nd, CVar *var) {
     set_Node((Node*)nd,ND_STR);

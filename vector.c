@@ -43,6 +43,14 @@ void cc_vector_pbStr(CC_Vector *vec, char *str, int len) {
     vec->_[vec->size].string.str = str;
     vec->_[vec->size++].string.len = len;
 }
+void cc_vector_pfPtr(CC_Vector *vec,void *ptr){
+    if (vec->size == vec->max_size) cc_vector_grow(vec);
+    for(int i = vec->size-1;i>=0 ;i--){
+        vec->_[i+1] = vec->_[i];
+    }
+    vec->_[0].ptr = ptr;
+    vec->size++;
+}
 int cc_vector_findStr(CC_Vector *vec, char *str, int len) {
     for (int i = 0; i < vec->size; i++) {
         Object item = (vec->_)[i];

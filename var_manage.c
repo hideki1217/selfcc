@@ -7,7 +7,9 @@
 ////////////////定数
 CStr *new_CStr(char *text, int len) {
     CStr *var = calloc(1, sizeof(CStr));
-    var->base.base.type = new_Pointer(find_type_from_name("char"));
+    TypeModel model = { typemgr_find("char",4,BK_OTHER) };
+    tpmodel_addptr(&model);
+    var->base.base.type = model.type;
     var->base.base.kind = GLOBAL;
     var->text = text;
     var->len = len;
@@ -28,7 +30,7 @@ LVar *new_LVar(Token *token, Type *type) {
     var->base.len = token->len;
     var->base.type = type;
 
-    var->offset = lvar_manager_GetOffset(locals) + make_memorysize(type);
+    var->offset = lvar_manager_GetOffset(locals) + type_size(type);
     return var;
 }
 //宣言済み変数一覧に存在するか確認

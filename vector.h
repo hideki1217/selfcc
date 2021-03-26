@@ -43,6 +43,7 @@ void cc_vector_init(CC_Vector *vec);
 void cc_vector_pbPtr(CC_Vector *vec, void *ptr);
 void cc_vector_pbInt(CC_Vector *vec, int val);
 void cc_vector_pbStr(CC_Vector *vec, char *str,int len);
+void cc_vector_pfPtr(CC_Vector *vec,void *ptr);
 /**あればindexなければ-1*/
 int cc_vector_findStr(CC_Vector *vec, char *str,int len);
 CC_Iterable *cc_vector_begin(CC_Vector *vec);

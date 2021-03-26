@@ -57,23 +57,26 @@ Type *expect_type() {
     if (tkstream->kind != TK_IDENT) {
         error_at(tkstream->str, "型名ではありません");
     }
-    Type *type = find_type(tkstream);
-    if (type == NULL) error_at(tkstream->str, "宣言されていない型です。");
+    // TODO: expect_Typeがstructやunionに対応していない
+    TypeModel model = { typemgr_find(tkstream->str,tkstream->len, BK_OTHER) };
+    if (model.type == NULL) error_at(tkstream->str, "宣言されていない型です。");
     forward();
     while (consume("*")) {
-        type = new_Pointer(type);
+        tpmodel_addptr(&model);
     }
-    return type;
+    return model.type;
 }
 bool check_Type() {
-    Type *type = find_type(tkstream);
+    // TODO: check_Typeがstructやunionに対応していない
+    Type *type = typemgr_find(tkstream->str,tkstream->len,BK_OTHER);
     if (type == NULL) return false;
     return true;
 }
 // checkした後に実行すべき
 Token *consume_Type(Type **tp) {
     if (tkstream->kind != TK_IDENT) return NULL;
-    Type *type = find_type(tkstream);
+    // TODO: consume_Typeがstructやunionに対応していない
+    Type *type = typemgr_find(tkstream->str,tkstream->len,BK_OTHER); 
     if (!type) return NULL;
     *tp = type;
     return forward();

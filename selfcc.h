@@ -6,8 +6,8 @@
 #include "preprocesser.h"
 #include "token.h"
 #include "vector.h"
+#include "type.h"
 
-typedef struct Type Type;
 
 typedef struct Var Var;
 typedef struct CVar CVar;
@@ -17,9 +17,6 @@ typedef struct LVar LVar;
 typedef struct SVar SVar;
 typedef struct GVar GVar;
 typedef struct ExVar ExVar;
-
-typedef struct Param Param;
-typedef struct Params Params;
 
 typedef struct Rootine Rootine;
 
@@ -48,11 +45,8 @@ typedef int flag_n;
 
 typedef enum StorageMode StorageMode;
 
-#define BUFFERSIZE 256
 #define ARG_MAX 30
 
-// 便宜用のbuffer
-extern char buffer[BUFFERSIZE];
 //////////////////////////// グローバル変数
 extern Token *tkstream;
 extern char *user_input;
@@ -94,6 +88,7 @@ Token *expect_ident();
 Token *_expect_ident(Token **tk);
 Token *expect_var();
 Type *expect_type();
+bool check_Type();
 Token *consume_Type(Type **tp);
 int expect_integer();
 Token *consume_integer();
@@ -317,14 +312,14 @@ param: mode = typedef等のフラグ
 param: base = ベースの型
 RET: false => 一回も更新されなかった
 */
-bool declaration_specifier(StorageMode *mode, Type **base);
+bool declaration_specifier(StorageMode *mode, TypeModel *model);
 /*なければSM_NONE*/
 StorageMode storage_specifier();
 /*
 定義済みの型の名前。
 存在しなければNULL
 */
-Type *type_specifier();
+bool type_specifier(TypeModel *model);
 /**
  * @brief ベースの型を期待する構文
  * @note
@@ -332,7 +327,7 @@ Type *type_specifier();
  * @param  errorExpected: エラーを期待するか
  * @retval false=>tokenを消費していない
  */
-bool specifier_qualifier(Type **tp, bool errorExpected);
+bool specifier_qualifier(TypeModel *model, bool errorExpected);
 
 /**
  * @brief  抽象な型名を読む
@@ -340,17 +335,17 @@ bool specifier_qualifier(Type **tp, bool errorExpected);
  * @param  isCheck: マッチしなければNULLを返すか？
  * @retval 読んだ型(もし何もなければvoid)
  */
-Type *type_name(bool isCheck);
+Type *type_naming(bool isCheck);
 /*識別子を含まない宣言*/
-void abstract_declarator(Type **base);  // 保留
-Type *declarator(Type *base, Token **tk);
+void abstract_declarator(TypeModel *model);
+void declarator(TypeModel *model, Token **ident);
 /*識別子を含む宣言。識別子を返す。なければNULL*/
-Token *direct_declarator(Type **base);
+Token *direct_declarator(TypeModel *base) ;
 
 /*RET: 2進数表示でabとすると
 a=1 => const
 b=1 => volatile */
-flag_n type_qualifier();
+bool type_qualifier(flag_n *flag);
 /**
  * @brief  ローカルでの宣言
  * @note
@@ -430,99 +425,9 @@ void gen_lval(Node *node, bool push);
  */
 void gen(Node *node, bool push);
 
-//型を管理
-typedef enum {
-    TY_VOID,
-    TY_INT,
-    TY_CHAR,
-    TY_LONG,
-    TY_FLOAT,
-    TY_DOUBLE,
-    TY_PTR,
-    TY_ARRAY,
-    TY_STRUCT,
-    TY_UNION,
-    TY_ENUM,
-    TY_FUNCTION,
-    TY_ALIAS
-} TypeKind;
-struct Type {
-    TypeKind kind;
-    Type *ptr_to;
-    int size;
-    bool isConst;
-    bool isVolatile;
- char *name;
-    int len;
-
-    Params *params;
-    int array_len;
-};
-/**
- * @brief  type_treeに新たな型名を登録
- * @note
- * @param  *tp: 登録する型(name,lenを埋めておく必要あり)
- * @retval None
- */
-void regist_type(Type *tp);
-
-Type *new_Pointer(Type *base);
-Type *new_Function(Type *base, Params *arg);
-Type *new_Array(Type *base, int length);
-Type *new_Struct(Type *bases);
-Type *new_Alias(Type *base, char *name, int len);
-Type *clone_Type(Type *tp);
-Type *find_type(Token *token);
-Type *find_type_from_name(char *name);
-bool equal(Type *l, Type *r);
-bool check_Type();
-bool isArrayorPtr(Type *type);
-bool isNum(Type *type);
-bool isInteger(Type *type);
-bool isFloat(Type *type);
-bool isAssignable(Type *l, Type *r);
-bool isLeftsidevalue(Type *tp);
-bool isAddSubable(Type *l, Type *r);
-bool isMulDivable(Type *l, Type *r);
-typedef enum { CANNOT, AsFUNCTION, AsPTR2FUNC } Callability;
-/**
- * @brief  Callできる変数かどうか
- * @note
- * @param  *tp: 対象の変数の型
- * @retval Callability
- */
-Callability isCallable(Type *tp);
-Type *commonType(Type *l, Type *r);
-
-char *type2str(Type *tp);
-
 int make_memorysize(Type *type);
 
 void Initialize_type_tree();
-
-//パラメータ
-typedef enum { PA_ARG, PA_VAARG } ParamKind;
-struct Param {
-    ParamKind kind;
-    Type *type;
-    Param *next;
-    Token *token;
-};
-struct Params {
-    Param *root;
-    Param *front;
-};
-Params *new_Params();
-void set_Params(Params *p);
-void set_Param(Param *p, Type *tp);
-void set_VaArg(Param *p);
-/*変数名をセット*/
-void params_setIdent(Params *params, Token *tk);
-/*可変長引数出ない引数を足す*/
-void params_addParam(Params *p, Type *tp);
-/*可変長引数を足す*/
-void params_addVaArg(Params *p);
-int params_compare(const Params *base, const Params *act);
 
 //変数を管理
 typedef enum { LOCAL, GLOBAL } Var_kind;
