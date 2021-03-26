@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "collections.h"
 #include "utility.h"
@@ -21,7 +22,7 @@ static CC_AVLTree *trees[TM_SIZE];
 
 static BaseType *new_BaseType(TypeKind kind, int size);
 static Type *new_Type(BaseType *btype, bool isConst, bool isVolatile);
-static Type *type_clone(Type *type);
+static Type *type_clone(const Type *type);
 static Type *new_PrimType(char *name, int namelen, TypeKind kind,
                           int memory_size);
 static BaseType *new_BaseType(TypeKind kind, int size);
@@ -97,7 +98,7 @@ void tpmodel_addprm(TypeModel *model, Type *prm_tp, Token *ident) {
     if (!type_isfunc(model->type))
         error("関数でない型に引数をつけようとしました。");
     Param *par = calloc(1, sizeof(Param));
-    patype_kind(r) = PA_ARG;
+    par->kind = PA_ARG;
     par->type = prm_tp;
     par->token = ident;
     cc_vector_pbPtr(type_params(model->type), par);
@@ -106,14 +107,14 @@ void tpmodel_addvaarg(TypeModel *model) {
     if (!type_isfunc(model->type))
         error("関数でない型に引数をつけようとしました。");
     Param *par = calloc(1, sizeof(Param));
-    patype_kind(r) = PA_VAARG;
+    par->kind  = PA_VAARG;
     cc_vector_pbPtr(type_params(model->type), par);
 }
 void tpmodel_addmem(TypeModel *model, Type *prm_tp, Token *ident) {
     if (!(type_isstruct(model->type) || type_isunion(model->type)))
         error("structやunion以外にmemberを足そうとしました。");
     Param *par = calloc(1, sizeof(Param));
-    patype_kind(r) = PA_ARG;
+    par->kind  = PA_ARG;
     par->type = prm_tp;
     par->token = ident;
     cc_vector_pbPtr(type_params(model->type), par);
@@ -135,15 +136,15 @@ char *_type2str(char *buffer, Type *tp) {
         case TY_ARRAY: {
             _type2str(tmp, type_ptr_to(tp));
             sprintf(buffer, "%s [%d]", tmp, type_arraylen(tp));
-            if (tp->isConst) strncat(buffer, " const", 6);
-            if (tp->isVolatile) strncat(buffer, " volatile", 9);
+            if (tp->isConst) strncat(buffer, " const", 7);
+            if (tp->isVolatile) strncat(buffer, " volatile", 10);
             break;
         }
         case TY_PTR: {
             _type2str(tmp, type_ptr_to(tp));
             sprintf(buffer, "%s *", tmp);
-            if (tp->isConst) strncat(buffer, " const", 6);
-            if (tp->isVolatile) strncat(buffer, " volatile", 9);
+            if (tp->isConst) strncat(buffer, " const", 7);
+            if (tp->isVolatile) strncat(buffer, " volatile", 10);
             break;
         }
         case TY_FUNCTION: {
@@ -154,21 +155,21 @@ char *_type2str(char *buffer, Type *tp) {
                 _type2str(tmp, par->type);
                 strncat(buffer, tmp, strlen(tmp));
                 if (i != type_params(tp)->size - 1)
-                    strncat(buffer, ", ", 2);
+                    strncat(buffer, ", ", 3);
                 else
-                    strncat(buffer, ") ", 2);
+                    strncat(buffer, ") ", 3);
             }
         }
         case TY_INCOMPLETE: {
-            strncpy(buffer, "unknown", 7);
-            if (tp->isConst) strncat(buffer, " const", 6);
-            if (tp->isVolatile) strncat(buffer, " volatile", 9);
+            strncpy(buffer, "unknown", 8);
+            if (tp->isConst) strncat(buffer, " const", 7);
+            if (tp->isVolatile) strncat(buffer, " volatile", 10);
             break;
         }
         default: {
             strncpy(buffer, type_name(tp), type_namelen(tp));
-            if (tp->isConst) strncat(buffer, " const", 6);
-            if (tp->isVolatile) strncat(buffer, " volatile", 9);
+            if (tp->isConst) strncat(buffer, " const", 7);
+            if (tp->isVolatile) strncat(buffer, " volatile", 10);
             break;
         }
     }
@@ -222,7 +223,7 @@ bool isInteger(Type *type) {
 bool isFloat(Type *type) { return isNum(type) && !isInteger(type); }
 bool isAssignable(Type *l, Type *r) {
     if (equal(l, r)) return true;
-    if (type_idptr(l) && type_kind(type_ptr_to(l)) == TY_VOID && type_isptr(r))
+    if (type_isptr(l) && type_kind(type_ptr_to(l)) == TY_VOID && type_isptr(r))
         return true;
     if (type_isptr(l) && isArrayorPtr(r)) return true;
     switch (type_kind(l)) {
@@ -299,6 +300,12 @@ int params_compare(const Params *base,const Params *act) {
     return 3;  // 引数が多い
 }
 
+////////////ヘルパ関数
+static Type *type_clone(const Type *tp) {
+    Type *type = calloc(1, sizeof(Type));
+    memcpy(type, tp, sizeof(Type));
+    return type;
+}
 
 static BaseType *new_BaseType(TypeKind kind, int size) {
     BaseType *btype = calloc(1, sizeof(BaseType));
