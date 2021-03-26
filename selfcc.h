@@ -76,7 +76,6 @@ extern CC_BidList *constants;
 
 // エラーを報告するための関数
 // printfと同じ引数を取る
-void error(char *msg, ...);
 void error_at(char *loc, char *fmt, ...);
 void error_here(bool flag, char *fmt, ...);
 
@@ -453,10 +452,10 @@ struct Type {
     int size;
     bool isConst;
     bool isVolatile;
+ char *name;
+    int len;
 
     Params *params;
-    char *name;
-    int len;
     int array_len;
 };
 /**
@@ -467,7 +466,6 @@ struct Type {
  */
 void regist_type(Type *tp);
 
-Type *new_PrimType(TypeKind kind, char *name, int len, int size);
 Type *new_Pointer(Type *base);
 Type *new_Function(Type *base, Params *arg);
 Type *new_Array(Type *base, int length);

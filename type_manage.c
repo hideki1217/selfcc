@@ -16,22 +16,26 @@ static Type *_long;
 static Type *_double;
 
 static CC_AVLTree *type_tree;
+static CC_AVLTree *struct_tree;
+
+Type *new_BaseType(TypeKind kind,int size);
 void Initialize_type_tree() {
-    _void = new_PrimType(TY_VOID, "void", 4, 8);
-    _int = new_PrimType(TY_INT, "int", 3, 4);
-    _char = new_PrimType(TY_CHAR, "char", 4, 1);
-    _float = new_PrimType(TY_FLOAT, "float", 5, 1);
-    _long = new_PrimType(TY_LONG, "long", 4, 1);
-    _double = new_PrimType(TY_DOUBLE, "double", 6, 1);
+    _void = new_BaseType(TY_VOID, 8);
+    _int = new_BaseType(TY_INT, 4);
+    _char = new_BaseType(TY_CHAR, 1);
+    _float = new_BaseType(TY_FLOAT,  1);
+    _long = new_BaseType(TY_LONG, 1);
+    _double = new_BaseType(TY_DOUBLE, 1);
 
     type_tree = cc_avltree_new();
+    struct_tree = cc_avltree_new(); 
 
-    cc_avltree_Add(type_tree, _void->name, _void->len, _void);
-    cc_avltree_Add(type_tree, _int->name, _int->len, _int);
-    cc_avltree_Add(type_tree, _char->name, _char->len, _char);
-    cc_avltree_Add(type_tree, _float->name, _float->len, _float);
-    cc_avltree_Add(type_tree, _double->name, _double->len, _double);
-    cc_avltree_Add(type_tree, _long->name, _long->len, _long);
+    cc_avltree_Add(type_tree, "void", 4, _void);
+    cc_avltree_Add(type_tree,  "int", 3, _int);
+    cc_avltree_Add(type_tree, "char", 4, _char);
+    cc_avltree_Add(type_tree, "float", 5, _float);
+    cc_avltree_Add(type_tree, "long", 4, _double);
+    cc_avltree_Add(type_tree, "double", 6,  _long);
 }
 
 void regist_type(Type *tp) { cc_avltree_Add(type_tree, tp->name, tp->len, tp); }
@@ -65,12 +69,10 @@ void InitType(Type *tp) {
     tp->isConst = false;
     tp->isVolatile = false;
 }
-Type *new_PrimType(TypeKind kind, char *name, int len, int size) {
+Type *new_BaseType(TypeKind kind, int size) {
     Type *type = calloc(1, sizeof(Type));
     InitType(type);
     type->kind = kind;
-    type->name = name;
-    type->len = len;
     type->size = size;
     return type;
 }

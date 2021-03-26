@@ -1,16 +1,11 @@
+#include "selfcc.h"
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "selfcc.h"
 
-void error(char *msg, ...) {
-    va_list ap;
-    va_start(ap, msg);
-    vfprintf(stderr, msg, ap);
-    exit(1);
-}
 
 //エラーの起きた場所を報告するための関数
 // 下のようなフォーマットでエラーメッセージを表示する

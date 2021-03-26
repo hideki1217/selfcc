@@ -4,8 +4,6 @@
 #include "selfcc.h"
 #include "utility.h"
 
-char buffer[BUFFERSIZE];
-
 void code_generate(Node *code);
 #define print_tab(n) \
     times(n) { fprintf(stderr, "\t"); }

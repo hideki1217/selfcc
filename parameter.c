@@ -1,14 +1,14 @@
 #include "selfcc.h"
 #include <stdlib.h>
 
-/*
-関数呼び出しの引数チェック
-param: base 元の引数
-param: act 実際の引数
-return:
-0::正常終了 1::型が不正
-2::引数が少ない 3::引数が多い
-*/
+
+/**
+ * @brief  関数呼び出しの引数チェック
+ * @note   
+ * @param  *base: 元の引数
+ * @param  *act: 実際の引数
+ * @retval 0::正常終了, 1::型が不正, 2::引数が少ない, 3::引数が多い
+ */
 int params_compare(const Params *base,const Params *act) {
     Param *base_arg = base->root;
     Param *act_arg = act->root;

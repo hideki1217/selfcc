@@ -25,6 +25,7 @@
         "token.h": "c",
         "params.h": "c",
         "type.h": "c",
-        "preprocesser.h": "c"
+        "preprocesser.h": "c",
+        "stdbool.h": "c"
     }
 }

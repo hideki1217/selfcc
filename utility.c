@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
-#include "selfcc.h"
+
+char buffer[BUFFER_SIZE];
 
 // 指定されたファイルの内容を返す
 char *read_file(char *path) {
@@ -87,4 +89,11 @@ int is_alnum(char c) {
 
 int is_alp(char c) {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || (c == '_');
+}
+
+void error(char *msg, ...) {
+    va_list ap;
+    va_start(ap, msg);
+    vfprintf(stderr, msg, ap);
+    exit(1);
 }
