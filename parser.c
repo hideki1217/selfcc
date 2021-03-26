@@ -8,7 +8,7 @@
 #define NOITEM -1
 
 #define ISNULL(a) (a) == NULL
-#define ISNNULL(a) (a) == NULL
+#define ISNNULL(a) (a) != NULL
 
 LVar_Manager *locals;
 CC_BidList *global_list;
@@ -53,8 +53,8 @@ void declarator(TypeModel *model, Token **ident) {
     *ident = NULL;
     while (consume("*")) {
         tpmodel_addptr(model);
-        if (ISNULL(consume("const"))) tpmodel_setconst(model);
-        if (ISNULL(consume("volatile"))) tpmodel_setvltle(model);
+        if (ISNNULL(consume("const"))) tpmodel_setconst(model);
+        if (ISNNULL(consume("volatile"))) tpmodel_setvltle(model);
         // error_here(true, "型を修飾する語でなければなりません。");
     }
     *ident = direct_declarator(model);

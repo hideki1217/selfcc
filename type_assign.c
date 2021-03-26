@@ -155,6 +155,11 @@ Type *type_assign(Node *node) {
                     // TODO: 中括弧を使った初期化の型チェック
                 } else {
                     Type *rtp = type_assign(inode->value);
+                    if (type_isfunc(rtp)){
+                        TypeModel model = {rtp};
+                        tpmodel_addptr(&model);
+                        rtp = model.type;
+                    }
                     if (!isAssignable(inode->var->type, rtp))
                         error_at(inode->var->name,
                                  "不正な初期化です。型が違います。");

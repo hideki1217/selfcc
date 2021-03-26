@@ -25,6 +25,7 @@ int print(const char *fmt,...){
 }
 int print_num(int x){
     printf("%d\n",x);
+    return x;
 }
 int test(char* fmt){
     printf(fmt,3,4,5);

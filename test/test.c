@@ -758,6 +758,19 @@ int test128() { return AHO(AHO, AHO); }
 #undef AHO
 #undef AHOAHO
 
+typedef int int_32;
+int_32 test129() {
+    int int_x = 8;
+    int_32 int_32x = 2;
+    return int_x+int_32x;
+}
+
+typedef int (*int_func_int)(int );
+int_32 test130(){
+    int_func_int func = print_num;
+    return func(4);
+}
+
 extern int assert(int, int);
 ////////////////////////////////^テスト部
 int Test() {
@@ -888,6 +901,8 @@ int Test() {
     TEST(3, test125)
     TEST(3, test126)
     TEST(6, test127)
+    TEST(10,test129)
+    TEST(4,test130)
 
     TEST_END()
 }
