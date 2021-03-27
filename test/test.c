@@ -831,6 +831,40 @@ int test134(){
 
     return ins.unti.aho;
 }
+struct Test135{
+    int x;
+    char y;
+};
+int test135(){
+    struct Test135 ins;
+    struct Test135 *ins_ptr = &ins;
+
+    ins.x = 5;
+    ins.y = 6;
+
+    ins_ptr->x = 7;
+
+    print_num(ins.x);
+
+    return ins_ptr->y;
+}
+union Test136{
+    int x;
+    char y;
+};
+int test136(){
+    union Test136 ins;
+    union Test136 *ins_ptr = &ins;
+
+    ins.x = 5;
+    ins.y = 6;
+
+    ins_ptr->x = 7;
+
+    print_num(ins.x);
+
+    return ins_ptr->y;
+}
 
 extern int assert(int, int);
 ////////////////////////////////^テスト部
@@ -968,6 +1002,8 @@ int Test() {
     TEST_ASSERT(16,test132)
     TEST_ASSERT(5,test133)
     TEST_ASSERT(8,test134)
+    TEST_ASSERT(6,test135)
+    TEST_ASSERT(7,test136)
 
     TEST_END()
 }
