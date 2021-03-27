@@ -53,30 +53,25 @@ void _expect(char *op, Token **token) {
 }
 void expect(char *op) { _expect(op, &tkstream); }
 
-Type *expect_type() {
-    if (tkstream->kind != TK_IDENT) {
-        error_at(tkstream->str, "型名ではありません");
-    }
-    // TODO: expect_Typeがstructやunionに対応していない
-    TypeModel model = { typemgr_find(tkstream->str,tkstream->len, BK_OTHER) };
-    if (model.type == NULL) error_at(tkstream->str, "宣言されていない型です。");
-    forward();
-    while (consume("*")) {
-        tpmodel_addptr(&model);
-    }
-    return model.type;
-}
+
 bool check_Type() {
-    // TODO: check_Typeがstructやunionに対応していない
-    Type *type = typemgr_find(tkstream->str,tkstream->len,BK_OTHER);
+    BaseKind bkind = BK_OTHER;
+    if (token_match(tkstream,"struct",6))bkind = BK_STRUCT;
+    else if (token_match(tkstream,"union",5))bkind = BK_UNION;
+
+    Type *type = typemgr_find(tkstream->str,tkstream->len,bkind);
     if (type == NULL) return false;
     return true;
 }
 // checkした後に実行すべき
 Token *consume_Type(Type **tp) {
-    if (tkstream->kind != TK_IDENT) return NULL;
-    // TODO: consume_Typeがstructやunionに対応していない
-    Type *type = typemgr_find(tkstream->str,tkstream->len,BK_OTHER); 
+    BaseKind bkind;
+    if(tkstream->kind == TK_IDENT)bkind = BK_OTHER;
+    else if (token_match(tkstream,"struct",6))bkind = BK_STRUCT;
+    else if (token_match(tkstream,"union",5))bkind = BK_UNION;
+    else return NULL;
+    
+    Type *type = typemgr_find(tkstream->str,tkstream->len,bkind); 
     if (!type) return NULL;
     *tp = type;
     return forward();

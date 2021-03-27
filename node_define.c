@@ -92,6 +92,12 @@ void set_LabelNode(LabelNode *node, NodeKind kind,int index) {
     set_Node((Node*)node,kind);
     node->jumpTo = index;
 }
+void set_OffsetNode(OffsetNode *node,NodeKind kind,Node *origin,char *tag_name,int namelen){
+    set_Node((Node*)node,kind);
+    node->origin = origin;
+    node->tag.string.str = tag_name;
+    node->tag.string.len = namelen;
+}
 
 Node *new_Node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
@@ -176,5 +182,10 @@ VarInitNode *new_VarInitNode(Var *var, Node *value) {
 LabelNode *new_LabelNode(NodeKind kind,int index) {
     LabelNode *node = calloc(1, sizeof(LabelNode));
     set_LabelNode(node, kind, index);
+    return node;
+}
+OffsetNode *new_OffsetNode(NodeKind kind,Node *origin,char *tag_name,int namelen){
+    OffsetNode *node = calloc(1,sizeof(OffsetNode));
+    set_OffsetNode(node,kind,origin,tag_name,namelen);
     return node;
 }

@@ -5,9 +5,8 @@
 #include "collections.h"
 #include "preprocesser.h"
 #include "token.h"
-#include "vector.h"
 #include "type.h"
-
+#include "vector.h"
 
 typedef struct Var Var;
 typedef struct CVar CVar;
@@ -37,6 +36,7 @@ typedef struct VarNode VarNode;
 typedef struct RootineNode RootineNode;
 typedef struct VarInitNode VarInitNode;
 typedef struct LabelNode LabelNode;
+typedef struct OffsetNode OffsetNode;
 
 typedef struct LVar_Manager LVar_Manager;
 typedef struct Map_for_LVar Map_for_LVar;
@@ -87,7 +87,6 @@ Token *consume_ident();
 Token *expect_ident();
 Token *_expect_ident(Token **tk);
 Token *expect_var();
-Type *expect_type();
 bool check_Type();
 Token *consume_Type(Type **tp);
 int expect_integer();
@@ -112,13 +111,13 @@ typedef enum {
     ND_SUB,     //"-"
     ND_MUL,     //"*"
     ND_DIV,     //"/"
-    ND_OR,      //"|" TODO
-    ND_XOR,     //"^" TODO
-    ND_AND,     //"&" TODO
-    ND_NOT,     //"~" TODO
-    ND_MOD,     //"%" TODO
-    ND_RSHFT,   //">>" TODO
-    ND_LSHFT,   //"<<" TODO
+    ND_OR,      //"|"
+    ND_XOR,     //"^"
+    ND_AND,     //"&"
+    ND_NOT,     //"~"
+    ND_MOD,     //"%"
+    ND_RSHFT,   //">>"
+    ND_LSHFT,   //"<<"
     ND_EQU,     //"=="
     ND_NEQ,     //"!="
     ND_GRT,     //"<"
@@ -130,40 +129,41 @@ typedef enum {
     ND_LVAR,    //ローカル変数
     ND_GVAR,    //グローバル変数
     ND_RETURN,
-    ND_GOTO,      // TODO
-    ND_BREAK,     // TODO
-    ND_CONTINUE,  // TODO
-    ND_LABEL,     // TODO "** : ..."ってやつ
-    ND_CASE,      // case ** : ...
-    ND_DEFAULT,   // defalut: ...
+    ND_GOTO,  // TODO
+    ND_BREAK,
+    ND_CONTINUE,
+    ND_LABEL,    // ** : ... TODO
+    ND_CASE,     // case ** : ... TODO
+    ND_DEFAULT,  // defalut: ... TODO
     ND_IF,
     ND_IFEL,
     ND_WHILE,
-    ND_DOWHILE,  // TODO
+    ND_DOWHILE,
     ND_FOR,
     ND_SWITCH,  // TODO
     ND_BLOCK,   //ブロック
     ND_CAST,    // TODO
     ND_CALL,
     ND_ROOTINE,
-    ND_ADDR,    //'&'
-    ND_DEREF,   //'*'
-    ND_INCRE,   //'++'
-    ND_DECRE,   //'--'
+    ND_ADDR,    // '&'
+    ND_DEREF,   // '*'
+    ND_INCRE,   // '++'
+    ND_DECRE,   // '--'
+    ND_ACCESS,  // '.'
     ND_ADDASS,  // '+='
     ND_SUBASS,  // '-='
-    ND_MULASS,  //'*='
-    ND_DIVASS,  //'/='
-    ND_MODASS,  //'%=' TODO
-    ND_LSHASS,  //'<<=' TODO
-    ND_RSHASS,  //'>>=' TODO
-    ND_ANDASS,  //'&=' TODO
-    ND_ORASS,   //'|=' TODO
-    ND_XORASS,  //'^=' TODO
+    ND_MULASS,  // '*='
+    ND_DIVASS,  // '/='
+    ND_MODASS,  // '%='
+    ND_LSHASS,  // '<<='
+    ND_RSHASS,  // '>>='
+    ND_ANDASS,  // '&='
+    ND_ORASS,   // '|='
+    ND_XORASS,  // '^='
     ND_SIZEOF,
     ND_SET,       // NDをまとめるもの
-    ND_LVARINIT,  //ローカル変数を初期化
-    ND_GVARINIT,  //グローバル変数を初期化
+    ND_LVARINIT,  // ローカル変数を初期化
+    ND_GVARINIT,  // グローバル変数を初期化
     ND_ENUM,      // TODO
     ND_INT,
     ND_FLOAT,  // TODO
@@ -295,6 +295,18 @@ struct LabelNode {
 };
 LabelNode *new_LabelNode(NodeKind kind, int index);
 void set_LabelNode(LabelNode *node, NodeKind kind, int index);
+struct OffsetNode{
+    Node base;
+    Node *origin;
+    union {
+        int offset;
+        String string;
+    } tag;
+};
+OffsetNode *new_OffsetNode(NodeKind kind,Node *origin,char *tag_name,int namelen);
+void set_OffsetNode(OffsetNode *node,NodeKind kind,Node *origin,char *tag_name,int namelen);
+
+
 
 //文法部
 void initialize_parser();
@@ -340,7 +352,7 @@ Type *type_naming(bool isCheck);
 void abstract_declarator(TypeModel *model);
 void declarator(TypeModel *model, Token **ident);
 /*識別子を含む宣言。識別子を返す。なければNULL*/
-Token *direct_declarator(TypeModel *base) ;
+Token *direct_declarator(TypeModel *base);
 
 /*RET: 2進数表示でabとすると
 a=1 => const
@@ -353,6 +365,9 @@ bool type_qualifier(flag_n *flag);
  * @retval 宣言によるNode
  */
 Node *local_declaration(bool asExpr);
+
+void struct_declaration(TypeModel *model);
+void struct_declarator(TypeModel *model, Token **ident);
 
 Node *initilizer();
 

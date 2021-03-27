@@ -1,11 +1,12 @@
+#include <stdlib.h>
+
 #include "selfcc.h"
-#include<stdlib.h>
 
 Type *type_assign(Node *node) {
     Type *tp;
     switch (node->kind) {
         case ND_NULL:
-            tp = typemgr_find("void",4,BK_OTHER);
+            tp = typemgr_find("void", 4, BK_OTHER);
             break;
         case ND_ROOTINE: {
             RootineNode *rootine = (RootineNode *)node;
@@ -27,7 +28,7 @@ Type *type_assign(Node *node) {
         case ND_ASSIGN: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
-            if (type_isfunc(rtp)){
+            if (type_isfunc(rtp)) {
                 TypeModel model = {rtp};
                 tpmodel_addptr(&model);
                 rtp = model.type;
@@ -62,8 +63,8 @@ Type *type_assign(Node *node) {
             tp = ttp;  // TODO: ここの型管理は未完成
             break;
         }
-        case ND_WHILE: 
-        case ND_DOWHILE:{
+        case ND_WHILE:
+        case ND_DOWHILE: {
             tp = type_assign(((CondNode *)node)->cond);
 
             tp = type_assign(((CondNode *)node)->T);
@@ -104,12 +105,13 @@ Type *type_assign(Node *node) {
             for (Node *elem = fnode->arg; elem; elem = elem->next) {
                 Param *param = par + (i++);
                 param->type = type_assign(elem);
-                cc_vector_pfPtr(act_par,param);// 逆順にいれていく
+                cc_vector_pfPtr(act_par, param);  // 逆順にいれていく
             }
 
             // 関数の引数チェック
-            Params *exact =
-                (call == AsFUNCTION) ? type_params(ftype) : type_params(type_ptr_to(ftype));
+            Params *exact = (call == AsFUNCTION)
+                                ? type_params(ftype)
+                                : type_params(type_ptr_to(ftype));
             int res = params_compare(exact, act_par);
             switch (res) {
                 case 1:
@@ -155,7 +157,7 @@ Type *type_assign(Node *node) {
                     // TODO: 中括弧を使った初期化の型チェック
                 } else {
                     Type *rtp = type_assign(inode->value);
-                    if (type_isfunc(rtp)){
+                    if (type_isfunc(rtp)) {
                         TypeModel model = {rtp};
                         tpmodel_addptr(&model);
                         rtp = model.type;
@@ -191,8 +193,7 @@ Type *type_assign(Node *node) {
             break;
         }
         case ND_MULASS:
-        case ND_DIVASS: 
-        {
+        case ND_DIVASS: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
             if (!isMulDivable(ltp, rtp))
@@ -210,12 +211,12 @@ Type *type_assign(Node *node) {
         case ND_RSHASS:
         case ND_ANDASS:
         case ND_ORASS:
-        case ND_XORASS:{
+        case ND_XORASS: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
-            if(!isInteger(ltp) || !isInteger(rtp))
-                error_at(node->pos->str,"式には整数型が必要です。");
-            tp = commonType(ltp,rtp);
+            if (!isInteger(ltp) || !isInteger(rtp))
+                error_at(node->pos->str, "式には整数型が必要です。");
+            tp = commonType(ltp, rtp);
             break;
         }
         case ND_INT:
@@ -226,22 +227,49 @@ Type *type_assign(Node *node) {
             tp = node->type;
             break;
         }
-        case ND_NOT:{
-            tp = type_assign(((UnaryNode*)node)->target);
-            if(isNum(tp) && !isInteger(tp))
-                error_at(node->pos->str,"浮動小数点を反転することはできません。");
+        case ND_NOT: {
+            tp = type_assign(((UnaryNode *)node)->target);
+            if (isNum(tp) && !isInteger(tp))
+                error_at(node->pos->str,
+                         "浮動小数点を反転することはできません。");
             break;
         }
         case ND_BREAK:
-        case ND_CONTINUE:{
-            tp = typemgr_find("void",4,BK_OTHER);
+        case ND_CONTINUE: {
+            tp = typemgr_find("void", 4, BK_OTHER);
+            break;
+        }
+        case ND_ACCESS: {
+            OffsetNode *onode = (OffsetNode *)node;
+            Node *origin = onode->origin;
+            tp = type_assign(origin);
+            if (!(type_isstruct(tp) || type_isunion(tp)))
+                error_at(origin->pos->str,
+                         "structやunionでない型を参照できません");
+
+            int index = params_indexof(type_members(tp), onode->tag.string.str,
+                                       onode->tag.string.len);
+            if (index == -1)
+                error_at(onode->tag.string.str,
+                         "存在しないタグを指定しています。");
+
+            int offset = 0;           // union は 0
+            if (type_isstruct(tp)) {  // structは累積
+                for (int i = 0; i < index; i++) {
+                    Param *par = type_members(tp)->_[i].ptr;
+                    offset += type_size(param_type(par));
+                }
+            }
+            onode->tag.offset = offset;  // offsetを登録
+            // タグの型をこのnodeの型とする
+            tp = param_type((Param *)type_members(tp)->_[index].ptr);
             break;
         }
         default: {
             Type *ltp = type_assign(((BinaryNode *)node)->lhs);
             Type *rtp = type_assign(((BinaryNode *)node)->rhs);
 
-            Type *type_int = typemgr_find("int",3,BK_OTHER);
+            Type *type_int = typemgr_find("int", 3, BK_OTHER);
             tp = type_int;  // default の型は今のところ int
             switch (node->kind) {
                 case ND_ADD:
@@ -288,19 +316,21 @@ Type *type_assign(Node *node) {
                     break;
                 case ND_RSHFT:
                 case ND_LSHFT:
-                    if(!isInteger(ltp) || !isInteger(rtp))
-                        error_at(node->pos->str,"整数型でない型をシフトすることはできません。");
+                    if (!isInteger(ltp) || !isInteger(rtp))
+                        error_at(
+                            node->pos->str,
+                            "整数型でない型をシフトすることはできません。");
                     break;
                 case ND_OR:
                 case ND_XOR:
                 case ND_AND:
-                    if(!isInteger(ltp) || !isInteger(rtp))
-                        error_at(node->pos->str,"式には整数型が必要です。");
-                    tp = commonType(ltp,rtp);
+                    if (!isInteger(ltp) || !isInteger(rtp))
+                        error_at(node->pos->str, "式には整数型が必要です。");
+                    tp = commonType(ltp, rtp);
                     break;
                 case ND_MOD:
-                    if(!isInteger(ltp) || !isInteger(rtp))
-                        error_at(node->pos->str,"式には整数型が必要です。");
+                    if (!isInteger(ltp) || !isInteger(rtp))
+                        error_at(node->pos->str, "式には整数型が必要です。");
                     tp = ltp;
                     break;
                 case ND_LGCOR:
@@ -310,10 +340,10 @@ Type *type_assign(Node *node) {
                 case ND_LABEL:
                 case ND_CASE:
                 case ND_DEFAULT:
-                
+
                 case ND_SWITCH:
                 case ND_CAST:
-                
+
                 default:
                     error("未定義のタグが使用されています。");
                     break;

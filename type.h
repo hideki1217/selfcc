@@ -6,6 +6,7 @@
 #include "vector.h"
 
 #define POINTER_SIZE 8
+#define INCOMPLETE_SIZE -1
 
 typedef struct Type Type;
 typedef struct BaseType BaseType;
@@ -63,9 +64,6 @@ Type *commonType(Type *l, Type *r);
     { TYPE_PARAMETERS(type_ptr) }
 #define LOCAL_POINTER(name, base_type)         \
     bPointer b##name = {TY_PTR, 8, base_type}; \
-    Type name = {&b##name, false, false};
-#define LOCAL_INCOMPLETE(name)                   \
-    bStruct b##name = {TY_INCOMPLETE, -1, NULL}; \
     Type name = {&b##name, false, false};
 
 struct BaseType {
@@ -126,7 +124,8 @@ struct bUnion {
 #define type_isptr(type_) (type_kind(type_) == TY_PTR)
 #define type_isarray(type_) (type_kind(type_) == TY_ARRAY)
 #define type_isfunc(type_) (type_kind(type_) == TY_FUNCTION)
-#define type_isincomplete(type_) (type_kind(type_) == TY_INCOMPLETE)
+
+#define type_isincomplete(type_) (type_size(type_) == INCOMPLETE_SIZE)
 
 #define type_hasptr_to(type_) \
     (type_isptr(type_) || type_isfunc(type_) || type_isarray(type_))
@@ -138,6 +137,9 @@ struct Param {
     Type *type;
     Token *token;
 };
+#define param_name(par) par->token->str
+#define param_namelen(par) (par)->token->len
+#define param_type(par) (par)->type
 /**
  * @brief  関数呼び出しの引数チェック
  * @note
@@ -146,17 +148,35 @@ struct Param {
  * @retval 0::正常終了, 1::型が不正, 2::引数が少ない, 3::引数が多い
  */
 int params_compare(const Params *base, const Params *act);
+/**
+ * @brief  先頭から見て最初にwordに一致した要素のindexを返す
+ * @note
+ * @param  *params: 検索対象
+ * @param  *word: 検索ワード
+ * @param  wordlen: 検索ワードの長さ
+ * @retval 検索ワードに一致する要素のindex or なければ -1
+ */
+int params_indexof(const Params *params, char *word, int wordlen);
 
 typedef enum { BK_OTHER = 0, BK_STRUCT = 1, BK_UNION = 2, BK_SIZE } BaseKind;
 struct TypeModel {
     Type *type;
 };
 TypeModel *tpmodel_tnew(Type *base);
-#define tpmodel_new(bname, blen, kind) \
-    tpmodel_tnew(typemgr_find(bname, blen, kind))
 void tpmodel_addptr(TypeModel *model);
 void tpmodel_addarray(TypeModel *model, int arraylen);
 void tpmodel_addfunc(TypeModel *model);
+/**
+ * @brief  modelにstructのひな形を登録する
+ * or 既存のstructを展開
+ * @note
+ * @param  *model: 対象のmodel
+ * @param  *struct_name: 目的のstructの名前
+ * @param  namelen: 名前の長さ
+ * @retval そのmodelのstructがincompleteならtrue
+ */
+bool tpmodel_initstruct(TypeModel *model, char *struct_name, int namelen);
+bool tpmodel_initunion(TypeModel *model, char *union_name, int namelen);
 void tpmodel_addprm(TypeModel *model, Type *prm_tp, Token *ident);
 void tpmodel_addvaarg(TypeModel *model);
 void tpmodel_addmem(TypeModel *model, Type *prm_tp, Token *ident);
@@ -194,5 +214,4 @@ TypeModel *typemgr_excl(char *name, int len, BaseKind kind);
  * @param  *model: 型モデル
  * @retval None
  */
-void typemgr_reg(char *name, int len, Type *type);
-
+void typemgr_reg(char *name, int len, BaseKind kind, Type *type);

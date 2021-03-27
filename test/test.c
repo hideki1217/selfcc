@@ -10,7 +10,7 @@ extern void alloc4(int **p, int a, int b, int c, int d);
 extern void doexit(int x);
 
 #define TEST_BEGIN() int ans, act;
-#define TEST(answer, test)                                                  \
+#define TEST_ASSERT(answer, test)                                                  \
     ans = answer;                                                           \
     act = test();                                                           \
     if (ans == act)                                                         \
@@ -770,139 +770,204 @@ int_32 test130(){
     int_func_int func = print_num;
     return func(4);
 }
+struct Test131{
+    int x;
+    char aho;
+};
+int test131(){
+    struct Test131 aho;
+    aho.x = 4;
+    aho.aho = 4;
+    return aho.aho;
+}
+union Test132{ 
+    int x;
+    char aho;
+};
+int test132(){
+    union Test132 aho;
+    aho.x = 4;
+    aho.aho = 16;
+    print_num(aho.x);
+    return aho.aho;
+}
+struct Test133{
+    int x;
+    struct aa{
+        char aho;
+        int y;
+    } str_test;
+};
+int test133(){
+    struct Test133 aho;
+    aho.x = 4;
+    aho.str_test.aho = 5;
+    aho.str_test.y = 6;
+    print_num(aho.str_test.y);
+    return aho.str_test.aho;
+}
+typedef struct Test134 Test134_t;
+struct Test134{
+    union {
+        int aho;
+        char baka;
+        int* ptr;
+    } item;
+    struct ahoo{
+        int aho;
+        char baka;
+        int *ptr;
+    } unti;
+};
+int test134(){
+    Test134_t ins;
+    ins.item.aho = 6;
+    ins.item.baka = 7;
+    ins.item.ptr = &(ins.item.aho);
+
+    ins.unti.aho = 8;
+    ins.unti.baka = 9;
+    ins.unti.ptr = &(ins.item.aho);
+
+    return ins.unti.aho;
+}
 
 extern int assert(int, int);
 ////////////////////////////////^テスト部
 int Test() {
     TEST_BEGIN()
-    TEST(0, test1)
-    TEST(42, test2)
-    TEST(2, test3)
-    TEST(3, test4)
-    TEST(2, test5)
-    TEST(3, test6)
-    TEST(47, test7)
-    TEST(15, test8)
-    TEST(4, test9)
-    TEST(2, test10)
-    TEST(2, test11)
-    TEST(1, test12)
-    TEST(1, test13)
-    TEST(0, test14)
-    TEST(1, test15)
-    TEST(1, test16)
-    TEST(15, test17)
-    TEST(1, test18)
-    TEST(0, test19)
-    TEST(0, test20)
-    TEST(1, test21)
-    TEST(10, test22)
-    TEST(7, test23)
-    TEST(1, test24)
-    TEST(12, test25)
-    TEST(5, test26)
-    TEST(18, test27)
-    TEST(3, test28)
-    TEST(48, test29)
-    TEST(4, test30)
-    TEST(1, test31)
-    TEST(6, test32)
-    TEST(6, test33)
-    TEST(18, test34)
-    TEST(50, test35)
-    TEST(5, test36)
-    TEST(3, test37)
-    TEST(3, test38)
-    TEST(36, test39)
-    TEST(6, test40)
-    TEST(5, test41)
-    TEST(8, test42)
-    TEST(10, test43)
-    TEST(3, test44)
-    TEST(3, test45)
-    TEST(5, test46)
-    TEST(3, test47)
-    TEST(3, test48)
-    TEST(8, test49)
-    TEST(13, test50)
-    TEST(6, test51)
-    TEST(7, test52)
-    TEST(3, test53)
-    TEST(2, test54)
-    TEST(144, test55)
-    TEST(6, test56)
-    TEST(5, test57)
-    TEST(24, test58)
-    TEST(15, test59)
-    TEST(6, test60)
-    TEST(6, test61)
-    TEST(5, test62)
-    TEST(3, test63)
-    TEST(5, test64)
-    TEST(3, test65)
-    TEST(3, test66)
-    TEST(7, test67)
-    TEST(1, test68)
-    TEST(4, test69)
-    TEST(8, test70)
-    TEST(4, test71)
-    TEST(8, test72)
-    TEST(4, test73)
-    TEST(8, test74)
-    TEST(5, test75)
-    TEST(3, test76)
-    TEST(5, test77)
-    TEST(10, test78)
-    TEST(3, test79)
-    TEST(5, test80)
-    TEST(10, test81)
-    TEST(3, test82)
-    TEST(10, test83)
-    TEST(5, test84)
-    TEST(5, test85)
-    TEST(3, test86)
-    TEST(4, test87)
-    TEST(97, test88)
-    TEST(7, test89)
-    TEST(6, test90)
-    TEST(6, test91)
-    TEST(3, test92)
-    TEST(10, test93)
-    TEST(3, test94)
-    TEST(3, test95)
-    TEST(8, test96)
-    TEST(2, test97)
-    TEST(6, test98)
-    TEST(0, test99)
-    TEST(0, test100)
-    TEST(1, test101)
-    TEST(8, test102)
-    TEST(2, test103)
-    TEST(6, test104)
-    TEST(0, test105)
-    TEST(0, test106)
-    TEST(1, test107)
-    TEST(10, test108)
-    TEST(9, test109)
-    TEST(9, test110)
-    TEST(9, test111)
-    TEST(9, test112)
-    TEST(17, test113)
-    TEST(1, test114)
-    TEST(0, test115)
-    TEST(4, test116)
-    TEST(5, test117)
-    TEST(7, test118)
-    TEST(7, test119)
-    TEST(3, test121)
-    TEST(15, test122)
-    TEST(15, test123)
-    TEST(3, test124)
-    TEST(3, test125)
-    TEST(3, test126)
-    TEST(6, test127)
-    TEST(10,test129)
-    TEST(4,test130)
+    TEST_ASSERT(0, test1)
+    TEST_ASSERT(42, test2)
+    TEST_ASSERT(2, test3)
+    TEST_ASSERT(3, test4)
+    TEST_ASSERT(2, test5)
+    TEST_ASSERT(3, test6)
+    TEST_ASSERT(47, test7)
+    TEST_ASSERT(15, test8)
+    TEST_ASSERT(4, test9)
+    TEST_ASSERT(2, test10)
+    TEST_ASSERT(2, test11)
+    TEST_ASSERT(1, test12)
+    TEST_ASSERT(1, test13)
+    TEST_ASSERT(0, test14)
+    TEST_ASSERT(1, test15)
+    TEST_ASSERT(1, test16)
+    TEST_ASSERT(15, test17)
+    TEST_ASSERT(1, test18)
+    TEST_ASSERT(0, test19)
+    TEST_ASSERT(0, test20)
+    TEST_ASSERT(1, test21)
+    TEST_ASSERT(10, test22)
+    TEST_ASSERT(7, test23)
+    TEST_ASSERT(1, test24)
+    TEST_ASSERT(12, test25)
+    TEST_ASSERT(5, test26)
+    TEST_ASSERT(18, test27)
+    TEST_ASSERT(3, test28)
+    TEST_ASSERT(48, test29)
+    TEST_ASSERT(4, test30)
+    TEST_ASSERT(1, test31)
+    TEST_ASSERT(6, test32)
+    TEST_ASSERT(6, test33)
+    TEST_ASSERT(18, test34)
+    TEST_ASSERT(50, test35)
+    TEST_ASSERT(5, test36)
+    TEST_ASSERT(3, test37)
+    TEST_ASSERT(3, test38)
+    TEST_ASSERT(36, test39)
+    TEST_ASSERT(6, test40)
+    TEST_ASSERT(5, test41)
+    TEST_ASSERT(8, test42)
+    TEST_ASSERT(10, test43)
+    TEST_ASSERT(3, test44)
+    TEST_ASSERT(3, test45)
+    TEST_ASSERT(5, test46)
+    TEST_ASSERT(3, test47)
+    TEST_ASSERT(3, test48)
+    TEST_ASSERT(8, test49)
+    TEST_ASSERT(13, test50)
+    TEST_ASSERT(6, test51)
+    TEST_ASSERT(7, test52)
+    TEST_ASSERT(3, test53)
+    TEST_ASSERT(2, test54)
+    TEST_ASSERT(144, test55)
+    TEST_ASSERT(6, test56)
+    TEST_ASSERT(5, test57)
+    TEST_ASSERT(24, test58)
+    TEST_ASSERT(15, test59)
+    TEST_ASSERT(6, test60)
+    TEST_ASSERT(6, test61)
+    TEST_ASSERT(5, test62)
+    TEST_ASSERT(3, test63)
+    TEST_ASSERT(5, test64)
+    TEST_ASSERT(3, test65)
+    TEST_ASSERT(3, test66)
+    TEST_ASSERT(7, test67)
+    TEST_ASSERT(1, test68)
+    TEST_ASSERT(4, test69)
+    TEST_ASSERT(8, test70)
+    TEST_ASSERT(4, test71)
+    TEST_ASSERT(8, test72)
+    TEST_ASSERT(4, test73)
+    TEST_ASSERT(8, test74)
+    TEST_ASSERT(5, test75)
+    TEST_ASSERT(3, test76)
+    TEST_ASSERT(5, test77)
+    TEST_ASSERT(10, test78)
+    TEST_ASSERT(3, test79)
+    TEST_ASSERT(5, test80)
+    TEST_ASSERT(10, test81)
+    TEST_ASSERT(3, test82)
+    TEST_ASSERT(10, test83)
+    TEST_ASSERT(5, test84)
+    TEST_ASSERT(5, test85)
+    TEST_ASSERT(3, test86)
+    TEST_ASSERT(4, test87)
+    TEST_ASSERT(97, test88)
+    TEST_ASSERT(7, test89)
+    TEST_ASSERT(6, test90)
+    TEST_ASSERT(6, test91)
+    TEST_ASSERT(3, test92)
+    TEST_ASSERT(10, test93)
+    TEST_ASSERT(3, test94)
+    TEST_ASSERT(3, test95)
+    TEST_ASSERT(8, test96)
+    TEST_ASSERT(2, test97)
+    TEST_ASSERT(6, test98)
+    TEST_ASSERT(0, test99)
+    TEST_ASSERT(0, test100)
+    TEST_ASSERT(1, test101)
+    TEST_ASSERT(8, test102)
+    TEST_ASSERT(2, test103)
+    TEST_ASSERT(6, test104)
+    TEST_ASSERT(0, test105)
+    TEST_ASSERT(0, test106)
+    TEST_ASSERT(1, test107)
+    TEST_ASSERT(10, test108)
+    TEST_ASSERT(9, test109)
+    TEST_ASSERT(9, test110)
+    TEST_ASSERT(9, test111)
+    TEST_ASSERT(9, test112)
+    TEST_ASSERT(17, test113)
+    TEST_ASSERT(1, test114)
+    TEST_ASSERT(0, test115)
+    TEST_ASSERT(4, test116)
+    TEST_ASSERT(5, test117)
+    TEST_ASSERT(7, test118)
+    TEST_ASSERT(7, test119)
+    TEST_ASSERT(3, test121)
+    TEST_ASSERT(15, test122)
+    TEST_ASSERT(15, test123)
+    TEST_ASSERT(3, test124)
+    TEST_ASSERT(3, test125)
+    TEST_ASSERT(3, test126)
+    TEST_ASSERT(6, test127)
+    TEST_ASSERT(10,test129)
+    TEST_ASSERT(4,test130)
+    TEST_ASSERT(4,test131)
+    TEST_ASSERT(16,test132)
+    TEST_ASSERT(5,test133)
+    TEST_ASSERT(8,test134)
 
     TEST_END()
 }

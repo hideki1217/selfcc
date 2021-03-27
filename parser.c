@@ -1,14 +1,20 @@
-#include <stdlib.h>
-
 #include "selfcc.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "utility.h"
+
 
 #define ISCONST 1
 #define ISVOLATILE 2
 
-#define NOITEM -1
+#define UNNAMED_STRUCT_PREFIX ".struct"
+#define UNNAMED_UNION_PREFIX ".union"
+#define UNNAMED_ENUM_PREFIX ".enum"
 
-#define ISNULL(a) (a) == NULL
-#define ISNNULL(a) (a) != NULL
+
+#define NOITEM -1
 
 LVar_Manager *locals;
 CC_BidList *global_list;
@@ -30,6 +36,11 @@ void initialize_parser() {
     continue_index = cc_intqueue_new();
     break_index = cc_intqueue_new();
 }
+
+char *struct_pseud();
+char *union_pseud();
+char *enum_pseud();
+
 
 #define new_Params() cc_vector_new()
 void continue_push(int index);
@@ -124,8 +135,8 @@ bool specifier_qualifier(TypeModel *model, bool errorExpected) {
         return false;  // 更新がない場合(errorExpectedが指定されていれば無視する)
     if (!type_specified) error_here(false, "ベースの型が宣言されていません");
 
-    if(flag | ISCONST)tpmodel_setconst(model);
-    if(flag | ISVOLATILE)tpmodel_setvltle(model);
+    if(flag & ISCONST)tpmodel_setconst(model);
+    if(flag & ISVOLATILE)tpmodel_setvltle(model);
 
     return count <= 1;
 }
@@ -139,7 +150,6 @@ void abstract_declarator(TypeModel *model) {
     bool isConst = false;
     bool isVolatile = false;
     TypeModel inner_model = {NULL};
-    Token *tk = NULL;
     while (consume("*")) {
         tpmodel_addptr(model);
         if (ISNNULL(consume("const"))) tpmodel_setconst(model);
@@ -149,11 +159,6 @@ void abstract_declarator(TypeModel *model) {
         abstract_declarator(&inner_model);
         expect(")");
     }
-    if (tk != NULL)
-        error_here(
-            false,
-            "ここに識別子は存在してはいけません");  // TODO:
-                                                    // 識別子を読み取る場所を用意すべし
     if (consume("[")) {
         int size = expect_integer();  // TODO:　定数式ならおっけ
         tpmodel_addarray(model, size);
@@ -193,10 +198,40 @@ StorageMode storage_specifier() {
 bool type_specifier(TypeModel *model) {  // TODO: 未実装
     // struct宣言
     if (consume("struct")) {
+        Token *ident;
+        if((ident = consume_ident()) != NULL){// タグ付きの場合
+            if(!tpmodel_initstruct(model,ident->str,ident->len))return true;// 完成した型ならそのまま返す
+            if(!check("{"))return true; // 不完全な型として宣言だけの場合
+        }
+        else { // 名前なしの場合は仮称を与える
+            char *pseud = struct_pseud();
+            tpmodel_initstruct(model,pseud,strlen(pseud));
+        }
+        expect("{");
+        do{
+            struct_declaration(model);
+        }
+        while(ISNULL(consume("}")));
+
         return true;
     }
     // union宣言
     if (consume("union")) {
+        Token *ident;
+        if((ident = consume_ident()) != NULL){// タグ付きの場合
+            if(!tpmodel_initunion(model,ident->str,ident->len))return true;// 完成した型ならそのまま返す
+            if(!check("{"))return true; // 不完全な型として宣言だけの場合
+        }
+        else { // 名前なしの場合は仮称を与える
+            char *pseud = struct_pseud();
+            tpmodel_initunion(model,pseud,strlen(pseud));
+        }
+        expect("{");
+        do{
+            struct_declaration(model);
+        }
+        while(ISNULL(consume("}")));
+
         return true;
     }
     // enum宣言
@@ -253,13 +288,14 @@ Node *local_declaration(bool /*式と同列に扱うか？*/ asExpr) {
     StorageMode mode = SM_NONE;
     TypeModel model = {NULL};
     Token *ident;
-    if (!declaration_specifier(&mode, &model)) return NULL;
+
+    if (!declaration_specifier(&mode, &model)) return NULL; // 更新がなかった場合
+    if(consume(";"))return NULL;//　型宣言のみの場合
 
     BlockNode *set = new_BlockNode(ND_SET);
     Node anker, *top = &anker;
     do {
-        Type *type = new_Type(TYPE_PARAMETERS(model.type));
-        TypeModel clone_model = { type };
+        TypeModel clone_model = { new_Type(TYPE_PARAMETERS(model.type)) };
         declarator(&clone_model, &ident);
         Node *res;
         if (CanbeFuncDef(clone_model.type)) {
@@ -283,7 +319,7 @@ Node *local_declaration(bool /*式と同列に扱うか？*/ asExpr) {
         } else {
             switch (mode) {
                 case SM_TYPEDEF: {
-                    typemgr_reg(ident->str,ident->len,clone_model.type);
+                    typemgr_reg(ident->str,ident->len,BK_OTHER,clone_model.type);
                     res = new_Node(ND_NULL);
                     break;
                 }
@@ -352,11 +388,12 @@ Node *global_declaration() {
     Token *ident;
 
     if (!declaration_specifier(&mode, &model)) return NULL; // 更新がなかった場合
+    if(consume(";"))return NULL;//　型宣言のみの場合
+
     BlockNode *set = new_BlockNode(ND_SET);
     Node anker, *top = &anker;
     do {
-        Type *type = new_Type(TYPE_PARAMETERS(model.type));
-        TypeModel clone_model = { type };
+        TypeModel clone_model = { new_Type(TYPE_PARAMETERS(model.type)) };
         declarator(&clone_model, &ident);
 
         Node *res;
@@ -404,7 +441,7 @@ Node *global_declaration() {
         } else {
             switch (mode) {
                 case SM_TYPEDEF: {
-                    typemgr_reg(ident->str,ident->len,clone_model.type);
+                    typemgr_reg(ident->str,ident->len,BK_OTHER,clone_model.type);
                     res = new_Node(ND_NULL);
                     break;
                 }
@@ -521,6 +558,26 @@ Node *initilizer() {
     }
     return assignment_expr();
 }
+
+void struct_declaration(TypeModel *model){
+    TypeModel mem_model = {NULL};
+    specifier_qualifier(&mem_model,true);
+    do
+    {
+        Token *ident;
+        TypeModel clone_model = { new_Type(TYPE_PARAMETERS(mem_model.type)) };
+        struct_declarator(&clone_model, &ident);
+        
+        tpmodel_addmem(model,clone_model.type,ident);
+    }
+    while(consume(","));
+    expect(";");
+}
+void struct_declarator(TypeModel *model,Token **ident){
+    declarator(model,ident); // TODO: bittableを実装するならここ
+}
+
+
 Node *declaration_or_expr() {
     Node *nd = local_declaration(true);
     if (nd == NULL) nd = expression();
@@ -698,12 +755,18 @@ Node *postfix_expr() {
             }
             cnd->arg = args;
             return (Node *)cnd;
-        }  // TODO: struct(値)のメンバへの参照
+        }  // struct(値)のメンバへの参照
         else if (consume(".")) {
             Token *tk = expect_ident();
-        }  // TODO: struct pointer からのメンバへの参照
+            nd = (Node *)new_OffsetNode(ND_ACCESS,nd,tk->str,tk->len);
+        }  // struct pointer からのメンバへの参照
         else if (consume("->")) {
             Token *tk = expect_ident();
+            nd = (Node *)new_OffsetNode(
+                ND_ACCESS,
+                (Node*)new_UnaryNode(ND_DEREF,nd),// 'A->B'=>'*(A).B'
+                tk->str, tk->len
+            );
         } else if (consume("++"))
             nd = (Node *)new_BinaryNode(ND_INCRE, nd,
                                         (Node *)new_NumNode(1));  // x++
@@ -793,7 +856,7 @@ Node *translation_unit() {
     Node *top = &anker;
     while (!at_eof()) {
         top->next = external_declaration();
-        top = top->next;
+        if(ISNNULL(top->next))top = top->next;
     }
     top->next = NULL;
 
@@ -1000,6 +1063,31 @@ Node *jump_stmt() {
 }
 
 //////////////ヘルパー関数
+char *struct_pseud(){
+    char numstr[10];
+    snprintf(numstr,10,"%d",structId++);
+    char *buffer = calloc(sizeof(UNNAMED_STRUCT_PREFIX)+strlen(numstr)+1,sizeof(char));
+    strncat(buffer,UNNAMED_STRUCT_PREFIX,sizeof(UNNAMED_STRUCT_PREFIX));
+    strncat(buffer,numstr,sizeof(numstr));
+    return buffer;
+}
+char *union_pseud(){
+    char numstr[10];
+    snprintf(numstr,10,"%d",unionId++);
+    char *buffer = calloc(sizeof(UNNAMED_UNION_PREFIX)+strlen(numstr)+1,sizeof(char));
+    strncat(buffer,UNNAMED_UNION_PREFIX,sizeof(UNNAMED_UNION_PREFIX));
+    strncat(buffer,numstr,sizeof(numstr));
+    return buffer;
+}
+char *enum_pseud(){
+    char numstr[10];
+    snprintf(numstr,10,"%d",enumId++);
+    char *buffer = calloc(sizeof(UNNAMED_ENUM_PREFIX)+strlen(numstr)+1,sizeof(char));
+    strncat(buffer,UNNAMED_ENUM_PREFIX,sizeof(UNNAMED_ENUM_PREFIX));
+    strncat(buffer,numstr,sizeof(numstr));
+    return buffer;
+}
+
 void continue_push(int index) { cc_intqueue_push(continue_index, index); }
 void continue_pop() { cc_intqueue_pop(continue_index); }
 int continue_top() {

@@ -57,23 +57,26 @@ void initialize_typemgr() {
     regist_Type(BK_OTHER, "double", 6, _long);
 }
 
-Type *typemgr_find(char *name, int len, BaseKind kind) {
+TypeModel *_typemgr_find(char *name, int len, BaseKind kind) {
     TypeModel *model;
     model = cc_avltree_Search(trees[kind], name, len);
-    return (model == NULL) ? NULL : type_clone(model->type);
+    return model;
+}
+
+Type *typemgr_find(char *name, int len, BaseKind kind) {
+    TypeModel *model = _typemgr_find(name, len, kind);
+    return (ISNULL(model)) ? NULL : type_clone(model->type);
 }
 
 TypeModel *typemgr_excl(char *name, int len, BaseKind kind) {
     if (kind == BK_OTHER) error("structやunionへの利用を目的としています。");
-    Type *type = typemgr_find(name, len, kind);
-    if (type) return NULL;
 
     TypeModel *model = tpmodel_tnew(NULL);
     cc_avltree_Add(trees[kind], name, len, model);
     return model;
 }
 
-void typemgr_reg(char *name, int len, Type *type) {
+void typemgr_reg(char *name, int len, BaseKind kind, Type *type) {
     TypeModel *model;
     if (type_hasname(type)) {  // 名前の付いた型ならばエイリアス
         BaseKind bkind;
@@ -89,7 +92,7 @@ void typemgr_reg(char *name, int len, Type *type) {
     } else {  // そうでなければ新規modelを登録
         model = tpmodel_tnew(type);
     }
-    cc_avltree_Add(trees[BK_OTHER], name, len, model);
+    cc_avltree_Add(trees[kind], name, len, model);
 }
 
 TypeModel *tpmodel_tnew(Type *base) {
@@ -108,6 +111,32 @@ void tpmodel_addarray(TypeModel *model, int arraylen) {
 }
 void tpmodel_addfunc(TypeModel *model) {
     model->type = new_Function(model->type);
+}
+bool tpmodel_initstruct(TypeModel *model, char *struct_name, int namelen) {
+    Type *reged_type = typemgr_find(struct_name, namelen, BK_STRUCT);
+    if (ISNNULL(reged_type)) {
+        model->type =
+            reged_type;  //　登録済みがあって、それがINCOMPLETEならそれを返す。
+        return type_isincomplete(reged_type);  // INCOMPMLETEなら編集可
+    }
+    model->type = new_Struct(struct_name, namelen);
+    type_size(model->type) = INCOMPLETE_SIZE;  // 登録段階ではINCOMPLETE
+    regist_Type(BK_STRUCT, struct_name, namelen, model->type);  // ひな形を登録
+
+    return true;  // 編集可
+}
+bool tpmodel_initunion(TypeModel *model, char *union_name, int namelen) {
+    Type *reged_type = typemgr_find(union_name, namelen, BK_UNION);
+    if (ISNNULL(reged_type)) {
+        model->type =
+            reged_type;  //　登録済みがあって、それがINCOMPLETEならそれを返す。
+        return type_isincomplete(reged_type);  // INCOMPMLETEなら編集可
+    }
+    model->type = new_Union(union_name, namelen);
+    type_size(model->type) = INCOMPLETE_SIZE;  // 登録段階ではINCOMPLETE
+    regist_Type(BK_UNION, union_name, namelen, model->type);  // ひな形を登録
+
+    return true;  // 編集可
 }
 void tpmodel_addprm(TypeModel *model, Type *prm_tp, Token *ident) {
     if (!type_isfunc(model->type))
@@ -132,15 +161,26 @@ void tpmodel_addmem(TypeModel *model, Type *prm_tp, Token *ident) {
     par->kind = PA_ARG;
     par->type = prm_tp;
     par->token = ident;
-    cc_vector_pbPtr(type_params(model->type), par);
+
+    // メンバリストに追加
+    cc_vector_pbPtr(type_members(model->type), par);
+
+    // 型のサイズの更新
+    if (type_isincomplete(model->type)) type_size(model->type) = 0;
+    if (type_isstruct(model->type)) {
+        type_size(model->type) += type_size(prm_tp);
+    }
+    if (type_isunion(model->type)) {
+        type_size(model->type) = max(type_size(model->type), type_size(prm_tp));
+    }
 }
 void tpmodel_setbase(TypeModel *model, Type *base) {
     Type *top = model->type, *pre = top;
-    if (top == NULL) {
+    if (ISNULL(top)) {
         model->type = base;
         return;
     }
-    while ((top != NULL) && type_hasptr_to(top)) {
+    while (ISNNULL(top) && type_hasptr_to(top)) {
         pre = top;
         top = type_ptr_to(top);
     }
@@ -179,12 +219,6 @@ char *_type2str(char *buffer, Type *tp) {
                     strncat(buffer, ") ", 3);
             }
         }
-        case TY_INCOMPLETE: {
-            strncpy(buffer, "unknown", 8);
-            if (tp->isConst) strncat(buffer, " const", 7);
-            if (tp->isVolatile) strncat(buffer, " volatile", 10);
-            break;
-        }
         default: {
             strncpy(buffer, type_name(tp), type_namelen(tp));
             if (tp->isConst) strncat(buffer, " const", 7);
@@ -199,7 +233,7 @@ char *type2str(Type *tp) {
     return _type2str(buffer, tp);
 }
 bool equal(Type *l, Type *r) {
-    if (l == NULL && r != NULL || l != NULL && r == NULL) return false;
+    if (ISNULL(l) && ISNNULL(r) || ISNNULL(l) && ISNULL(r)) return false;
     if (l == r) return true;
     if (type_kind(l) != type_kind(r)) return false;
     switch (type_kind(r)) {
@@ -319,6 +353,19 @@ int params_compare(const Params *base, const Params *act) {
 
     return 3;  // 引数が多い
 }
+int params_indexof(const Params *params, char *word, int wordlen) {
+    int index = -1;
+    for (int i = 0; i < params->size; i++) {
+        Param *par = params->_[i].ptr;
+        int cmp_res =
+            string_cmp(param_name(par), param_namelen(par), word, wordlen);
+        if (cmp_res == 0) {
+            index = i;
+            break;
+        }
+    }
+    return index;
+}
 
 ////////////ヘルパ関数
 static Type *type_clone(const Type *tp) {
@@ -375,6 +422,7 @@ static Type *new_Struct(char *name, int namelen) {
     type_kind(type) = TY_STRUCT;
     type_name(type) = name;
     type_namelen(type) = namelen;
+    type_members(type) = cc_vector_new();
     return type;
 }
 static Type *new_Union(char *name, int namelen) {
@@ -383,6 +431,7 @@ static Type *new_Union(char *name, int namelen) {
     type_kind(type) = TY_UNION;
     type_name(type) = name;
     type_namelen(type) = namelen;
+    type_members(type) = cc_vector_new();
     return type;
 }
 static Type *new_Incomplete() {

@@ -1,6 +1,10 @@
 #pragma once
 
 #define times(n) for(int i=0;i<(int)n;i++)
+
+#define ISNULL(a) ((a) == NULL)
+#define ISNNULL(a) ((a) != NULL)
+
 #define BUFFER_SIZE 256
 
 extern char buffer[BUFFER_SIZE];

@@ -30,6 +30,18 @@ void gen_lval(Node *node, bool push) {
         gen(((UnaryNode *)node)->target, push);
         return;
     }
+    if (node->kind == ND_ACCESS) {
+        int total_offset = 0;
+        Node *top = node;
+        while (top->kind == ND_ACCESS) {
+            total_offset += ((OffsetNode *)top)->tag.offset;
+            top = ((OffsetNode *)top)->origin;
+        }
+        gen_lval(top, false);
+        if (total_offset != 0) printf("    add rax, %d\n", total_offset);
+        if (push) printf("    push rax\n");
+        return;
+    }
     if (isArrayorPtr(node->type)) {
         gen(node, push);
         return;
@@ -102,10 +114,10 @@ void gen(Node *node, bool push) {
             return;
         }
         case ND_LVAR:
-        case ND_GVAR: {
-            VarNode *vnode = (VarNode *)node;
+        case ND_GVAR:
+        case ND_ACCESS: {
             gen_lval(node, push);
-            if (type_isarray(vnode->var->type) || type_isfunc(vnode->var->type))
+            if (type_isarray(node->type) || type_isfunc(node->type))
                 return;  // 配列型と関数型はPOINTERみたいにしてあげる
             if (push) printf("    pop rax\n");
             printf("    %s, %s [rax]\n",
@@ -372,7 +384,7 @@ void gen(Node *node, bool push) {
     printf("    pop rdi\n");
     printf("    pop rax\n");
 
-    Type *type_int = typemgr_find("int",3,BK_OTHER);
+    Type *type_int = typemgr_find("int", 3, BK_OTHER);
 
     switch (node->kind) {
         case ND_ADD:
