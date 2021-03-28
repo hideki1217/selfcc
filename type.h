@@ -16,6 +16,7 @@ typedef struct bFunction bFunction;
 typedef struct bArray bArray;
 typedef struct bStruct bStruct;
 typedef struct bUnion bUnion;
+typedef struct bEnum bEnum;
 
 typedef CC_Vector Params;
 typedef struct Param Param;
@@ -97,6 +98,9 @@ struct bUnion {
     bLeafType base;
     Params /*<Param>*/ *members;
 };
+struct bEnum {
+    bLeafType base;
+};
 #define btype_kind(btype_) ((BaseType *)(btype_))->kind
 #define btype_size(btype_) ((BaseType *)(btype_))->size
 // 以下キャストが必要なのでTypeKindによる検査必須
@@ -121,6 +125,7 @@ struct bUnion {
 
 #define type_isstruct(type_) (type_kind(type_) == TY_STRUCT)
 #define type_isunion(type_) (type_kind(type_) == TY_UNION)
+#define type_isenum(type_) (type_kind(type_) == TY_ENUM)
 #define type_isptr(type_) (type_kind(type_) == TY_PTR)
 #define type_isarray(type_) (type_kind(type_) == TY_ARRAY)
 #define type_isfunc(type_) (type_kind(type_) == TY_FUNCTION)
@@ -158,7 +163,7 @@ int params_compare(const Params *base, const Params *act);
  */
 int params_indexof(const Params *params, char *word, int wordlen);
 
-typedef enum { BK_OTHER = 0, BK_STRUCT = 1, BK_UNION = 2, BK_SIZE } BaseKind;
+typedef enum { BK_OTHER = 0, BK_STRUCT = 1, BK_UNION = 2, BK_ENUM = 3, BK_SIZE } BaseKind;
 struct TypeModel {
     Type *type;
 };
@@ -177,6 +182,7 @@ void tpmodel_addfunc(TypeModel *model);
  */
 bool tpmodel_initstruct(TypeModel *model, char *struct_name, int namelen);
 bool tpmodel_initunion(TypeModel *model, char *union_name, int namelen);
+bool tpmodel_initenum(TypeModel *model, char *enum_name, int namelen);
 void tpmodel_addprm(TypeModel *model, Type *prm_tp, Token *ident);
 void tpmodel_addvaarg(TypeModel *model);
 void tpmodel_addmem(TypeModel *model, Type *prm_tp, Token *ident);
@@ -215,3 +221,13 @@ TypeModel *typemgr_excl(char *name, int len, BaseKind kind);
  * @retval None
  */
 void typemgr_reg(char *name, int len, BaseKind kind, Type *type);
+/**
+ * @brief  enumを登録するための関数
+ * @note   
+ * @param  *name: 名前
+ * @param  namelen: 名前の長さ
+ * @param  val: その定数値
+ * @retval falseならすでに登録済み
+ */
+bool typemgr_regenum(char *name,int namelen,int val);
+

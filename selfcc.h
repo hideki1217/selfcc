@@ -369,6 +369,8 @@ Node *local_declaration(bool asExpr);
 void struct_declaration(TypeModel *model);
 void struct_declarator(TypeModel *model, Token **ident);
 
+void enum_declaration();
+
 Node *initilizer();
 
 Node *constant_expr();

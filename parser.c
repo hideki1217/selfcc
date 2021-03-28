@@ -195,7 +195,7 @@ StorageMode storage_specifier() {
     if (consume("register")) return SM_REGISTER;
     return SM_NONE;
 }
-bool type_specifier(TypeModel *model) {  // TODO: 未実装
+bool type_specifier(TypeModel *model) { // TODO: 未実装
     // struct宣言
     if (consume("struct")) {
         Token *ident;
@@ -236,6 +236,19 @@ bool type_specifier(TypeModel *model) {  // TODO: 未実装
     }
     // enum宣言
     if (consume("enum")) {
+        Token *ident;
+        if((ident = consume_ident()) != NULL){// タグ付きの場合
+            if(!tpmodel_initenum(model,ident->str,ident->len))return true;// 完成した型ならそのまま返す
+            if(!check("{"))return true; // 不完全な型として宣言だけの場合
+        }
+        else { // 名前なしの場合は仮称を与える
+            char *pseud = struct_pseud();
+            tpmodel_initenum(model,pseud,strlen(pseud));
+        }
+        expect("{");
+        enum_declaration();
+        expect("}");
+
         return true;
     }
     // 符号付き
@@ -577,6 +590,21 @@ void struct_declarator(TypeModel *model,Token **ident){
     declarator(model,ident); // TODO: bittableを実装するならここ
 }
 
+void enum_declaration(){
+    Token *ident;
+    int value = 0;
+    do{
+        ident = expect_ident();
+        if(consume("=")){
+            int val = expect_integer(); // TODO: コンパイル時定数にも対応
+            value = val;
+        }
+        if(! typemgr_regenum(ident->str,ident->len,value))
+            error_at(ident->str,"enum値が2度定義されています。");
+        value++;
+    }
+    while(consume(","));
+}
 
 Node *declaration_or_expr() {
     Node *nd = local_declaration(true);

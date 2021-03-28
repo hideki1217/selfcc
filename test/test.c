@@ -10,7 +10,7 @@ extern void alloc4(int **p, int a, int b, int c, int d);
 extern void doexit(int x);
 
 #define TEST_BEGIN() int ans, act;
-#define TEST_ASSERT(answer, test)                                                  \
+#define TEST_ASSERT(answer, test)                                           \
     ans = answer;                                                           \
     act = test();                                                           \
     if (ans == act)                                                         \
@@ -762,43 +762,43 @@ typedef int int_32;
 int_32 test129() {
     int int_x = 8;
     int_32 int_32x = 2;
-    return int_x+int_32x;
+    return int_x + int_32x;
 }
 
-typedef int (*int_func_int)(int );
-int_32 test130(){
+typedef int (*int_func_int)(int);
+int_32 test130() {
     int_func_int func = print_num;
     return func(4);
 }
-struct Test131{
+struct Test131 {
     int x;
     char aho;
 };
-int test131(){
+int test131() {
     struct Test131 aho;
     aho.x = 4;
     aho.aho = 4;
     return aho.aho;
 }
-union Test132{ 
+union Test132 {
     int x;
     char aho;
 };
-int test132(){
+int test132() {
     union Test132 aho;
     aho.x = 4;
     aho.aho = 16;
     print_num(aho.x);
     return aho.aho;
 }
-struct Test133{
+struct Test133 {
     int x;
-    struct aa{
+    struct aa {
         char aho;
         int y;
     } str_test;
 };
-int test133(){
+int test133() {
     struct Test133 aho;
     aho.x = 4;
     aho.str_test.aho = 5;
@@ -807,19 +807,19 @@ int test133(){
     return aho.str_test.aho;
 }
 typedef struct Test134 Test134_t;
-struct Test134{
+struct Test134 {
     union {
         int aho;
         char baka;
-        int* ptr;
+        int *ptr;
     } item;
-    struct ahoo{
+    struct ahoo {
         int aho;
         char baka;
         int *ptr;
     } unti;
 };
-int test134(){
+int test134() {
     Test134_t ins;
     ins.item.aho = 6;
     ins.item.baka = 7;
@@ -831,11 +831,11 @@ int test134(){
 
     return ins.unti.aho;
 }
-struct Test135{
+struct Test135 {
     int x;
     char y;
 };
-int test135(){
+int test135() {
     struct Test135 ins;
     struct Test135 *ins_ptr = &ins;
 
@@ -848,11 +848,11 @@ int test135(){
 
     return ins_ptr->y;
 }
-union Test136{
+union Test136 {
     int x;
     char y;
 };
-int test136(){
+int test136() {
     union Test136 ins;
     union Test136 *ins_ptr = &ins;
 
@@ -865,6 +865,11 @@ int test136(){
 
     return ins_ptr->y;
 }
+enum Test137{
+    T137_x,
+    T137_y = 2,
+    T137_z
+};
 
 extern int assert(int, int);
 ////////////////////////////////^テスト部
@@ -996,14 +1001,14 @@ int Test() {
     TEST_ASSERT(3, test125)
     TEST_ASSERT(3, test126)
     TEST_ASSERT(6, test127)
-    TEST_ASSERT(10,test129)
-    TEST_ASSERT(4,test130)
-    TEST_ASSERT(4,test131)
-    TEST_ASSERT(16,test132)
-    TEST_ASSERT(5,test133)
-    TEST_ASSERT(8,test134)
-    TEST_ASSERT(6,test135)
-    TEST_ASSERT(7,test136)
+    TEST_ASSERT(10, test129)
+    TEST_ASSERT(4, test130)
+    TEST_ASSERT(4, test131)
+    TEST_ASSERT(16, test132)
+    TEST_ASSERT(5, test133)
+    TEST_ASSERT(8, test134)
+    TEST_ASSERT(6, test135)
+    TEST_ASSERT(7, test136)
 
     TEST_END()
 }

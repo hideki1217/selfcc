@@ -17,6 +17,13 @@ struct String{
 int string_cmp(const char *a, int a_len, const char *b, int b_len);
 /*sにstrをlen文字分コピー*/
 void string_ncopy(char s[], char *str, int n);
+void string_print(char *s,int n);
+
+typedef struct Integer Integer;
+struct Integer{
+    int val;
+};
+Integer *new_Integer(int val);
 
 typedef union Object Object;
 union Object{

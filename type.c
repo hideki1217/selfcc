@@ -18,7 +18,10 @@ static Type *_float;
 static Type *_long;
 static Type *_double;
 
+static Type *_enum;
+
 static CC_AVLTree /*<ModelType*>*/ *trees[BK_SIZE];
+static CC_AVLTree /*<Integer*>*/ *enum_vals;
 
 static BaseType *new_BaseType(TypeKind kind, int size);
 static Type *type_clone(const Type *type);
@@ -32,6 +35,7 @@ static Type *new_Function(Type *base);
 static Type *new_Array(Type *base, int length);
 static Type *new_Struct(char *name, int namelen);
 static Type *new_Union(char *name, int namelen);
+static Type *new_Enum(char *enum_name,int namelen);
 static Type *new_Incomplete();
 
 #define regist_Type(bkind, type_name, namelen, type_ptr) \
@@ -45,16 +49,22 @@ void initialize_typemgr() {
     _long = new_PrimType("long", 4, TY_LONG, 8);
     _double = new_PrimType("double", 6, TY_DOUBLE, 8);
 
+    _enum = type_clone(_int);// すべてのenumのベース(中身はconst int)
+    _enum->isConst = true;
+
     trees[BK_OTHER] = cc_avltree_new();
     trees[BK_STRUCT] = cc_avltree_new();
     trees[BK_UNION] = cc_avltree_new();
+    trees[BK_ENUM] = cc_avltree_new();
+    enum_vals = cc_avltree_new();
 
     regist_Type(BK_OTHER, "void", 4, _void);
     regist_Type(BK_OTHER, "int", 3, _int);
     regist_Type(BK_OTHER, "char", 4, _char);
     regist_Type(BK_OTHER, "float", 5, _float);
     regist_Type(BK_OTHER, "long", 4, _double);
-    regist_Type(BK_OTHER, "double", 6, _long);
+
+    regist_Type(BK_ENUM, "enum",3,_enum);
 }
 
 TypeModel *_typemgr_find(char *name, int len, BaseKind kind) {
@@ -84,6 +94,8 @@ void typemgr_reg(char *name, int len, BaseKind kind, Type *type) {
             bkind = BK_STRUCT;
         else if (type_isunion(type))
             bkind = BK_UNION;
+        else if(type_isenum(type))
+            bkind = BK_ENUM;
         else
             bkind = BK_OTHER;
 
@@ -93,6 +105,11 @@ void typemgr_reg(char *name, int len, BaseKind kind, Type *type) {
         model = tpmodel_tnew(type);
     }
     cc_avltree_Add(trees[kind], name, len, model);
+}
+bool typemgr_regenum(char *name,int namelen,int val){
+    if(ISNNULL(cc_avltree_Search(enum_vals,name,namelen)))return false;
+    cc_avltree_Add(enum_vals,name,namelen,new_Integer(val));
+    return true;
 }
 
 TypeModel *tpmodel_tnew(Type *base) {
@@ -138,6 +155,20 @@ bool tpmodel_initunion(TypeModel *model, char *union_name, int namelen) {
 
     return true;  // 編集可
 }
+bool tpmodel_initenum(TypeModel *model, char *enum_name, int namelen){
+    Type *reged_type = typemgr_find(enum_name, namelen, BK_ENUM);
+    if (ISNNULL(reged_type)) {
+        model->type =
+            reged_type;  //　登録済みがあって、それがINCOMPLETEならそれを返す。
+        return type_isincomplete(reged_type);  // INCOMPMLETEなら編集可
+    }
+    model->type = new_Enum(enum_name, namelen);
+    type_size(model->type) = INCOMPLETE_SIZE;  // 登録段階ではINCOMPLETE
+    regist_Type(BK_ENUM, enum_name, namelen, model->type);  // ひな形を登録
+
+    return true;  // 編集可
+}
+
 void tpmodel_addprm(TypeModel *model, Type *prm_tp, Token *ident) {
     if (!type_isfunc(model->type))
         error("関数でない型に引数をつけようとしました。");
@@ -434,6 +465,15 @@ static Type *new_Union(char *name, int namelen) {
     type_members(type) = cc_vector_new();
     return type;
 }
+static Type *new_Enum(char *enum_name,int namelen){
+    BaseType *btype = calloc(1, sizeof(bEnum));
+    Type *type = new_Type(btype, false, false);
+    type_kind(type) = TY_ENUM;
+    type_name(type) = enum_name;
+    type_namelen(type) = namelen;
+    return type;
+}
+
 static Type *new_Incomplete() {
     BaseType *btype = calloc(1, sizeof(bStruct));
     Type *type = new_Type(btype, false, false);

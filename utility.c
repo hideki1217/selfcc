@@ -81,6 +81,17 @@ int string_cmp(const char *a, int a_len, const char *b, int b_len) {
     }
     return (a[a_i] - b[b_i]);
 }
+void string_print(char *s,int n){
+    strncpy(buffer,s,n);
+    printf("%s",buffer);
+}
+
+Integer *new_Integer(int val){
+    Integer *integer = calloc(1,sizeof(Integer));
+    integer->val = val;
+    return integer;
+}
+
 
 int is_alnum(char c) {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
