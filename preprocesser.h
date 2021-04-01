@@ -31,6 +31,8 @@ Token *skip2MacroEnd(Token *begin);
 TkSequence *preproccess(TkSequence *ts);
 
 TkSequence *expand_include(TkSequence *ts);
+extern char *include_path[];
+
 TkSequence *combine_strings(TkSequence *ts);
 void free_Hideset(TkSequence *ts);
 

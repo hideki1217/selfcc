@@ -47,8 +47,6 @@ int min(int x,int y);
 
 void swap(void **a,void **b);
 
-char *path_filename(char *path);
-
 int is_alnum(char c);
 int is_alp(char c);
 

@@ -4,6 +4,8 @@
 #include "selfcc.h"
 #include "utility.h"
 
+#include "path.h"
+
 void code_generate(Node *code);
 #define print_tab(n) \
     times(n) { fprintf(stderr, "\t"); }
@@ -65,7 +67,7 @@ int main(int argc, char **argv) {
     TkSequence *tokens;
 
     if (fromfile) user_input = read_file(filepath);
-    filename = fromfile ? path_filename(filepath) : "";
+    filename = fromfile ? path_filename(filepath,strlen(filepath)) : "";
     tokens = tokenize(user_input);    // トークン化
     tokens = preproccess(tokens);     // プリプロセス
     if (dpp) debug_pp(tokens);        // プリプロセスの結果デバッグ

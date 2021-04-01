@@ -34,18 +34,6 @@ char *read_file(char *path) {
     return buf;
 }
 
-// パスからファイル名を取り出す
-char *path_filename(char *path) {
-    char *p = path, *q = p;
-    while (*p != '\0') {
-        if (*p == '\\' || *p == '/') q = p + 1;
-        p++;
-    }
-    char *name = calloc(1, strlen(q) + 1);
-    strncpy(name, q, strlen(q) + 1);
-    return name;
-}
-
 int max(int x, int y) { return x > y ? x : y; }
 int min(int x, int y) { return x < y ? x : y; }
 

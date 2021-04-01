@@ -16,6 +16,9 @@
 #include "vector.h"
 
 static CC_AVLTree *defined_macros;
+char *include_path[] = {
+    "/usr/include"
+};
 
 void Initialize_preprocesser() { defined_macros = cc_avltree_new(); }
 Macro *new_Macro() { return calloc(1, sizeof(Macro)); }
@@ -74,17 +77,7 @@ Token *skip2MacroEnd(Token *begin) {
     INCREMENT_ROOT();            \
     token_join(noneMacro, root); \
     root = noneMacro
-TkSequence *preproccess(TkSequence *ts) {
-    ts = expand_include(ts);
-    ts = expand(ts);
-    free_Hideset(ts);
-    ts = combine_strings(ts);
-    return ts;
-}
 
-TkSequence *expand_include(TkSequence *ts) {
-    return ts;  // TODO: 未完成
-}
 /** TK_STRINGを連結 beginをTK_STRING出ないとこまで進める*/
 Token *combine(Token **begin) {
     Token *end = *begin;
@@ -444,7 +437,19 @@ Token *stringize(const TkSequence *ts) {
     return new_Token(TK_STRING, NULL, combined, str_length);
 }
 
+TkSequence *expand_include(TkSequence *ts) {
+    return ts;  // TODO: 未完成
+}
+
+TkSequence *preproccess(TkSequence *ts) {
+    ts = expand_include(ts);
+    ts = expand(ts);
+    free_Hideset(ts);
+    ts = combine_strings(ts);
+    return ts;
+}
+
+
 #undef INCREMENT_ROOT
 #undef INCREMENT_ROOT_WITH_SAVE
-
 #undef match

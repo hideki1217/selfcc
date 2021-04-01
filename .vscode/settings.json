@@ -26,6 +26,9 @@
         "params.h": "c",
         "type.h": "c",
         "preprocesser.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "string.h": "c",
+        "paths.h": "c",
+        "path.h": "c"
     }
 }
