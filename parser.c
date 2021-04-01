@@ -437,7 +437,7 @@ Node *global_declaration() {
                     {
                         lvar_manager_PushScope(locals);
                         args = CreateArgs(type_params(clone_model.type));
-                        block = compound_stmt();
+                        block = compound_stmt(false);
                         lvar_manager_PopScope(locals);
                     }
                     rnode = new_RootineNode((Var *)var, args, block);
@@ -892,7 +892,7 @@ Node *translation_unit() {
 }
 Node *external_declaration() { return global_declaration(); }
 
-Node *compound_stmt() {
+Node *compound_stmt(bool hasScope) {
     BlockNode *bnode = new_BlockNode(ND_BLOCK);
     BlockNode *set = new_BlockNode(ND_SET);
 
@@ -901,7 +901,7 @@ Node *compound_stmt() {
     Node *top = &anker, *node;
     if (!consume("{")) return NULL;
     //新たなスコープ追加
-    lvar_manager_PushScope(locals);
+    if(hasScope)lvar_manager_PushScope(locals);
 
     while (!consume("}")) {
         node = local_declaration(false);
@@ -914,7 +914,7 @@ Node *compound_stmt() {
     set->block = anker.next;
     bnode->block = (Node *)set;
     //スコープ除去
-    lvar_manager_PopScope(locals);
+    if(hasScope)lvar_manager_PopScope(locals);
 
     return (Node *)bnode;
 }
@@ -928,7 +928,7 @@ Node *statement() {
     if (res) return res;
     res = labeled_stmt();
     if (res) return res;
-    res = compound_stmt();
+    res = compound_stmt(true);
     if (res) return res;
     return expression_stmt();
 }
@@ -1018,7 +1018,7 @@ Node *iteration_stmt() {
         continue_push(lcount);
         break_push(lcount);
         {
-            Node *T = compound_stmt();
+            Node *T = compound_stmt(true);
             expect("while");
             expect("(");
             Node *cond = expression();

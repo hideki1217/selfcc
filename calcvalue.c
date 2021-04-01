@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+/*
+
 CVar *_node_evaluate_val(Node *node) {
     if (node->kind == ND_GVAR) {
         Var *var = ((VarNode *)node)->var;
@@ -135,3 +137,5 @@ Node *node_getnumval(Node *node) {
     Node *res = node_evaluate(node);
     return res;
 }
+
+*/

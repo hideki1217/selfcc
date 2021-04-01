@@ -393,7 +393,7 @@ Node *constant();
 Node *expression();
 Node *assignment_expr();
 Node *statement();
-Node *compound_stmt();
+Node *compound_stmt(bool hasScope);
 Node *labeled_stmt();
 Node *expression_stmt();
 Node *selection_stmt();

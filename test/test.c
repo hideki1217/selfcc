@@ -870,6 +870,15 @@ enum Test137{
     T137_y = 2,
     T137_z
 };
+int test137(){ return 3;} // TODO: enumが完成したら組み込む
+int test138_sum(int x,int y){
+    //int x = 5; // 引数と内部が同じスコープになるのでこれを入れるとerror
+    return x+y;
+}
+int test138(){
+    return test138_sum(3,4);
+}
+
 
 extern int assert(int, int);
 ////////////////////////////////^テスト部
@@ -1009,6 +1018,8 @@ int Test() {
     TEST_ASSERT(8, test134)
     TEST_ASSERT(6, test135)
     TEST_ASSERT(7, test136)
+    //TEST_ASSERT(3,test137)
+    TEST_ASSERT(7,test138)
 
     TEST_END()
 }
