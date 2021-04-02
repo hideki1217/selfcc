@@ -28,10 +28,10 @@ void macro_Delete(char *key, int len);
  * @retval TK_MACROENDのノードへのpointer
  */
 Token *skip2MacroEnd(Token *begin);
-TkSequence *preproccess(TkSequence *ts);
+TkSequence *preproccess(TkSequence *ts,char *dirpath);
 
-TkSequence *expand_include(TkSequence *ts);
-extern char *include_path[];
+TkSequence *expand_include(TkSequence *ts,char *nowdir,int len);
+void add_includepath(char *dirpath,int len);
 
 TkSequence *combine_strings(TkSequence *ts);
 void free_Hideset(TkSequence *ts);

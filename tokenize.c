@@ -53,25 +53,30 @@ void _expect(char *op, Token **token) {
 }
 void expect(char *op) { _expect(op, &tkstream); }
 
-
 bool check_Type() {
     BaseKind bkind = BK_OTHER;
-    if (token_match(tkstream,"struct",6))bkind = BK_STRUCT;
-    else if (token_match(tkstream,"union",5))bkind = BK_UNION;
+    if (token_match(tkstream, "struct", 6))
+        bkind = BK_STRUCT;
+    else if (token_match(tkstream, "union", 5))
+        bkind = BK_UNION;
 
-    Type *type = typemgr_find(tkstream->str,tkstream->len,bkind);
+    Type *type = typemgr_find(tkstream->str, tkstream->len, bkind);
     if (type == NULL) return false;
     return true;
 }
 // checkした後に実行すべき
 Token *consume_Type(Type **tp) {
     BaseKind bkind;
-    if(tkstream->kind == TK_IDENT)bkind = BK_OTHER;
-    else if (token_match(tkstream,"struct",6))bkind = BK_STRUCT;
-    else if (token_match(tkstream,"union",5))bkind = BK_UNION;
-    else return NULL;
-    
-    Type *type = typemgr_find(tkstream->str,tkstream->len,bkind); 
+    if (tkstream->kind == TK_IDENT)
+        bkind = BK_OTHER;
+    else if (token_match(tkstream, "struct", 6))
+        bkind = BK_STRUCT;
+    else if (token_match(tkstream, "union", 5))
+        bkind = BK_UNION;
+    else
+        return NULL;
+
+    Type *type = typemgr_find(tkstream->str, tkstream->len, bkind);
     if (!type) return NULL;
     *tp = type;
     return forward();
@@ -120,9 +125,9 @@ bool match(const char *p, const char *word) {
         p += n;                               \
         continue;                             \
     }
-#define macrokey(p, s) \
-    n = strlen(s);\
-    if (match(p, s)) {     \
+#define macrokey(p, s)                        \
+    n = strlen(s);                            \
+    if (match(p, s)) {                        \
         cur = new_Token(TK_MACRO, cur, p, n); \
         p += n;                               \
         continue;                             \
@@ -180,10 +185,18 @@ TkSequence *tokenize(char *p) {
             p++;  // 最後の「"」を消費する
             continue;
         }
+
         if (macroMode) {
             macroword(p, "defined");
             macrokey(p, "##");
             macrokey(p, "#");
+            if (*p == '<') {
+                char *q = ++p;
+                while (*p != '>') p++;
+                cur = new_Token(TK_INCLUDE, cur, q, p - q);
+                p++;  // 最後の「"」を消費する
+                continue;
+            }
         }
         if (*p == '#') {
             cur = new_Token(TK_MACROSTART, cur, p, 1);
@@ -198,7 +211,7 @@ TkSequence *tokenize(char *p) {
             macroword(p, "else");
             macroword(p, "elif");
             continue;
-        }        
+        }
         //制御構文
         keyword(p, "while");
         keyword(p, "else");

@@ -5,6 +5,7 @@
 #include "utility.h"
 
 #include "path.h"
+#include "file.h"
 
 void code_generate(Node *code);
 #define print_tab(n) \
@@ -52,6 +53,7 @@ int main(int argc, char **argv) {
         }
         filepath = argv[i];
     }
+    char *dirpath = path_dirname(PAIR_STR_LEN(filepath));
     ////////////////////////////グローバル変数の初期化
     locals = lvar_manager_new();
     globals = cc_avltree_new();
@@ -66,10 +68,10 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////
     TkSequence *tokens;
 
-    if (fromfile) user_input = read_file(filepath);
-    filename = fromfile ? path_filename(filepath,strlen(filepath)) : "";
+    if (fromfile) user_input = file_read2str(filepath,strlen(filepath));
+    filename = fromfile ? path_filename(filepath,strlen(filepath)) : "stdinput";
     tokens = tokenize(user_input);    // トークン化
-    tokens = preproccess(tokens);     // プリプロセス
+    tokens = preproccess(tokens,dirpath);     // プリプロセス
     if (dpp) debug_pp(tokens);        // プリプロセスの結果デバッグ
     tkstream = tokens->begin;         // streamにセット
     Node *code = translation_unit();  // 抽象構文木化

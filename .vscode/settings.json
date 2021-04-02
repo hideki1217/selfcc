@@ -29,6 +29,10 @@
         "stdbool.h": "c",
         "string.h": "c",
         "paths.h": "c",
-        "path.h": "c"
+        "path.h": "c",
+        "file.h": "c",
+        "backtrace-supported.h": "c",
+        "errno.h": "c",
+        "features.h": "c"
     }
 }

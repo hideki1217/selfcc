@@ -5,6 +5,8 @@
 #define ISNULL(a) ((a) == NULL)
 #define ISNNULL(a) ((a) != NULL)
 
+#define PAIR_STR_LEN(str) str,strlen(str)
+
 #define BUFFER_SIZE 256
 
 extern char buffer[BUFFER_SIZE];
@@ -39,8 +41,6 @@ union Object{
 #define obj_long(obj) (obj).lval
 #define obj_str(obj) (obj).string.str
 #define obj_strlen(obj) (obj).string.len
-
-char *read_file(char *path);
 
 int max(int x,int y);
 int min(int x,int y);

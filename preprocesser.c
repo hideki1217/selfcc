@@ -11,16 +11,29 @@
 #include <string.h>
 
 #include "collections.h"
+#include "file.h"
+#include "path.h"
 #include "selfcc.h"
 #include "utility.h"
 #include "vector.h"
 
-static CC_AVLTree *defined_macros;
-char *include_path[] = {
-    "/usr/include"
-};
+static CC_AVLTree *defined_macros/*<Macro *>*/;
+static CC_Vector *include_paths /*<char *>*/;
+static CC_AVLTree *included_files/*<NULL>*/;
 
-void Initialize_preprocesser() { defined_macros = cc_avltree_new(); }
+void Initialize_preprocesser() {
+    defined_macros = cc_avltree_new();
+    include_paths = cc_vector_new();
+
+    cc_vector_pbStr(include_paths, PAIR_STR_LEN("/usr/include"));
+}
+void add_includepath(char *dirpath, int len) {
+    char *path = malloc(len + 1);
+    strncpy(path, dirpath, len);
+    path[len] = 0;
+    cc_vector_pbStr(include_paths, path, len);
+}
+
 Macro *new_Macro() { return calloc(1, sizeof(Macro)); }
 void set_Macro(Macro *macro, char *key, int keylen, Token *begin, Token *end,
                CC_Vector *params) {
@@ -79,7 +92,7 @@ Token *skip2MacroEnd(Token *begin) {
     root = noneMacro
 
 /** TK_STRINGを連結 beginをTK_STRING出ないとこまで進める*/
-Token *combine(Token **begin) {
+static Token *_combine_strings(Token **begin) {
     Token *end = *begin;
 
     // 長さを計算
@@ -123,7 +136,7 @@ TkSequence *combine_strings(TkSequence *ts) {
     while (root->kind != TK_END) {
         if (root->kind == TK_STRING) {
             noneString = token_prev(root);
-            Token *combined = combine(&root);
+            Token *combined = _combine_strings(&root);
 
             token_join(noneString, combined);
             token_join(combined, root);
@@ -198,19 +211,19 @@ TkSequence *expand(TkSequence *ts) {
                     CONNECT_PRE_2_ROOT();
                     continue;
                 }
-                if (_consume("include", &root)) {
+                if (_consume("include", &root)) {  // TODO
                 }
-                if (_consume("if", &root)) {
+                if (_consume("if", &root)) {  // TODO
                 }
-                if (_consume("elif", &root)) {
+                if (_consume("elif", &root)) {  // TODO
                 }
-                if (_consume("else", &root)) {
+                if (_consume("else", &root)) {  // TODO
                 }
-                if (_consume("endif", &root)) {
+                if (_consume("endif", &root)) {  // TODO
                 }
-                if (_consume("ifdef", &root)) {
+                if (_consume("ifdef", &root)) {  // TODO
                 }
-                if (_consume("ifndef", &root)) {
+                if (_consume("ifndef", &root)) {  // TODO
                 }
             }
             case TK_IDENT: {  // マクロ展開部
@@ -226,13 +239,13 @@ TkSequence *expand(TkSequence *ts) {
                     CC_Vector *args = cc_vector_new();
                     Token *begin, *end;
                     {
-                        int bracket_n=0;
+                        int bracket_n = 0;
                         _expect("(", &root);
                         if (!(end = _consume(")", &root))) {  // 引数0と1を区別
                             begin = root;
                             while (1) {
                                 if (end = _consume(")", &root)) {
-                                    if(bracket_n==0){
+                                    if (bracket_n == 0) {
                                         TkSequence *ts =
                                             (begin == end)
                                                 ? NULL
@@ -244,7 +257,7 @@ TkSequence *expand(TkSequence *ts) {
                                     continue;
                                 }
                                 if (end = _consume(",", &root)) {
-                                    if(bracket_n==0){
+                                    if (bracket_n == 0) {
                                         TkSequence *ts =
                                             (begin == end)
                                                 ? NULL
@@ -254,7 +267,7 @@ TkSequence *expand(TkSequence *ts) {
                                     }
                                     continue;
                                 }
-                                if(_consume("(",&root))bracket_n++;
+                                if (_consume("(", &root)) bracket_n++;
                                 INCREMENT_ROOT();
                             }
                         }
@@ -436,19 +449,71 @@ Token *stringize(const TkSequence *ts) {
 
     return new_Token(TK_STRING, NULL, combined, str_length);
 }
+static void find_includeitem(char *buffer, Token *token, char *nowdir,
+                             int len) {
+    if (token->kind != TK_STRING && token->kind != TK_INCLUDE)
+        error_at(token->str, "パスではありません");
 
-TkSequence *expand_include(TkSequence *ts) {
+    if (token->kind == TK_STRING) { // "includepath"
+        // nowdirで調べる
+        _path_combine(buffer, nowdir, len, token->str, token->len);
+        if (file_exist(buffer, strlen(buffer))) return;
+    }
+    // include pathで調べる
+    for (int i = 0; i < include_paths->size; i++) {
+        String name = include_paths->_[i].string;
+        _path_combine(buffer, name.str, name.len, token->str, token->len);
+        if (file_exist(buffer, strlen(buffer))) return;
+    }
+
+    error_at(token->str,"存在しないファイルやディレクトリです");
+}
+static TkSequence *_expand_include(Token *token, char *nowdir, int len){
+    char buffer[BUFFER_SIZE],dir[BUFFER_SIZE];
+
+    find_includeitem(buffer,token,nowdir,len);
+    
+    _path_dirname(dir,PAIR_STR_LEN(buffer));
+    
+    char *program = file_read2str(PAIR_STR_LEN(buffer));
+    TkSequence *ts = tokenize(program);
+    return expand_include(ts,PAIR_STR_LEN(dir));
+} 
+
+TkSequence *expand_include(TkSequence *ts,char *nowdir,int len) {
+    Token anker,*root = ts->begin;
+    anker.next = root;
+    Token *noneInclude = &anker;
+    while(root->kind != TK_END){
+        if(root->kind == TK_MACROSTART){
+            INCREMENT_ROOT(); // '#'
+            if(_consume("include",&root)){
+                TkSequence *ex = _expand_include(root,nowdir,len);
+                root = skip2MacroEnd(root);
+                INCREMENT_ROOT(); // MACROEND
+
+                token_join(noneInclude,ex->begin);
+                token_join(ex->end->prev,root);
+
+                root = noneInclude;
+                continue;
+            }
+        }
+        noneInclude = root;
+        INCREMENT_ROOT();
+    }
+    
+    ts->begin = anker.next;
     return ts;  // TODO: 未完成
 }
 
-TkSequence *preproccess(TkSequence *ts) {
-    ts = expand_include(ts);
+TkSequence *preproccess(TkSequence *ts,char *dirpath) {
+    ts = expand_include(ts,dirpath,strlen(dirpath));//PAIR_STR_LEN(dirpath));
     ts = expand(ts);
     free_Hideset(ts);
     ts = combine_strings(ts);
     return ts;
 }
-
 
 #undef INCREMENT_ROOT
 #undef INCREMENT_ROOT_WITH_SAVE

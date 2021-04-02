@@ -1,13 +1,4 @@
-extern int foo();
-extern int hoge(int x, int y);
-extern int hogege(int a, int b, int c, int d, int e, int f);
-extern int hogehoge(int a, int b, int c, int d, int e, int f, int g);
-extern int print(const char *fmt, ...);
-extern int print_num(int x);
-extern int test(char *fmt);
-extern int fact(int x);
-extern void alloc4(int **p, int a, int b, int c, int d);
-extern void doexit(int x);
+#include "fortest.h"
 
 #define TEST_BEGIN() int ans, act;
 #define TEST_ASSERT(answer, test)                                           \
