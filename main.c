@@ -16,6 +16,8 @@ void debug_pp(TkSequence *ts) {
         string_ncopy(buffer, t->str, t->len);
         if (t->kind == TK_STRING) {
             fprintf(stderr, "\"%s\" ", buffer);
+        } else if (t->kind == TK_CHAR) {
+            fprintf(stderr, "\'%s\'", buffer);
         } else if (token_match(t, "{", 1)) {
             fprintf(stderr, "%s \n", buffer);
             indent++;

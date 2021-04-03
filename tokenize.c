@@ -170,6 +170,14 @@ TkSequence *tokenize(char *p) {
         }
         //////////////////////////
 
+        if( *p == '\'') {
+            char *q = p+1; // 文字部
+            p+= 2;
+            if( *p != '\'')error_at(p,"\'がありません");
+            cur = new_Token(TK_CHAR, cur,q,1);
+            p++; // "'"を消費
+            continue;
+        }
         if (*p == '"') {
             char *q = ++p;
             while (*p != '"') {

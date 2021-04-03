@@ -521,12 +521,12 @@ int test91() {
     return x;
 }
 
-int *ahoaho(char *x) {
+int ahoaho(char *x) {
     print(x);
     return 3;
 }
 int test92() {
-    int *x = ahoaho("aho");
+    int x = ahoaho("aho");
     return x;
 }
 int test93() {
@@ -693,7 +693,8 @@ int test118() {
     int x = 6, y = 7;
     return y;
 }
-int test119_a, test119_b, test119() {
+int test119_a, test119_b;
+int test119() {
     test119_a = 7;
     test119_b = 6;
     return test119_a;
@@ -878,6 +879,11 @@ int test138_sum(int x,int y){
 int test138(){
     return test138_sum(3,4);
 }
+int test139(){
+    char a = 'a';
+    char b = 'b';
+    return b-a;
+}
 
 
 extern int assert(int, int);
@@ -1020,6 +1026,7 @@ int Test() {
     TEST_ASSERT(7, test136)
     //TEST_ASSERT(3,test137)
     TEST_ASSERT(7,test138)
+    TEST_ASSERT(1,test139)
 
     TEST_END()
 }
