@@ -111,24 +111,17 @@ bool match(const char *p, const char *word) {
     return memcmp(p, word, strlen(word)) == 0;
 }
 
-#define keyword(p, s)                            \
+#define keyword(p, s,tk_enum)                            \
     n = strlen(s);                               \
     if (match(p, s) && !is_alnum(p[n])) {        \
-        cur = new_Token(TK_RESERVED, cur, p, n); \
+        cur = new_Token(tk_enum, cur, p, n); \
         p += n;                                  \
         continue;                                \
     }
-#define macroword(p, s)                       \
-    n = strlen(s);                            \
-    if (match(p, s) && !is_alnum(p[n])) {     \
-        cur = new_Token(TK_MACRO, cur, p, n); \
-        p += n;                               \
-        continue;                             \
-    }
-#define macrokey(p, s)                        \
+#define macrokey(p, s,tk_enum)                        \
     n = strlen(s);                            \
     if (match(p, s)) {                        \
-        cur = new_Token(TK_MACRO, cur, p, n); \
+        cur = new_Token(tk_enum, cur, p, n); \
         p += n;                               \
         continue;                             \
     }
@@ -187,13 +180,13 @@ TkSequence *tokenize(char *p) {
         }
 
         if (macroMode) {
-            macroword(p, "defined");
-            macrokey(p, "##");
-            macrokey(p, "#");
+            keyword(p, "defined",TK_MACRO);
+            macrokey(p, "##",TK_MACRO);
+            macrokey(p, "#",TK_MACRO);
             if (*p == '<') {
                 char *q = ++p;
                 while (*p != '>') p++;
-                cur = new_Token(TK_INCLUDE, cur, q, p - q);
+                cur = new_Token(TK_INCLUDEPATH, cur, q, p - q);
                 p++;  // 最後の「"」を消費する
                 continue;
             }
@@ -202,45 +195,45 @@ TkSequence *tokenize(char *p) {
             cur = new_Token(TK_MACROSTART, cur, p, 1);
             p++;
             macroMode++;
-            macroword(p, "define");
-            macroword(p, "ifdef");
-            macroword(p, "ifndef");
-            macroword(p, "include");
-            macroword(p, "if");
-            macroword(p, "endif");
-            macroword(p, "else");
-            macroword(p, "elif");
+            keyword(p, "define",TK_MACRO);
+            keyword(p, "ifdef",TK_MACROIF);
+            keyword(p, "ifndef",TK_MACROIF);
+            keyword(p, "include",TK_MACROINCLUDE);
+            keyword(p, "if",TK_MACROIF);
+            keyword(p, "endif",TK_MACROENDIF);
+            keyword(p, "else",TK_MACROELSE);
+            keyword(p, "elif",TK_MACROELIF);
             continue;
         }
         //制御構文
-        keyword(p, "while");
-        keyword(p, "else");
-        keyword(p, "for");
-        keyword(p, "if");
-        keyword(p, "switch");
-        keyword(p, "case");
-        keyword(p, "default");
-        keyword(p, "goto");
-        keyword(p, "do");
+        keyword(p, "while",TK_RESERVED);
+        keyword(p, "else",TK_RESERVED);
+        keyword(p, "for",TK_RESERVED);
+        keyword(p, "if",TK_RESERVED);
+        keyword(p, "switch",TK_RESERVED);
+        keyword(p, "case",TK_RESERVED);
+        keyword(p, "default",TK_RESERVED);
+        keyword(p, "goto",TK_RESERVED);
+        keyword(p, "do",TK_RESERVED);
         //演算子
-        keyword(p, "sizeof");
+        keyword(p, "sizeof",TK_RESERVED);
         //修飾子
-        keyword(p, "extern");
-        keyword(p, "register");  // TODO
-        keyword(p, "auto");      // TODO
-        keyword(p, "static");    // TODO
-        keyword(p, "typedef");   // TODO
+        keyword(p, "extern",TK_RESERVED);
+        keyword(p, "register",TK_RESERVED);  // TODO
+        keyword(p, "auto",TK_RESERVED);      
+        keyword(p, "static",TK_RESERVED);    
+        keyword(p, "typedef",TK_RESERVED);   
         //データ構造
-        keyword(p, "struct");  // TODO
-        keyword(p, "union");   // TODO
-        keyword(p, "enum");    // TODO
+        keyword(p, "struct",TK_RESERVED);  
+        keyword(p, "union",TK_RESERVED);   
+        keyword(p, "enum",TK_RESERVED);    // TODO
         //制御文字
-        keyword(p, "return");
-        keyword(p, "continue");  // TODO
-        keyword(p, "break");     // TODO
+        keyword(p, "return",TK_RESERVED);
+        keyword(p, "continue",TK_RESERVED);  
+        keyword(p, "break",TK_RESERVED);     
         //変数修飾子
-        keyword(p, "const");
-        keyword(p, "volatile");
+        keyword(p, "const",TK_RESERVED);
+        keyword(p, "volatile",TK_RESERVED);
 
         //確実に非変数名なもの
         if (match(p, "...")) {
@@ -271,11 +264,11 @@ TkSequence *tokenize(char *p) {
             *p == ')' || *p == '>' || *p == '<' || *p == '=' || *p == ';' ||
             *p == '{' || *p == '}' || *p == ',' || *p == '*' || *p == '&' ||
             *p == '[' || *p == ']' || *p == '?' || *p == ':' || *p == '|' ||
-            *p == '?' || *p == '%' || *p == '.' || *p == '~' || *p == '^') {
+            *p == '?' || *p == '%' || *p == '.' || *p == '~' || *p == '^' ||
+            *p == '!') {
             cur = new_Token(TK_RESERVED, cur, p++, 1);
             continue;
         }
-
         //数字
         if (isdigit(*p)) {  // TODO: int->float->
                             // doubleと自動で読み込むレベルをあげるようにすべき

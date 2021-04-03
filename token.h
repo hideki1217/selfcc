@@ -20,13 +20,18 @@ typedef CC_SortedStrList HideSet;
 typedef enum {
     TK_RESERVED,
     TK_STRING,   // "..."
-    TK_INCLUDE,  // <...>
+    TK_INCLUDEPATH,  // <...>
     TK_IDENT,
     TK_NUM,
     TK_END,
     TK_FLOAT,
     TK_CHAR,
     TK_ENUM,
+    TK_MACROIF,
+    TK_MACROELSE,
+    TK_MACROELIF,
+    TK_MACROENDIF,
+    TK_MACROINCLUDE,
     TK_MACRO,
     TK_MACROSTART,
     TK_MACROEND

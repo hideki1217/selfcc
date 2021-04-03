@@ -17,9 +17,9 @@
 #include "utility.h"
 #include "vector.h"
 
-static CC_AVLTree *defined_macros/*<Macro *>*/;
+static CC_AVLTree *defined_macros /*<Macro *>*/;
 static CC_Vector *include_paths /*<char *>*/;
-static CC_AVLTree *included_files/*<NULL>*/;
+static CC_AVLTree *included_files /*<NULL>*/;
 
 void Initialize_preprocesser() {
     defined_macros = cc_avltree_new();
@@ -82,6 +82,16 @@ Token *skip2MacroEnd(Token *begin) {
     Token *top = begin;
     for (; top->kind != TK_MACROEND && top->kind != TK_END; top = top->next)
         ;
+    return top;
+}
+Token *skip2EndIf(Token *begin) {
+    Token *top = begin;
+    int count = 0;
+    for (; top->kind != TK_END && (count != 0 || top->kind != TK_MACROENDIF);
+         top = top->next) {
+        if (top->kind == TK_MACROIF) count++;
+        if (top->kind == TK_MACROENDIF) count--;
+    }
     return top;
 }
 #define INCREMENT_ROOT_WITH_SAVE() noneMacro = root, root = root->next
@@ -162,10 +172,12 @@ void free_Hideset(TkSequence *ts) {
         root->hs = NULL;
     }
 }
+static TkSequence *_expand_include(Token *token, char *basedir, int len);
 /** token[0] * insert * token[1]...*/
 #define INSERT(token, insert)          \
     token_join(insert, (token)->next); \
     token_join(token, insert);
+static char *Currentdir;
 TkSequence *expand(TkSequence *ts) {
     if (!ts) return NULL;
     Token *root = ts->begin;
@@ -211,7 +223,17 @@ TkSequence *expand(TkSequence *ts) {
                     CONNECT_PRE_2_ROOT();
                     continue;
                 }
-                if (_consume("include", &root)) {  // TODO
+                if (_consume("include", &root)) {
+                    char *dir = Currentdir;
+                    TkSequence *ex = _expand_include(root, PAIR_STR_LEN(dir));
+                    root = skip2MacroEnd(root);
+                    INCREMENT_ROOT();  // MACROEND
+
+                    token_join(noneMacro, ex->begin);
+                    token_join(ex->end->prev, root);
+
+                    root = noneMacro;
+                    continue;
                 }
                 if (_consume("if", &root)) {  // TODO
                 }
@@ -449,14 +471,14 @@ Token *stringize(const TkSequence *ts) {
 
     return new_Token(TK_STRING, NULL, combined, str_length);
 }
-static void find_includeitem(char *buffer, Token *token, char *nowdir,
+static void find_includeitem(char *buffer, Token *token, char *basedir,
                              int len) {
-    if (token->kind != TK_STRING && token->kind != TK_INCLUDE)
+    if (token->kind != TK_STRING && token->kind != TK_INCLUDEPATH)
         error_at(token->str, "パスではありません");
 
-    if (token->kind == TK_STRING) { // "includepath"
+    if (token->kind == TK_STRING) {  // "includepath"
         // nowdirで調べる
-        _path_combine(buffer, nowdir, len, token->str, token->len);
+        _path_combine(buffer, basedir, len, token->str, token->len);
         if (file_exist(buffer, strlen(buffer))) return;
     }
     // include pathで調べる
@@ -466,49 +488,27 @@ static void find_includeitem(char *buffer, Token *token, char *nowdir,
         if (file_exist(buffer, strlen(buffer))) return;
     }
 
-    error_at(token->str,"存在しないファイルやディレクトリです");
+    error_at(token->str, "存在しないファイルやディレクトリです");
 }
-static TkSequence *_expand_include(Token *token, char *nowdir, int len){
-    char buffer[BUFFER_SIZE],dir[BUFFER_SIZE];
+static TkSequence *_expand_include(Token *token, char *basedir, int len) {
+    char buffer[BUFFER_SIZE], dir[BUFFER_SIZE];
 
-    find_includeitem(buffer,token,nowdir,len);
-    
-    _path_dirname(dir,PAIR_STR_LEN(buffer));
-    
+    find_includeitem(buffer, token, basedir, len);
+
+    _path_dirname(dir, PAIR_STR_LEN(buffer));
+
     char *program = file_read2str(PAIR_STR_LEN(buffer));
     TkSequence *ts = tokenize(program);
-    return expand_include(ts,PAIR_STR_LEN(dir));
-} 
 
-TkSequence *expand_include(TkSequence *ts,char *nowdir,int len) {
-    Token anker,*root = ts->begin;
-    anker.next = root;
-    Token *noneInclude = &anker;
-    while(root->kind != TK_END){
-        if(root->kind == TK_MACROSTART){
-            INCREMENT_ROOT(); // '#'
-            if(_consume("include",&root)){
-                TkSequence *ex = _expand_include(root,nowdir,len);
-                root = skip2MacroEnd(root);
-                INCREMENT_ROOT(); // MACROEND
+    Currentdir = dir;// 次のベースディレクトリを登録
+    TkSequence* expand_program = expand(ts);
+    Currentdir = basedir;// 元のベースディレクトリに戻ってくる
 
-                token_join(noneInclude,ex->begin);
-                token_join(ex->end->prev,root);
-
-                root = noneInclude;
-                continue;
-            }
-        }
-        noneInclude = root;
-        INCREMENT_ROOT();
-    }
-    
-    ts->begin = anker.next;
-    return ts;  // TODO: 未完成
+    return expand_program;
 }
 
-TkSequence *preproccess(TkSequence *ts,char *dirpath) {
-    ts = expand_include(ts,dirpath,strlen(dirpath));//PAIR_STR_LEN(dirpath));
+TkSequence *preproccess(TkSequence *ts, char *dirpath) {
+    Currentdir = dirpath;
     ts = expand(ts);
     free_Hideset(ts);
     ts = combine_strings(ts);
