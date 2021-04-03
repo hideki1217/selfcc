@@ -30,7 +30,6 @@ void macro_Delete(char *key, int len);
 Token *skip2MacroEnd(Token *begin);
 TkSequence *preproccess(TkSequence *ts,char *dirpath);
 
-TkSequence *expand_include(TkSequence *ts,char *nowdir,int len);
 void add_includepath(char *dirpath,int len);
 
 TkSequence *combine_strings(TkSequence *ts);
