@@ -103,6 +103,11 @@ void gen(Node *node, bool push) {
             return;
         }
         /////////////////////////////// 以下push flagが有効
+        case ND_CHAR: {
+            printf("    mov rax, \'%c\'\n",((CharNode*)node)->val);
+            if (push) printf("    push rax\n");
+            return;
+        }
         case ND_INT: {
             printf("    mov rax, %d\n", ((NumNode *)node)->val);
             if (push) printf("    push rax\n");
