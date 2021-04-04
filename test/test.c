@@ -512,12 +512,12 @@ int test91() {
     return x;
 }
 
-int ahoaho(char *x) {
+int *ahoaho(char *x) {
     print(x);
     return 3;
 }
 int test92() {
-    int x = ahoaho("aho");
+    int *x = ahoaho("aho");
     return x;
 }
 int test93() {
@@ -684,8 +684,7 @@ int test118() {
     int x = 6, y = 7;
     return y;
 }
-int test119_a, test119_b;
-int test119() {
+int test119_a, test119_b, test119() {
     test119_a = 7;
     test119_b = 6;
     return test119_a;
@@ -870,12 +869,23 @@ int test138_sum(int x,int y){
 int test138(){
     return test138_sum(3,4);
 }
+#define TEST139
 int test139(){
-    char a = 'a';
-    char b = 'b';
-    return b-a;
-}
+    int x = 0;
+#ifdef TEST139
+    x += 1;
+#endif
 
+#ifndef TEST139
+    x += 2;
+#endif
+#undef TEST139
+
+#ifndef TEST139
+    x += 4;
+#endif
+    return x;
+} 
 
 
 extern int assert(int, int);
@@ -1018,7 +1028,7 @@ int Test() {
     TEST_ASSERT(7, test136)
     //TEST_ASSERT(3,test137)
     TEST_ASSERT(7,test138)
-    TEST_ASSERT(1,test139)
+    TEST_ASSERT(5,test139)
 
     TEST_END()
 }

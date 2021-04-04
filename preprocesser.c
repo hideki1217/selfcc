@@ -173,6 +173,7 @@ void free_Hideset(TkSequence *ts) {
     }
 }
 static TkSequence *_expand_include(Token *token, char *basedir, int len);
+static bool evaluate_if(Token *root);
 /** token[0] * insert * token[1]...*/
 #define INSERT(token, insert)          \
     token_join(insert, (token)->next); \
@@ -573,6 +574,10 @@ static TkSequence *_expand_include(Token *token, char *basedir, int len) {
 
     return expand_program;
 }
+static bool evaluate_if(Token *root){
+    return true; // TODO 
+}
+
 
 TkSequence *preproccess(TkSequence *ts, char *dirpath) {
     CurrentDir = dirpath;
