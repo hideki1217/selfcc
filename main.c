@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "file.h"
+#include "path.h"
 #include "selfcc.h"
 #include "utility.h"
-
-#include "path.h"
-#include "file.h"
 
 void code_generate(Node *code);
 #define print_tab(n) \
@@ -70,10 +69,11 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////
     TkSequence *tokens;
 
-    if (fromfile) user_input = file_read2str(filepath,strlen(filepath));
-    filename = fromfile ? path_filename(filepath,strlen(filepath)) : "stdinput";
-    tokens = tokenize(user_input);    // トークン化
-    tokens = preproccess(tokens,dirpath);     // プリプロセス
+    if (fromfile) user_input = file_read2str(filepath, strlen(filepath));
+    filename =
+        fromfile ? path_filename(filepath, strlen(filepath)) : "stdinput";
+    tokens = tokenize(user_input);          // トークン化
+    tokens = preproccess(tokens, dirpath);  // プリプロセス
     if (dpp) debug_pp(tokens);        // プリプロセスの結果デバッグ
     tkstream = tokens->begin;         // streamにセット
     Node *code = translation_unit();  // 抽象構文木化
