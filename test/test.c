@@ -871,6 +871,7 @@ int test138(){
 }
 
 
+
 extern int assert(int, int);
 ////////////////////////////////^テスト部
 int Test() {

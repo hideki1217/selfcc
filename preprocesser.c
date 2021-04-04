@@ -177,14 +177,47 @@ static TkSequence *_expand_include(Token *token, char *basedir, int len);
 #define INSERT(token, insert)          \
     token_join(insert, (token)->next); \
     token_join(token, insert);
-static char *Currentdir;
+#define REMOVE_MACROSECTION(macro_token, noneMacro_token) \
+    macro_token = skip2MacroEnd(macro_token);             \
+    macro_token = (macro_token)->next;                    \
+    token_join(noneMacro_token, macro_token);
+
+static char *CurrentDir;
 TkSequence *expand(TkSequence *ts) {
     if (!ts) return NULL;
     Token *root = ts->begin;
 
-    Token anker, *noneMacro = &anker;
+    enum { MM_IGNORE, MM_NORMAL } macromode = MM_NORMAL;
+    int if_count = 0;
+
+    Token anker, *noneMacro = &anker, *mem;
     anker.next = root;
     while (root->kind != TK_END) {
+        if (macromode == MM_IGNORE) {
+            if (mem = _consume("elif", &root)) {  // TODO
+                if (if_count <= 0) error_at(mem->str, "ifがありません");
+                bool res = evaluate_if(root);
+                REMOVE_MACROSECTION(root, noneMacro)
+                if (!res) continue;
+                macromode = MM_NORMAL;
+                continue;
+            }
+            if (_consume("else", &root)) {  // TODO
+                if (if_count <= 0) error_at(mem->str, "ifがありません");
+                REMOVE_MACROSECTION(root, noneMacro)
+                macromode = MM_NORMAL;
+                continue;
+            }
+            if (_consume("endif", &root)) {  // TODO
+                if (if_count <= 0) error_at(mem->str, "ifがありません");
+                REMOVE_MACROSECTION(root, noneMacro)
+                macromode = MM_NORMAL;
+                if_count--;
+                continue;
+            }
+            INCREMENT_ROOT();
+            continue;
+        }
         switch (root->kind) {
             case TK_MACROSTART: {  // マクロ定義部
                 INCREMENT_ROOT();
@@ -224,7 +257,7 @@ TkSequence *expand(TkSequence *ts) {
                     continue;
                 }
                 if (_consume("include", &root)) {
-                    char *dir = Currentdir;
+                    char *dir = CurrentDir;
                     TkSequence *ex = _expand_include(root, PAIR_STR_LEN(dir));
                     root = skip2MacroEnd(root);
                     INCREMENT_ROOT();  // MACROEND
@@ -236,16 +269,50 @@ TkSequence *expand(TkSequence *ts) {
                     continue;
                 }
                 if (_consume("if", &root)) {  // TODO
+                    if_count++;
+                    bool res = evaluate_if(root);
+                    REMOVE_MACROSECTION(root, noneMacro)
+                    if (res) continue;
+                    macromode = MM_IGNORE;
+                    continue;
                 }
-                if (_consume("elif", &root)) {  // TODO
-                }
-                if (_consume("else", &root)) {  // TODO
+                if (_consume("elif", &root) ||
+                    _consume("else", &root)) {  // TODO
+                    if (if_count <= 0) error_at(mem->str, "ifがありません");
+                    root = skip2EndIf(root);
+                    REMOVE_MACROSECTION(root, noneMacro)
+                    if_count--;
+                    continue;
                 }
                 if (_consume("endif", &root)) {  // TODO
+                    if (if_count <= 0) error_at(mem->str, "ifがありません");
+                    REMOVE_MACROSECTION(root, noneMacro)
+                    if_count--;
+                    continue;
                 }
                 if (_consume("ifdef", &root)) {  // TODO
+                    if_count++;
+                    Token *ident = _consume_ident(&root);
+                    REMOVE_MACROSECTION(root, noneMacro)
+                    if (ISNNULL(ident) &&
+                        ISNNULL(macro_Search(ident->str, ident->len))) // trueの時
+                        continue;
+                    
+                    macromode = MM_IGNORE;
+                    continue;
                 }
                 if (_consume("ifndef", &root)) {  // TODO
+                    if_count++;
+                    Token *ident = _consume_ident(&root);
+                    REMOVE_MACROSECTION(root, noneMacro)
+                    if (ISNNULL(ident) &&
+                        ISNNULL(macro_Search(ident->str, ident->len))) // falseの時
+                    {
+                        macromode = MM_IGNORE;
+                        continue;
+                    }
+                    
+                    continue;
                 }
             }
             case TK_IDENT: {  // マクロ展開部
@@ -500,15 +567,15 @@ static TkSequence *_expand_include(Token *token, char *basedir, int len) {
     char *program = file_read2str(PAIR_STR_LEN(buffer));
     TkSequence *ts = tokenize(program);
 
-    Currentdir = dir;// 次のベースディレクトリを登録
-    TkSequence* expand_program = expand(ts);
-    Currentdir = basedir;// 元のベースディレクトリに戻ってくる
+    CurrentDir = dir;  // 次のベースディレクトリを登録
+    TkSequence *expand_program = expand(ts);
+    CurrentDir = basedir;  // 元のベースディレクトリに戻ってくる
 
     return expand_program;
 }
 
 TkSequence *preproccess(TkSequence *ts, char *dirpath) {
-    Currentdir = dirpath;
+    CurrentDir = dirpath;
     ts = expand(ts);
     free_Hideset(ts);
     ts = combine_strings(ts);
