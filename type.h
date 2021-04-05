@@ -163,7 +163,13 @@ int params_compare(const Params *base, const Params *act);
  */
 int params_indexof(const Params *params, char *word, int wordlen);
 
-typedef enum { BK_OTHER = 0, BK_STRUCT = 1, BK_UNION = 2, BK_ENUM = 3, BK_SIZE } BaseKind;
+typedef enum {
+    BK_OTHER = 0,
+    BK_STRUCT = 1,
+    BK_UNION = 2,
+    BK_ENUM = 3,
+    BK_SIZE
+} BaseKind;
 struct TypeModel {
     Type *type;
 };
@@ -223,11 +229,10 @@ TypeModel *typemgr_excl(char *name, int len, BaseKind kind);
 void typemgr_reg(char *name, int len, BaseKind kind, Type *type);
 /**
  * @brief  enumを登録するための関数
- * @note   
+ * @note
  * @param  *name: 名前
  * @param  namelen: 名前の長さ
  * @param  val: その定数値
  * @retval falseならすでに登録済み
  */
-bool typemgr_regenum(char *name,int namelen,int val);
-
+bool typemgr_regenum(char *name, int namelen, int val);

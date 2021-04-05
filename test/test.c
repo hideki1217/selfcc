@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include "fortest.h"
 
 #define TEST_BEGIN() int ans, act;
@@ -856,21 +858,15 @@ int test136() {
 
     return ins_ptr->y;
 }
-enum Test137{
-    T137_x,
-    T137_y = 2,
-    T137_z
-};
-int test137(){ return 3;} // TODO: enumが完成したら組み込む
-int test138_sum(int x,int y){
-    //int x = 5; // 引数と内部が同じスコープになるのでこれを入れるとerror
-    return x+y;
+enum Test137 { T137_x, T137_y = 2, T137_z };
+int test137() { return 3; }  // TODO: enumが完成したら組み込む
+int test138_sum(int x, int y) {
+    // int x = 5; // 引数と内部が同じスコープになるのでこれを入れるとerror
+    return x + y;
 }
-int test138(){
-    return test138_sum(3,4);
-}
+int test138() { return test138_sum(3, 4); }
 #define TEST139
-int test139(){
+int test139() {
     int x = 0;
 #ifdef TEST139
     x += 1;
@@ -886,12 +882,18 @@ int test139(){
 #endif
     return x;
 }
-int test140(){
+int test140() {
     char a = 'a';
     char b = 'b';
-    return b-a;
+    return b - a;
 }
-
+int test141() {
+    bool x = true;
+    bool y = false;
+    int res = 5;
+    if (x & y) res++;
+    return res;
+}
 
 extern int assert(int, int);
 ////////////////////////////////^テスト部
@@ -1031,10 +1033,11 @@ int Test() {
     TEST_ASSERT(8, test134)
     TEST_ASSERT(6, test135)
     TEST_ASSERT(7, test136)
-    //TEST_ASSERT(3,test137)
-    TEST_ASSERT(7,test138)
-    TEST_ASSERT(5,test139)
-    TEST_ASSERT(1,test140)
+    // TEST_ASSERT(3,test137)
+    TEST_ASSERT(7, test138)
+    TEST_ASSERT(5, test139)
+    TEST_ASSERT(1, test140)
+    TEST_ASSERT(5, test141)
 
     TEST_END()
 }

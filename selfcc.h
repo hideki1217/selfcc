@@ -295,7 +295,7 @@ struct LabelNode {
 };
 LabelNode *new_LabelNode(NodeKind kind, int index);
 void set_LabelNode(LabelNode *node, NodeKind kind, int index);
-struct OffsetNode{
+struct OffsetNode {
     Node base;
     Node *origin;
     union {
@@ -303,10 +303,10 @@ struct OffsetNode{
         String string;
     } tag;
 };
-OffsetNode *new_OffsetNode(NodeKind kind,Node *origin,char *tag_name,int namelen);
-void set_OffsetNode(OffsetNode *node,NodeKind kind,Node *origin,char *tag_name,int namelen);
-
-
+OffsetNode *new_OffsetNode(NodeKind kind, Node *origin, char *tag_name,
+                           int namelen);
+void set_OffsetNode(OffsetNode *node, NodeKind kind, Node *origin,
+                    char *tag_name, int namelen);
 
 //文法部
 void initialize_parser();

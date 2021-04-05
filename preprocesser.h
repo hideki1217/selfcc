@@ -10,8 +10,8 @@ typedef enum { MC_OBJECT, MC_FUNC } MacroKind;
 typedef struct Macro Macro;
 struct Macro {
     MacroKind kind;
-    char *key;        // キー
-    int keylen;       // キーの長さ
+    char *key;          // キー
+    int keylen;         // キーの長さ
     TkSequence *ts;     // マクロの中身
     CC_Vector *params;  // 引数名リスト
 };
@@ -28,9 +28,9 @@ void macro_Delete(char *key, int len);
  * @retval TK_MACROENDのノードへのpointer
  */
 Token *skip2MacroEnd(Token *begin);
-TkSequence *preproccess(TkSequence *ts,char *dirpath);
+TkSequence *preproccess(TkSequence *ts, char *dirpath);
 
-void add_includepath(char *dirpath,int len);
+void add_includepath(char *dirpath, int len);
 
 TkSequence *combine_strings(TkSequence *ts);
 void free_Hideset(TkSequence *ts);
@@ -40,5 +40,5 @@ TkSequence *subst(TkSequence *is, CC_Vector *fp, CC_Vector *ap, HideSet *hs);
 Token *glue(Token *os_end, Token *rt);
 Token *ts(Token *tk);
 Token *fp(Token *tk);
-#define select(i,vec_ts) ((vec_ts)->_)[i].ptr
+#define select(i, vec_ts) ((vec_ts)->_)[i].ptr
 Token *stringize(const TkSequence *ts);

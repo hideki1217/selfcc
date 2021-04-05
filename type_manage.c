@@ -1,13 +1,11 @@
-#include "selfcc.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "collections.h"
+#include "selfcc.h"
 #include "utility.h"
-
 
 /////////////////////データ構造
 
