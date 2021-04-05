@@ -61,6 +61,7 @@ void initialize_typemgr() {
     regist_Type(BK_OTHER, "void", 4, _void);
     regist_Type(BK_OTHER, "int", 3, _int);
     regist_Type(BK_OTHER, "char", 4, _char);
+    regist_Type(BK_OTHER, "_Bool",5,_char);
     regist_Type(BK_OTHER, "float", 5, _float);
     regist_Type(BK_OTHER, "long", 4, _double);
 
