@@ -33,6 +33,10 @@
         "file.h": "c",
         "backtrace-supported.h": "c",
         "errno.h": "c",
-        "features.h": "c"
+        "features.h": "c",
+        "stddef.h": "c",
+        "stdatomic.h": "c",
+        "waitflags.h": "c",
+        "libc-header-start.h": "c"
     }
 }

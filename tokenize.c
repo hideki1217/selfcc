@@ -191,7 +191,8 @@ TkSequence *tokenize(char *p) {
             keyword(p, "defined",TK_MACRO);
             macrokey(p, "##",TK_MACRO);
             macrokey(p, "#",TK_MACRO);
-            if (*p == '<') {
+            if (cur->kind == TK_MACROINCLUDE && 
+                *p == '<') {
                 char *q = ++p;
                 while (*p != '>') p++;
                 cur = new_Token(TK_INCLUDEPATH, cur, q, p - q);

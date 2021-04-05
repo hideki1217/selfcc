@@ -26,6 +26,10 @@ void Initialize_preprocesser() {
     include_paths = cc_vector_new();
 
     cc_vector_pbStr(include_paths, PAIR_STR_LEN("/usr/include"));
+    cc_vector_pbStr(include_paths,
+                    PAIR_STR_LEN("/usr/lib/gcc/x86_64-linux-gnu/9/include"));
+    cc_vector_pbStr(include_paths,
+                    PAIR_STR_LEN("/usr/include/x86_64-linux-gnu"));
 }
 void add_includepath(char *dirpath, int len) {
     char *path = malloc(len + 1);
@@ -50,14 +54,16 @@ Macro *macro_Search(char *key, int len) {
 }
 void macro_Delete(char *key, int len) {
     Macro *macro = cc_avltree_Search(defined_macros, key, len);
-    if (macro->params) free(macro->params);
-    Token *iter = macro->ts->begin;
-    while (iter != macro->ts->end) {
-        Token *tmp = token_next(iter);
-        free(iter);
-        iter = tmp;
+    if (macro) {
+        if (macro->params) cc_vector_delete(macro->params);
+        Token *iter = macro->ts->begin;
+        while (iter != macro->ts->end) {
+            Token *tmp = token_next(iter);
+            free(iter);
+            iter = tmp;
+        }
+        cc_avltree_DeleteNode(defined_macros, key, len);
     }
-    cc_avltree_DeleteNode(defined_macros, key, len);
 }
 
 #define match(token, string)          \
@@ -296,9 +302,10 @@ TkSequence *expand(TkSequence *ts) {
                     Token *ident = _consume_ident(&root);
                     REMOVE_MACROSECTION(root, noneMacro)
                     if (ISNNULL(ident) &&
-                        ISNNULL(macro_Search(ident->str, ident->len))) // trueの時
+                        ISNNULL(
+                            macro_Search(ident->str, ident->len)))  // trueの時
                         continue;
-                    
+
                     macromode = MM_IGNORE;
                     continue;
                 }
@@ -307,12 +314,13 @@ TkSequence *expand(TkSequence *ts) {
                     Token *ident = _consume_ident(&root);
                     REMOVE_MACROSECTION(root, noneMacro)
                     if (ISNNULL(ident) &&
-                        ISNNULL(macro_Search(ident->str, ident->len))) // falseの時
+                        ISNNULL(
+                            macro_Search(ident->str, ident->len)))  // falseの時
                     {
                         macromode = MM_IGNORE;
                         continue;
                     }
-                    
+
                     continue;
                 }
             }
@@ -574,10 +582,9 @@ static TkSequence *_expand_include(Token *token, char *basedir, int len) {
 
     return expand_program;
 }
-static bool evaluate_if(Token *root){
-    return true; // TODO 
+static bool evaluate_if(Token *root) {
+    return true;  // TODO
 }
-
 
 TkSequence *preproccess(TkSequence *ts, char *dirpath) {
     CurrentDir = dirpath;
