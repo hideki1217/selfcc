@@ -13,6 +13,7 @@
 #include "collections.h"
 #include "file.h"
 #include "path.h"
+#include "resource.h"
 #include "selfcc.h"
 #include "utility.h"
 #include "vector.h"
@@ -201,7 +202,7 @@ TkSequence *expand(TkSequence *ts) {
     anker.next = root;
     while (root->kind != TK_END) {
         if (macromode == MM_IGNORE) {
-            if (mem = _consume("elif", &root)) {  // TODO
+            if (mem = _consume(r_STR_MACROELIF, &root)) {  // TODO
                 if (if_count <= 0) error_at(mem->str, "ifがありません");
                 bool res = evaluate_if(root);
                 REMOVE_MACROSECTION(root, noneMacro)
@@ -209,13 +210,13 @@ TkSequence *expand(TkSequence *ts) {
                 macromode = MM_NORMAL;
                 continue;
             }
-            if (_consume("else", &root)) {  // TODO
+            if (_consume(r_STR_MACROELSE, &root)) {  // TODO
                 if (if_count <= 0) error_at(mem->str, "ifがありません");
                 REMOVE_MACROSECTION(root, noneMacro)
                 macromode = MM_NORMAL;
                 continue;
             }
-            if (_consume("endif", &root)) {  // TODO
+            if (_consume(r_STR_MACROENDIF, &root)) {  // TODO
                 if (if_count <= 0) error_at(mem->str, "ifがありません");
                 REMOVE_MACROSECTION(root, noneMacro)
                 macromode = MM_NORMAL;
@@ -232,7 +233,7 @@ TkSequence *expand(TkSequence *ts) {
                     CONNECT_PRE_2_ROOT();
                     continue;
                 }
-                if (_consume("define", &root)) {
+                if (_consume(r_STR_MACRODEFINE, &root)) {
                     // 識別子を確保
                     Token *ident = _expect_ident(&root);
                     Macro *macro = regist_macro(ident->str, ident->len);
@@ -263,7 +264,7 @@ TkSequence *expand(TkSequence *ts) {
                     CONNECT_PRE_2_ROOT();
                     continue;
                 }
-                if (_consume("include", &root)) {
+                if (_consume(r_STR_MACROINCLUDE, &root)) {
                     char *dir = CurrentDir;
                     TkSequence *ex = _expand_include(root, PAIR_STR_LEN(dir));
                     root = skip2MacroEnd(root);
@@ -275,7 +276,7 @@ TkSequence *expand(TkSequence *ts) {
                     root = noneMacro;
                     continue;
                 }
-                if (_consume("if", &root)) {  // TODO
+                if (_consume(r_STR_MACROIF, &root)) {  // TODO
                     if_count++;
                     bool res = evaluate_if(root);
                     REMOVE_MACROSECTION(root, noneMacro)
@@ -283,21 +284,21 @@ TkSequence *expand(TkSequence *ts) {
                     macromode = MM_IGNORE;
                     continue;
                 }
-                if (_consume("elif", &root) ||
-                    _consume("else", &root)) {  // TODO
+                if (_consume(r_STR_MACROELIF, &root) ||
+                    _consume(r_STR_MACROELSE, &root)) {  // TODO
                     if (if_count <= 0) error_at(mem->str, "ifがありません");
                     root = skip2EndIf(root);
                     REMOVE_MACROSECTION(root, noneMacro)
                     if_count--;
                     continue;
                 }
-                if (_consume("endif", &root)) {  // TODO
+                if (_consume(r_STR_MACROENDIF, &root)) {  // TODO
                     if (if_count <= 0) error_at(mem->str, "ifがありません");
                     REMOVE_MACROSECTION(root, noneMacro)
                     if_count--;
                     continue;
                 }
-                if (_consume("ifdef", &root)) {  // TODO
+                if (_consume(r_STR_MACROIFDEF, &root)) {  // TODO
                     if_count++;
                     Token *ident = _consume_ident(&root);
                     REMOVE_MACROSECTION(root, noneMacro)
@@ -309,7 +310,7 @@ TkSequence *expand(TkSequence *ts) {
                     macromode = MM_IGNORE;
                     continue;
                 }
-                if (_consume("ifndef", &root)) {  // TODO
+                if (_consume(r_STR_MACROIFNDEF, &root)) {  // TODO
                     if_count++;
                     Token *ident = _consume_ident(&root);
                     REMOVE_MACROSECTION(root, noneMacro)
